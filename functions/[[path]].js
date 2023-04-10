@@ -13728,7 +13728,7 @@ var require_react_jsx_dev_runtime_development = __commonJS({
           value: source
         }), Object.freeze && (Object.freeze(element.props), Object.freeze(element)), element;
       };
-      function jsxDEV4(type, config, maybeKey, source, self) {
+      function jsxDEV7(type, config, maybeKey, source, self) {
         {
           var propName, props = {}, key = null, ref = null;
           maybeKey !== void 0 && (checkKeyStringCoercion(maybeKey), key = "" + maybeKey), hasValidKey(config) && (checkKeyStringCoercion(config.key), key = "" + config.key), hasValidRef(config) && (ref = config.ref, warnIfStringRefCannotBeAutoConverted(config, self));
@@ -13873,7 +13873,7 @@ Check the top-level render call using <` + parentName + ">.");
             var typeString;
             type === null ? typeString = "null" : isArray(type) ? typeString = "array" : type !== void 0 && type.$$typeof === REACT_ELEMENT_TYPE ? (typeString = "<" + (getComponentNameFromType(type.type) || "Unknown") + " />", info = " Did you accidentally export a JSX literal instead of a component?") : typeString = typeof type, error("React.jsx: type is invalid -- expected a string (for built-in components) or a class/function (for composite components) but got: %s.%s", typeString, info);
           }
-          var element = jsxDEV4(type, props, key, source, self);
+          var element = jsxDEV7(type, props, key, source, self);
           if (element == null)
             return element;
           if (validType) {
@@ -14394,10 +14394,10 @@ function Links() {
     routeModules
   } = useRemixContext(), {
     matches
-  } = useDataRouterStateContext(), links = React3.useMemo(() => getLinksForMatches(matches, routeModules, manifest), [matches, routeModules, manifest]);
+  } = useDataRouterStateContext(), links2 = React3.useMemo(() => getLinksForMatches(matches, routeModules, manifest), [matches, routeModules, manifest]);
   return React3.useEffect(() => {
-    links.some((link) => "imagesizes" in link || "imagesrcset" in link) && logDeprecationOnce(linksWarning);
-  }, [links]), /* @__PURE__ */ React3.createElement(React3.Fragment, null, links.map((link) => {
+    links2.some((link) => "imagesizes" in link || "imagesrcset" in link) && logDeprecationOnce(linksWarning);
+  }, [links2]), /* @__PURE__ */ React3.createElement(React3.Fragment, null, links2.map((link) => {
     if (isPageLinkDescriptor(link))
       return /* @__PURE__ */ React3.createElement(PrefetchPageLinks, _extends4({
         key: link.page
@@ -14427,8 +14427,8 @@ function usePrefetchedStylesheets(matches) {
   } = useRemixContext(), [styleLinks, setStyleLinks] = React3.useState([]);
   return React3.useEffect(() => {
     let interrupted = !1;
-    return getStylesheetPrefetchLinks(matches, manifest, routeModules).then((links) => {
-      interrupted || setStyleLinks(links);
+    return getStylesheetPrefetchLinks(matches, manifest, routeModules).then((links2) => {
+      interrupted || setStyleLinks(links2);
     }), () => {
       interrupted = !0;
     };
@@ -15384,158 +15384,208 @@ async function handleRequest(request, responseStatusCode, responseHeaders, remix
 // app/root.tsx
 var root_exports = {};
 __export(root_exports, {
-  default: () => App
+  default: () => App,
+  links: () => links
 });
-var import_jsx_dev_runtime2 = __toESM(require_jsx_dev_runtime());
-function App() {
-  return /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("html", { lang: "en", children: [
-    /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("head", { children: [
-      /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("title", { title: "Personal Site" }, void 0, !1, {
-        fileName: "app/root.tsx",
-        lineNumber: 14,
-        columnNumber: 9
-      }, this),
-      /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("meta", { charSet: "utf-8" }, void 0, !1, {
-        fileName: "app/root.tsx",
-        lineNumber: 15,
-        columnNumber: 9
-      }, this),
-      /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("meta", { name: "viewport", content: "width=device-width,initial-scale=1" }, void 0, !1, {
-        fileName: "app/root.tsx",
-        lineNumber: 16,
-        columnNumber: 9
-      }, this),
-      /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)(Meta, {}, void 0, !1, {
-        fileName: "app/root.tsx",
-        lineNumber: 17,
-        columnNumber: 9
-      }, this),
-      /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)(Links, {}, void 0, !1, {
-        fileName: "app/root.tsx",
-        lineNumber: 18,
-        columnNumber: 9
-      }, this)
-    ] }, void 0, !0, {
-      fileName: "app/root.tsx",
-      lineNumber: 13,
+
+// app/tailwind.css
+var tailwind_default = "/build/_assets/tailwind-3EXLAOLR.css";
+
+// app/components/navigationTabs/NavigationTabContainer.tsx
+var import_jsx_dev_runtime2 = __toESM(require_jsx_dev_runtime()), NavigationTabContainer = ({
+  children
+}) => /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("ul", { className: "flex flex-wrap text-sm font-medium text-center text-slate-500 border-b border-slate-200 dark:border-slate-700 dark:text-slate-400", children }, void 0, !1, {
+  fileName: "app/components/navigationTabs/NavigationTabContainer.tsx",
+  lineNumber: 14,
+  columnNumber: 5
+}, this);
+
+// app/components/navigationTabs/NavigationTab.tsx
+var import_jsx_dev_runtime3 = __toESM(require_jsx_dev_runtime()), NavigationTab = ({
+  displayString,
+  to
+}) => {
+  let { pathname } = useLocation(), conditionalStyles = sameRootPaths(pathname, to) ? "text-fuchsia-600 dark:text-fuchsia-500 active" : "hover:text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 dark:hover:text-slate-300";
+  return /* @__PURE__ */ (0, import_jsx_dev_runtime3.jsxDEV)("li", { className: "mr-2", children: /* @__PURE__ */ (0, import_jsx_dev_runtime3.jsxDEV)(
+    Link2,
+    {
+      to,
+      className: "inline-block p-4 rounded-t-lg " + conditionalStyles,
+      children: displayString
+    },
+    void 0,
+    !1,
+    {
+      fileName: "app/components/navigationTabs/NavigationTab.tsx",
+      lineNumber: 20,
       columnNumber: 7
-    }, this),
-    /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("body", { children: [
-      /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)(Outlet, {}, void 0, !1, {
+    },
+    this
+  ) }, void 0, !1, {
+    fileName: "app/components/navigationTabs/NavigationTab.tsx",
+    lineNumber: 19,
+    columnNumber: 5
+  }, this);
+}, getRootPath = (path) => path.split("/")[1], sameRootPaths = (path1, path2) => getRootPath(path1) === getRootPath(path2);
+
+// app/root.tsx
+var import_jsx_dev_runtime4 = __toESM(require_jsx_dev_runtime()), links = () => [{ rel: "stylesheet", href: tailwind_default }];
+function App() {
+  return /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)("html", { lang: "en", children: [
+    /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)("head", { children: [
+      /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)("title", { title: "Personal Site" }, void 0, !1, {
+        fileName: "app/root.tsx",
+        lineNumber: 20,
+        columnNumber: 9
+      }, this),
+      /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)("meta", { charSet: "utf-8" }, void 0, !1, {
         fileName: "app/root.tsx",
         lineNumber: 21,
         columnNumber: 9
       }, this),
-      /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)(ScrollRestoration2, {}, void 0, !1, {
+      /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)("meta", { name: "viewport", content: "width=device-width,initial-scale=1" }, void 0, !1, {
         fileName: "app/root.tsx",
         lineNumber: 22,
         columnNumber: 9
       }, this),
-      /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)(Scripts, {}, void 0, !1, {
+      /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(Meta, {}, void 0, !1, {
         fileName: "app/root.tsx",
         lineNumber: 23,
         columnNumber: 9
       }, this),
-      /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)(LiveReload, {}, void 0, !1, {
+      /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(Links, {}, void 0, !1, {
         fileName: "app/root.tsx",
         lineNumber: 24,
         columnNumber: 9
       }, this)
     ] }, void 0, !0, {
       fileName: "app/root.tsx",
-      lineNumber: 20,
+      lineNumber: 19,
       columnNumber: 7
-    }, this)
+    }, this),
+    /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(
+      "body",
+      {
+        className: "bg-slate-100 dark:bg-slate-800 w-screen h-screen dark:text-slate-300 text-slate-700",
+        children: [
+          /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(NavigationTabContainer, { children: [
+            /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(NavigationTab, { to: "/", displayString: "Home" }, void 0, !1, {
+              fileName: "app/root.tsx",
+              lineNumber: 32,
+              columnNumber: 11
+            }, this),
+            /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(NavigationTab, { to: "/travel", displayString: "Travel" }, void 0, !1, {
+              fileName: "app/root.tsx",
+              lineNumber: 33,
+              columnNumber: 11
+            }, this)
+          ] }, void 0, !0, {
+            fileName: "app/root.tsx",
+            lineNumber: 31,
+            columnNumber: 9
+          }, this),
+          /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(Outlet, {}, void 0, !1, {
+            fileName: "app/root.tsx",
+            lineNumber: 35,
+            columnNumber: 9
+          }, this),
+          /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(ScrollRestoration2, {}, void 0, !1, {
+            fileName: "app/root.tsx",
+            lineNumber: 36,
+            columnNumber: 9
+          }, this),
+          /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(Scripts, {}, void 0, !1, {
+            fileName: "app/root.tsx",
+            lineNumber: 37,
+            columnNumber: 9
+          }, this),
+          /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(LiveReload, {}, void 0, !1, {
+            fileName: "app/root.tsx",
+            lineNumber: 38,
+            columnNumber: 9
+          }, this)
+        ]
+      },
+      void 0,
+      !0,
+      {
+        fileName: "app/root.tsx",
+        lineNumber: 26,
+        columnNumber: 7
+      },
+      this
+    )
   ] }, void 0, !0, {
     fileName: "app/root.tsx",
-    lineNumber: 12,
+    lineNumber: 18,
     columnNumber: 5
+  }, this);
+}
+
+// app/routes/travel/index.tsx
+var travel_exports = {};
+__export(travel_exports, {
+  default: () => Travel
+});
+var import_jsx_dev_runtime5 = __toESM(require_jsx_dev_runtime());
+function Travel() {
+  return /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)("main", { children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)("h1", { children: "Travel" }, void 0, !1, {
+    fileName: "app/routes/travel/index.tsx",
+    lineNumber: 4,
+    columnNumber: 9
+  }, this) }, void 0, !1, {
+    fileName: "app/routes/travel/index.tsx",
+    lineNumber: 3,
+    columnNumber: 7
   }, this);
 }
 
 // app/routes/_index.tsx
 var index_exports = {};
 __export(index_exports, {
-  default: () => Index,
+  default: () => _index3,
   meta: () => meta
 });
-var import_jsx_dev_runtime3 = __toESM(require_jsx_dev_runtime()), meta = () => [{ title: "New Remix App" }];
-function Index() {
-  return /* @__PURE__ */ (0, import_jsx_dev_runtime3.jsxDEV)("div", { style: { fontFamily: "system-ui, sans-serif", lineHeight: "1.4" }, children: [
-    /* @__PURE__ */ (0, import_jsx_dev_runtime3.jsxDEV)("h1", { children: "Welcome to Remix" }, void 0, !1, {
-      fileName: "app/routes/_index.tsx",
-      lineNumber: 10,
-      columnNumber: 7
-    }, this),
-    /* @__PURE__ */ (0, import_jsx_dev_runtime3.jsxDEV)("ul", { children: [
-      /* @__PURE__ */ (0, import_jsx_dev_runtime3.jsxDEV)("li", { children: /* @__PURE__ */ (0, import_jsx_dev_runtime3.jsxDEV)(
-        "a",
-        {
-          target: "_blank",
-          href: "https://remix.run/tutorials/blog",
-          rel: "noreferrer",
-          children: "15m Quickstart Blog Tutorial"
-        },
-        void 0,
-        !1,
-        {
-          fileName: "app/routes/_index.tsx",
-          lineNumber: 13,
-          columnNumber: 11
-        },
-        this
-      ) }, void 0, !1, {
-        fileName: "app/routes/_index.tsx",
-        lineNumber: 12,
-        columnNumber: 9
-      }, this),
-      /* @__PURE__ */ (0, import_jsx_dev_runtime3.jsxDEV)("li", { children: /* @__PURE__ */ (0, import_jsx_dev_runtime3.jsxDEV)(
-        "a",
-        {
-          target: "_blank",
-          href: "https://remix.run/tutorials/jokes",
-          rel: "noreferrer",
-          children: "Deep Dive Jokes App Tutorial"
-        },
-        void 0,
-        !1,
-        {
-          fileName: "app/routes/_index.tsx",
-          lineNumber: 22,
-          columnNumber: 11
-        },
-        this
-      ) }, void 0, !1, {
-        fileName: "app/routes/_index.tsx",
-        lineNumber: 21,
-        columnNumber: 9
-      }, this),
-      /* @__PURE__ */ (0, import_jsx_dev_runtime3.jsxDEV)("li", { children: /* @__PURE__ */ (0, import_jsx_dev_runtime3.jsxDEV)("a", { target: "_blank", href: "https://remix.run/docs", rel: "noreferrer", children: "Remix Docs" }, void 0, !1, {
-        fileName: "app/routes/_index.tsx",
-        lineNumber: 31,
-        columnNumber: 11
-      }, this) }, void 0, !1, {
-        fileName: "app/routes/_index.tsx",
-        lineNumber: 30,
-        columnNumber: 9
-      }, this)
-    ] }, void 0, !0, {
+var import_jsx_dev_runtime6 = __toESM(require_jsx_dev_runtime()), meta = () => [{ title: "New Remix App" }];
+function _index3() {
+  return /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)("div", { style: { fontFamily: "system-ui, sans-serif", lineHeight: "1.4" }, children: [
+    /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)("h1", { children: "Hi, I'm Enes" }, void 0, !1, {
       fileName: "app/routes/_index.tsx",
       lineNumber: 11,
+      columnNumber: 7
+    }, this),
+    /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)("div", { className: "mx-auto mt-16 max-w-7xl text-center", children: /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
+      Link2,
+      {
+        to: "/travel",
+        className: "text-xl text-blue-600 underline",
+        children: "Travel"
+      },
+      void 0,
+      !1,
+      {
+        fileName: "app/routes/_index.tsx",
+        lineNumber: 13,
+        columnNumber: 9
+      },
+      this
+    ) }, void 0, !1, {
+      fileName: "app/routes/_index.tsx",
+      lineNumber: 12,
       columnNumber: 7
     }, this)
   ] }, void 0, !0, {
     fileName: "app/routes/_index.tsx",
-    lineNumber: 9,
+    lineNumber: 10,
     columnNumber: 5
   }, this);
 }
 
 // server-assets-manifest:@remix-run/dev/assets-manifest
-var assets_manifest_default = { version: "e144c4de", entry: { module: "/build/entry.client-XLCPTT5O.js", imports: ["/build/_shared/chunk-GZMNNEXQ.js", "/build/_shared/chunk-EETRBLDB.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-2RX7ILPX.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-FUJDYMOW.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-E144C4DE.js" };
+var assets_manifest_default = { version: "15ebbcef", entry: { module: "/build/entry.client-JEDOSHU7.js", imports: ["/build/_shared/chunk-ZQRHYKA3.js", "/build/_shared/chunk-EETRBLDB.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-E6NKMO5A.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-4UIK6UXW.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-BEGSPICC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-15EBBCEF.js" };
 
 // server-entry-module:@remix-run/dev/server-build
-var assetsBuildDirectory = "public/build", future = { unstable_cssModules: !1, unstable_cssSideEffectImports: !1, unstable_dev: !1, unstable_postcss: !1, unstable_tailwind: !1, unstable_vanillaExtract: !1, v2_errorBoundary: !0, v2_meta: !0, v2_normalizeFormMethod: !0, v2_routeConvention: !0 }, publicPath = "/build/", entry = { module: entry_server_exports }, routes = {
+var assetsBuildDirectory = "public\\build", future = { unstable_cssModules: !1, unstable_cssSideEffectImports: !1, unstable_dev: !1, unstable_postcss: !1, unstable_tailwind: !0, unstable_vanillaExtract: !1, v2_errorBoundary: !0, v2_meta: !0, v2_normalizeFormMethod: !0, v2_routeConvention: !0 }, publicPath = "/build/", entry = { module: entry_server_exports }, routes = {
   root: {
     id: "root",
     parentId: void 0,
@@ -15543,6 +15593,14 @@ var assetsBuildDirectory = "public/build", future = { unstable_cssModules: !1, u
     index: void 0,
     caseSensitive: void 0,
     module: root_exports
+  },
+  "routes/travel": {
+    id: "routes/travel",
+    parentId: "root",
+    path: "travel",
+    index: void 0,
+    caseSensitive: void 0,
+    module: travel_exports
   },
   "routes/_index": {
     id: "routes/_index",
