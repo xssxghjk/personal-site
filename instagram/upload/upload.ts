@@ -70,12 +70,14 @@ const mediaMetaData: MediaMetaData[] = []
 //     resource_type: 'video',
 //   })
 // })
-const baseUrl =
+const imageBaseUrl =
   'https://res.cloudinary.com/dvwkrskzv/image/upload/v1685997940/instagram/'
+const videoBaseUrl =
+  'https://res.cloudinary.com/dvwkrskzv/video/upload/v1685997940/instagram/'
 imagesToUpload.forEach((image) =>
   mediaMetaData.push({
     mediaDirectory: image.mediaDirectory,
-    url: baseUrl + image.mediaDirectory + '/' + image.name,
+    url: imageBaseUrl + image.mediaDirectory + '/' + image.name,
     type: 'image',
   })
 )
@@ -83,7 +85,7 @@ imagesToUpload.forEach((image) =>
 videosToUpload.forEach((video) =>
   mediaMetaData.push({
     mediaDirectory: video.mediaDirectory,
-    url: baseUrl + video.mediaDirectory + '/' + video.name,
+    url: videoBaseUrl + video.mediaDirectory + '/' + video.name,
     type: 'video',
   })
 )
