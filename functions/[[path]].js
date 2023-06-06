@@ -118,9 +118,9 @@ var alreadyWarned, init_warnings = __esm({
 });
 
 // node_modules/@remix-run/server-runtime/dist/esm/cookies.js
-async function encodeCookieValue(sign, value, secrets) {
+async function encodeCookieValue(sign2, value, secrets) {
   let encoded = encodeData(value);
-  return secrets.length > 0 && (encoded = await sign(encoded, secrets[0])), encoded;
+  return secrets.length > 0 && (encoded = await sign2(encoded, secrets[0])), encoded;
 }
 async function decodeCookieValue(unsign, value, secrets) {
   if (secrets.length > 0) {
@@ -181,7 +181,7 @@ var import_cookie, createCookieFactory, isCookie, init_cookies = __esm({
     import_cookie = __toESM(require_cookie());
     init_warnings();
     createCookieFactory = ({
-      sign,
+      sign: sign2,
       unsign
     }) => (name, cookieOptions = {}) => {
       let {
@@ -213,13 +213,13 @@ var import_cookie, createCookieFactory, isCookie, init_cookies = __esm({
           return name in cookies ? cookies[name] === "" ? "" : await decodeCookieValue(unsign, cookies[name], secrets) : null;
         },
         async serialize(value, serializeOptions) {
-          return (0, import_cookie.serialize)(name, value === "" ? "" : await encodeCookieValue(sign, value, secrets), {
+          return (0, import_cookie.serialize)(name, value === "" ? "" : await encodeCookieValue(sign2, value, secrets), {
             ...options,
             ...serializeOptions
           });
         }
       };
-    }, isCookie = (object) => object != null && typeof object.name == "string" && typeof object.isSigned == "boolean" && typeof object.parse == "function" && typeof object.serialize == "function";
+    }, isCookie = (object3) => object3 != null && typeof object3.name == "string" && typeof object3.isSigned == "boolean" && typeof object3.parse == "function" && typeof object3.serialize == "function";
   }
 });
 
@@ -897,20 +897,20 @@ function isIndexRoute(route) {
 }
 function convertRoutesToDataRoutes(routes2, detectErrorBoundary2, parentPath, manifest) {
   return parentPath === void 0 && (parentPath = []), manifest === void 0 && (manifest = {}), routes2.map((route, index) => {
-    let treePath = [...parentPath, index], id = typeof route.id == "string" ? route.id : treePath.join("-");
-    if (invariant(route.index !== !0 || !route.children, "Cannot specify children on an index route"), invariant(!manifest[id], 'Found a route id collision on id "' + id + `".  Route id's must be globally unique within Data Router usages`), isIndexRoute(route)) {
+    let treePath = [...parentPath, index], id2 = typeof route.id == "string" ? route.id : treePath.join("-");
+    if (invariant(route.index !== !0 || !route.children, "Cannot specify children on an index route"), invariant(!manifest[id2], 'Found a route id collision on id "' + id2 + `".  Route id's must be globally unique within Data Router usages`), isIndexRoute(route)) {
       let indexRoute = _extends({}, route, {
         hasErrorBoundary: detectErrorBoundary2(route),
-        id
+        id: id2
       });
-      return manifest[id] = indexRoute, indexRoute;
+      return manifest[id2] = indexRoute, indexRoute;
     } else {
       let pathOrLayoutRoute = _extends({}, route, {
-        id,
+        id: id2,
         hasErrorBoundary: detectErrorBoundary2(route),
         children: void 0
       });
-      return manifest[id] = pathOrLayoutRoute, route.children && (pathOrLayoutRoute.children = convertRoutesToDataRoutes(route.children, detectErrorBoundary2, treePath, manifest)), pathOrLayoutRoute;
+      return manifest[id2] = pathOrLayoutRoute, route.children && (pathOrLayoutRoute.children = convertRoutesToDataRoutes(route.children, detectErrorBoundary2, treePath, manifest)), pathOrLayoutRoute;
     }
   });
 }
@@ -1128,14 +1128,14 @@ function unwrapTrackedPromise(value) {
 function isRouteErrorResponse(error) {
   return error != null && typeof error.status == "number" && typeof error.statusText == "string" && typeof error.internal == "boolean" && "data" in error;
 }
-function createRouter(init) {
-  invariant(init.routes.length > 0, "You must provide a non-empty routes array to createRouter");
-  let detectErrorBoundary2 = init.detectErrorBoundary || defaultDetectErrorBoundary, manifest = {}, dataRoutes = convertRoutesToDataRoutes(init.routes, detectErrorBoundary2, void 0, manifest), inFlightDataRoutes, future2 = _extends({
+function createRouter(init2) {
+  invariant(init2.routes.length > 0, "You must provide a non-empty routes array to createRouter");
+  let detectErrorBoundary2 = init2.detectErrorBoundary || defaultDetectErrorBoundary, manifest = {}, dataRoutes = convertRoutesToDataRoutes(init2.routes, detectErrorBoundary2, void 0, manifest), inFlightDataRoutes, future2 = _extends({
     v7_normalizeFormMethod: !1
-  }, init.future), unlistenHistory = null, subscribers = /* @__PURE__ */ new Set(), savedScrollPositions2 = null, getScrollRestorationKey = null, getScrollPosition = null, initialScrollRestored = init.hydrationData != null, initialMatches = matchRoutes(dataRoutes, init.history.location, init.basename), initialErrors = null;
+  }, init2.future), unlistenHistory = null, subscribers = /* @__PURE__ */ new Set(), savedScrollPositions2 = null, getScrollRestorationKey = null, getScrollPosition = null, initialScrollRestored = init2.hydrationData != null, initialMatches = matchRoutes(dataRoutes, init2.history.location, init2.basename), initialErrors = null;
   if (initialMatches == null) {
     let error = getInternalRouterError(404, {
-      pathname: init.history.location.pathname
+      pathname: init2.history.location.pathname
     }), {
       matches,
       route
@@ -1144,23 +1144,23 @@ function createRouter(init) {
       [route.id]: error
     };
   }
-  let initialized = !initialMatches.some((m) => m.route.lazy) && (!initialMatches.some((m) => m.route.loader) || init.hydrationData != null), router, state = {
-    historyAction: init.history.action,
-    location: init.history.location,
+  let initialized = !initialMatches.some((m) => m.route.lazy) && (!initialMatches.some((m) => m.route.loader) || init2.hydrationData != null), router, state = {
+    historyAction: init2.history.action,
+    location: init2.history.location,
     matches: initialMatches,
     initialized,
     navigation: IDLE_NAVIGATION,
-    restoreScrollPosition: init.hydrationData != null ? !1 : null,
+    restoreScrollPosition: init2.hydrationData != null ? !1 : null,
     preventScrollReset: !1,
     revalidation: "idle",
-    loaderData: init.hydrationData && init.hydrationData.loaderData || {},
-    actionData: init.hydrationData && init.hydrationData.actionData || null,
-    errors: init.hydrationData && init.hydrationData.errors || initialErrors,
+    loaderData: init2.hydrationData && init2.hydrationData.loaderData || {},
+    actionData: init2.hydrationData && init2.hydrationData.actionData || null,
+    errors: init2.hydrationData && init2.hydrationData.errors || initialErrors,
     fetchers: /* @__PURE__ */ new Map(),
     blockers: /* @__PURE__ */ new Map()
   }, pendingAction = Action.Pop, pendingPreventScrollReset = !1, pendingNavigationController, isUninterruptedRevalidation = !1, isRevalidationRequired = !1, cancelledDeferredRoutes = [], cancelledFetcherLoads = [], fetchControllers = /* @__PURE__ */ new Map(), incrementingLoadId = 0, pendingNavigationLoadId = -1, fetchReloadIds = /* @__PURE__ */ new Map(), fetchRedirectIds = /* @__PURE__ */ new Set(), fetchLoadMatches = /* @__PURE__ */ new Map(), activeDeferreds = /* @__PURE__ */ new Map(), blockerFunctions = /* @__PURE__ */ new Map(), ignoreNextHistoryUpdate = !1;
   function initialize() {
-    return unlistenHistory = init.history.listen((_ref) => {
+    return unlistenHistory = init2.history.listen((_ref) => {
       let {
         action: historyAction,
         location,
@@ -1177,7 +1177,7 @@ function createRouter(init) {
         historyAction
       });
       if (blockerKey && delta != null) {
-        ignoreNextHistoryUpdate = !0, init.history.go(delta * -1), updateBlocker(blockerKey, {
+        ignoreNextHistoryUpdate = !0, init2.history.go(delta * -1), updateBlocker(blockerKey, {
           state: "blocked",
           location,
           proceed() {
@@ -1186,7 +1186,7 @@ function createRouter(init) {
               proceed: void 0,
               reset: void 0,
               location
-            }), init.history.go(delta);
+            }), init2.history.go(delta);
           },
           reset() {
             deleteBlocker(blockerKey), updateState({
@@ -1227,11 +1227,11 @@ function createRouter(init) {
       restoreScrollPosition: getSavedScrollPosition(location, newState.matches || state.matches),
       preventScrollReset,
       blockers: new Map(state.blockers)
-    })), isUninterruptedRevalidation || pendingAction === Action.Pop || (pendingAction === Action.Push ? init.history.push(location, location.state) : pendingAction === Action.Replace && init.history.replace(location, location.state)), pendingAction = Action.Pop, pendingPreventScrollReset = !1, isUninterruptedRevalidation = !1, isRevalidationRequired = !1, cancelledDeferredRoutes = [], cancelledFetcherLoads = [];
+    })), isUninterruptedRevalidation || pendingAction === Action.Pop || (pendingAction === Action.Push ? init2.history.push(location, location.state) : pendingAction === Action.Replace && init2.history.replace(location, location.state)), pendingAction = Action.Pop, pendingPreventScrollReset = !1, isUninterruptedRevalidation = !1, isRevalidationRequired = !1, cancelledDeferredRoutes = [], cancelledFetcherLoads = [];
   }
   async function navigate(to, opts) {
     if (typeof to == "number") {
-      init.history.go(to);
+      init2.history.go(to);
       return;
     }
     let {
@@ -1239,7 +1239,7 @@ function createRouter(init) {
       submission,
       error
     } = normalizeNavigateOptions(to, future2, opts), currentLocation = state.location, nextLocation = createLocation(state.location, path, opts && opts.state);
-    nextLocation = _extends({}, nextLocation, init.history.encodeLocation(nextLocation));
+    nextLocation = _extends({}, nextLocation, init2.history.encodeLocation(nextLocation));
     let userReplace = opts && opts.replace != null ? opts.replace : void 0, historyAction = Action.Push;
     userReplace === !0 ? historyAction = Action.Replace : userReplace === !1 || submission != null && isMutationMethod(submission.formMethod) && submission.formAction === state.location.pathname + state.location.search && (historyAction = Action.Replace);
     let preventScrollReset = opts && "preventScrollReset" in opts ? opts.preventScrollReset === !0 : void 0, blockerKey = shouldBlockNavigation({
@@ -1291,7 +1291,7 @@ function createRouter(init) {
   }
   async function startNavigation(historyAction, location, opts) {
     pendingNavigationController && pendingNavigationController.abort(), pendingNavigationController = null, pendingAction = historyAction, isUninterruptedRevalidation = (opts && opts.startUninterruptedRevalidation) === !0, saveScrollPosition(state.location, state.matches), pendingPreventScrollReset = (opts && opts.preventScrollReset) === !0;
-    let routesToUse = inFlightDataRoutes || dataRoutes, loadingNavigation = opts && opts.overrideNavigation, matches = matchRoutes(routesToUse, location, init.basename);
+    let routesToUse = inFlightDataRoutes || dataRoutes, loadingNavigation = opts && opts.overrideNavigation, matches = matchRoutes(routesToUse, location, init2.basename);
     if (!matches) {
       let error = getInternalRouterError(404, {
         pathname: location.pathname
@@ -1315,7 +1315,7 @@ function createRouter(init) {
       return;
     }
     pendingNavigationController = new AbortController();
-    let request = createClientSideRequest(init.history, location, pendingNavigationController.signal, opts && opts.submission), pendingActionData, pendingError;
+    let request = createClientSideRequest(init2.history, location, pendingNavigationController.signal, opts && opts.submission), pendingActionData, pendingError;
     if (opts && opts.pendingError)
       pendingError = {
         [findNearestBoundary(matches).route.id]: opts.pendingError
@@ -1413,7 +1413,7 @@ function createRouter(init) {
       formAction: loadingNavigation.formAction,
       formData: loadingNavigation.formData,
       formEncType: loadingNavigation.formEncType
-    } : void 0, routesToUse = inFlightDataRoutes || dataRoutes, [matchesToLoad, revalidatingFetchers] = getMatchesToLoad(init.history, state, matches, activeSubmission, location, isRevalidationRequired, cancelledDeferredRoutes, cancelledFetcherLoads, fetchLoadMatches, routesToUse, init.basename, pendingActionData, pendingError);
+    } : void 0, routesToUse = inFlightDataRoutes || dataRoutes, [matchesToLoad, revalidatingFetchers] = getMatchesToLoad(init2.history, state, matches, activeSubmission, location, isRevalidationRequired, cancelledDeferredRoutes, cancelledFetcherLoads, fetchLoadMatches, routesToUse, init2.basename, pendingActionData, pendingError);
     if (cancelActiveDeferreds((routeId) => !(matches && matches.some((m) => m.route.id === routeId)) || matchesToLoad && matchesToLoad.some((m) => m.route.id === routeId)), matchesToLoad.length === 0 && revalidatingFetchers.length === 0)
       return completeNavigation(location, _extends({
         matches,
@@ -1486,11 +1486,11 @@ function createRouter(init) {
   function getFetcher(key) {
     return state.fetchers.get(key) || IDLE_FETCHER;
   }
-  function fetch(key, routeId, href, opts) {
+  function fetch2(key, routeId, href, opts) {
     if (isServer)
       throw new Error("router.fetch() was called during the server render, but it shouldn't be. You are likely calling a useFetcher() method in the body of your component. Try moving it to a useEffect or a callback.");
     fetchControllers.has(key) && abortFetcher(key);
-    let matches = matchRoutes(inFlightDataRoutes || dataRoutes, href, init.basename);
+    let matches = matchRoutes(inFlightDataRoutes || dataRoutes, href, init2.basename);
     if (!matches) {
       setFetcherError(key, routeId, getInternalRouterError(404, {
         pathname: href
@@ -1529,7 +1529,7 @@ function createRouter(init) {
     state.fetchers.set(key, fetcher), updateState({
       fetchers: new Map(state.fetchers)
     });
-    let abortController = new AbortController(), fetchRequest = createClientSideRequest(init.history, path, abortController.signal, submission);
+    let abortController = new AbortController(), fetchRequest = createClientSideRequest(init2.history, path, abortController.signal, submission);
     fetchControllers.set(key, abortController);
     let actionResult = await callLoaderOrAction("action", fetchRequest, match, requestMatches, manifest, detectErrorBoundary2, router.basename);
     if (fetchRequest.signal.aborted) {
@@ -1559,7 +1559,7 @@ function createRouter(init) {
       throw getInternalRouterError(400, {
         type: "defer-action"
       });
-    let nextLocation = state.navigation.location || state.location, revalidationRequest = createClientSideRequest(init.history, nextLocation, abortController.signal), routesToUse = inFlightDataRoutes || dataRoutes, matches = state.navigation.state !== "idle" ? matchRoutes(routesToUse, state.navigation.location, init.basename) : state.matches;
+    let nextLocation = state.navigation.location || state.location, revalidationRequest = createClientSideRequest(init2.history, nextLocation, abortController.signal), routesToUse = inFlightDataRoutes || dataRoutes, matches = state.navigation.state !== "idle" ? matchRoutes(routesToUse, state.navigation.location, init2.basename) : state.matches;
     invariant(matches, "Didn't find any matches after fetcher action");
     let loadId = ++incrementingLoadId;
     fetchReloadIds.set(key, loadId);
@@ -1571,7 +1571,7 @@ function createRouter(init) {
     });
     state.fetchers.set(key, loadFetcher);
     let [matchesToLoad, revalidatingFetchers] = getMatchesToLoad(
-      init.history,
+      init2.history,
       state,
       matches,
       submission,
@@ -1581,7 +1581,7 @@ function createRouter(init) {
       cancelledFetcherLoads,
       fetchLoadMatches,
       routesToUse,
-      init.basename,
+      init2.basename,
       {
         [match.route.id]: actionResult.data
       },
@@ -1652,7 +1652,7 @@ function createRouter(init) {
     state.fetchers.set(key, loadingFetcher), updateState({
       fetchers: new Map(state.fetchers)
     });
-    let abortController = new AbortController(), fetchRequest = createClientSideRequest(init.history, path, abortController.signal);
+    let abortController = new AbortController(), fetchRequest = createClientSideRequest(init2.history, path, abortController.signal);
     fetchControllers.set(key, abortController);
     let result = await callLoaderOrAction("loader", fetchRequest, match, matches, manifest, detectErrorBoundary2, router.basename);
     if (isDeferredResult(result) && (result = await resolveDeferredData(result, fetchRequest.signal, !0) || result), fetchControllers.get(key) === abortController && fetchControllers.delete(key), fetchRequest.signal.aborted)
@@ -1703,7 +1703,7 @@ function createRouter(init) {
       } : {})
     );
     if (invariant(redirectLocation, "Expected a location on the redirect navigation"), ABSOLUTE_URL_REGEX.test(redirect4.location) && isBrowser && typeof ((_window = window) == null ? void 0 : _window.location) < "u") {
-      let url = init.history.createURL(redirect4.location), isDifferentBasename = stripBasename(url.pathname, init.basename || "/") == null;
+      let url = init2.history.createURL(redirect4.location), isDifferentBasename = stripBasename(url.pathname, init2.basename || "/") == null;
       if (window.location.origin !== url.origin || isDifferentBasename) {
         replace ? window.location.replace(redirect4.location) : window.location.assign(redirect4.location);
         return;
@@ -1750,7 +1750,7 @@ function createRouter(init) {
     });
   }
   async function callLoadersAndMaybeResolveData(currentMatches, matches, matchesToLoad, fetchersToLoad, request) {
-    let results = await Promise.all([...matchesToLoad.map((match) => callLoaderOrAction("loader", request, match, matches, manifest, detectErrorBoundary2, router.basename)), ...fetchersToLoad.map((f) => f.matches && f.match ? callLoaderOrAction("loader", createClientSideRequest(init.history, f.path, request.signal), f.match, f.matches, manifest, detectErrorBoundary2, router.basename) : {
+    let results = await Promise.all([...matchesToLoad.map((match) => callLoaderOrAction("loader", request, match, matches, manifest, detectErrorBoundary2, router.basename)), ...fetchersToLoad.map((f) => f.matches && f.match ? callLoaderOrAction("loader", createClientSideRequest(init2.history, f.path, request.signal), f.match, f.matches, manifest, detectErrorBoundary2, router.basename) : {
       type: ResultType.error,
       error: getInternalRouterError(404, {
         pathname: f.path
@@ -1807,8 +1807,8 @@ function createRouter(init) {
   }
   function abortStaleFetchLoads(landedId) {
     let yeetedKeys = [];
-    for (let [key, id] of fetchReloadIds)
-      if (id < landedId) {
+    for (let [key, id2] of fetchReloadIds)
+      if (id2 < landedId) {
         let fetcher = state.fetchers.get(key);
         invariant(fetcher, "Expected fetcher: " + key), fetcher.state === "loading" && (abortFetcher(key), fetchReloadIds.delete(key), yeetedKeys.push(key));
       }
@@ -1881,7 +1881,7 @@ function createRouter(init) {
   }
   return router = {
     get basename() {
-      return init.basename;
+      return init2.basename;
     },
     get state() {
       return state;
@@ -1893,10 +1893,10 @@ function createRouter(init) {
     subscribe,
     enableScrollRestoration,
     navigate,
-    fetch,
+    fetch: fetch2,
     revalidate,
-    createHref: (to) => init.history.createHref(to),
-    encodeLocation: (to) => init.history.encodeLocation(to),
+    createHref: (to) => init2.history.createHref(to),
+    encodeLocation: (to) => init2.history.encodeLocation(to),
     getFetcher,
     deleteFetcher,
     dispose,
@@ -2199,7 +2199,7 @@ function getMatchesToLoad(history, state, matches, submission, location, isReval
       return !0;
     if (match.route.loader == null)
       return !1;
-    if (isNewLoader(state.loaderData, state.matches[index], match) || cancelledDeferredRoutes.some((id) => id === match.route.id))
+    if (isNewLoader(state.loaderData, state.matches[index], match) || cancelledDeferredRoutes.some((id2) => id2 === match.route.id))
       return !0;
     let currentRouteMatch = state.matches[index], nextRouteMatch = match;
     return shouldRevalidateLoader(match, _extends({
@@ -2383,7 +2383,7 @@ async function callLoaderOrAction(type, request, match, matches, manifest, detec
   };
 }
 function createClientSideRequest(history, location, signal, submission) {
-  let url = history.createURL(stripHashFromPath(location)).toString(), init = {
+  let url = history.createURL(stripHashFromPath(location)).toString(), init2 = {
     signal
   };
   if (submission && isMutationMethod(submission.formMethod)) {
@@ -2392,9 +2392,9 @@ function createClientSideRequest(history, location, signal, submission) {
       formEncType,
       formData
     } = submission;
-    init.method = formMethod.toUpperCase(), init.body = formEncType === "application/x-www-form-urlencoded" ? convertFormDataToSearchParams(formData) : formData;
+    init2.method = formMethod.toUpperCase(), init2.body = formEncType === "application/x-www-form-urlencoded" ? convertFormDataToSearchParams(formData) : formData;
   }
-  return new Request(url, init);
+  return new Request(url, init2);
 }
 function convertFormDataToSearchParams(formData) {
   let searchParams = new URLSearchParams();
@@ -2405,12 +2405,12 @@ function convertFormDataToSearchParams(formData) {
 function processRouteLoaderData(matches, matchesToLoad, results, pendingError, activeDeferreds) {
   let loaderData = {}, errors = null, statusCode, foundError = !1, loaderHeaders = {};
   return results.forEach((result, index) => {
-    let id = matchesToLoad[index].route.id;
+    let id2 = matchesToLoad[index].route.id;
     if (invariant(!isRedirectResult(result), "Cannot handle redirect results in processLoaderData"), isErrorResult(result)) {
-      let boundaryMatch = findNearestBoundary(matches, id), error = result.error;
-      pendingError && (error = Object.values(pendingError)[0], pendingError = void 0), errors = errors || {}, errors[boundaryMatch.route.id] == null && (errors[boundaryMatch.route.id] = error), loaderData[id] = void 0, foundError || (foundError = !0, statusCode = isRouteErrorResponse(result.error) ? result.error.status : 500), result.headers && (loaderHeaders[id] = result.headers);
+      let boundaryMatch = findNearestBoundary(matches, id2), error = result.error;
+      pendingError && (error = Object.values(pendingError)[0], pendingError = void 0), errors = errors || {}, errors[boundaryMatch.route.id] == null && (errors[boundaryMatch.route.id] = error), loaderData[id2] = void 0, foundError || (foundError = !0, statusCode = isRouteErrorResponse(result.error) ? result.error.status : 500), result.headers && (loaderHeaders[id2] = result.headers);
     } else
-      isDeferredResult(result) ? (activeDeferreds.set(id, result.deferredData), loaderData[id] = result.deferredData.data) : loaderData[id] = result.data, result.statusCode != null && result.statusCode !== 200 && !foundError && (statusCode = result.statusCode), result.headers && (loaderHeaders[id] = result.headers);
+      isDeferredResult(result) ? (activeDeferreds.set(id2, result.deferredData), loaderData[id2] = result.deferredData.data) : loaderData[id2] = result.data, result.statusCode != null && result.statusCode !== 200 && !foundError && (statusCode = result.statusCode), result.headers && (loaderHeaders[id2] = result.headers);
   }), pendingError && (errors = pendingError, loaderData[Object.keys(pendingError)[0]] = void 0), {
     loaderData,
     errors,
@@ -2460,8 +2460,8 @@ function processLoaderData(state, matches, matchesToLoad, results, pendingError,
 function mergeLoaderData(loaderData, newLoaderData, matches, errors) {
   let mergedLoaderData = _extends({}, newLoaderData);
   for (let match of matches) {
-    let id = match.route.id;
-    if (newLoaderData.hasOwnProperty(id) ? newLoaderData[id] !== void 0 && (mergedLoaderData[id] = newLoaderData[id]) : loaderData[id] !== void 0 && match.route.loader && (mergedLoaderData[id] = loaderData[id]), errors && errors.hasOwnProperty(id))
+    let id2 = match.route.id;
+    if (newLoaderData.hasOwnProperty(id2) ? newLoaderData[id2] !== void 0 && (mergedLoaderData[id2] = newLoaderData[id2]) : loaderData[id2] !== void 0 && match.route.loader && (mergedLoaderData[id2] = loaderData[id2]), errors && errors.hasOwnProperty(id2))
       break;
   }
   return mergedLoaderData;
@@ -2605,11 +2605,11 @@ var Action, PopStateEventType, ResultType, immutableRouteKeys, paramRe, dynamicS
     })(ResultType || (ResultType = {}));
     immutableRouteKeys = /* @__PURE__ */ new Set(["lazy", "caseSensitive", "path", "id", "index", "children"]);
     paramRe = /^:\w+$/, dynamicSegmentValue = 3, indexRouteValue = 2, emptySegmentValue = 1, staticSegmentValue = 10, splatPenalty = -2, isSplat = (s) => s === "*";
-    joinPaths = (paths) => paths.join("/").replace(/\/\/+/g, "/"), normalizePathname = (pathname) => pathname.replace(/\/+$/, "").replace(/^\/*/, "/"), normalizeSearch = (search) => !search || search === "?" ? "" : search.startsWith("?") ? search : "?" + search, normalizeHash = (hash) => !hash || hash === "#" ? "" : hash.startsWith("#") ? hash : "#" + hash, json = function(data, init) {
-      init === void 0 && (init = {});
-      let responseInit = typeof init == "number" ? {
-        status: init
-      } : init, headers = new Headers(responseInit.headers);
+    joinPaths = (paths) => paths.join("/").replace(/\/\/+/g, "/"), normalizePathname = (pathname) => pathname.replace(/\/+$/, "").replace(/^\/*/, "/"), normalizeSearch = (search) => !search || search === "?" ? "" : search.startsWith("?") ? search : "?" + search, normalizeHash = (hash) => !hash || hash === "#" ? "" : hash.startsWith("#") ? hash : "#" + hash, json = function(data, init2) {
+      init2 === void 0 && (init2 = {});
+      let responseInit = typeof init2 == "number" ? {
+        status: init2
+      } : init2, headers = new Headers(responseInit.headers);
       return headers.has("Content-Type") || headers.set("Content-Type", "application/json; charset=utf-8"), new Response(JSON.stringify(data), _extends({}, responseInit, {
         headers
       }));
@@ -2682,15 +2682,15 @@ var Action, PopStateEventType, ResultType, immutableRouteKeys, paramRe, dynamicS
         return Array.from(this.pendingKeysSet);
       }
     };
-    defer = function(data, init) {
-      init === void 0 && (init = {});
-      let responseInit = typeof init == "number" ? {
-        status: init
-      } : init;
+    defer = function(data, init2) {
+      init2 === void 0 && (init2 = {});
+      let responseInit = typeof init2 == "number" ? {
+        status: init2
+      } : init2;
       return new DeferredData(data, responseInit);
-    }, redirect = function(url, init) {
-      init === void 0 && (init = 302);
-      let responseInit = init;
+    }, redirect = function(url, init2) {
+      init2 === void 0 && (init2 = 302);
+      let responseInit = init2;
       typeof responseInit == "number" ? responseInit = {
         status: responseInit
       } : typeof responseInit.status > "u" && (responseInit.status = 302);
@@ -2838,7 +2838,7 @@ var json3, defer3, redirect3, redirectStatusCodes2, DEFERRED_VALUE_PLACEHOLDER_P
   "node_modules/@remix-run/server-runtime/dist/esm/responses.js"() {
     init_router();
     init_errors();
-    json3 = (data, init = {}) => json(data, init), defer3 = (data, init = {}) => defer(data, init), redirect3 = (url, init = 302) => redirect(url, init);
+    json3 = (data, init2 = {}) => json(data, init2), defer3 = (data, init2 = {}) => defer(data, init2), redirect3 = (url, init2 = 302) => redirect(url, init2);
     redirectStatusCodes2 = /* @__PURE__ */ new Set([301, 302, 303, 307, 308]);
     DEFERRED_VALUE_PLACEHOLDER_PREFIX = "__deferred_promise:";
   }
@@ -2921,7 +2921,7 @@ var require_set_cookie = __commonJS({
         return cookiesString;
       if (typeof cookiesString != "string")
         return [];
-      var cookiesStrings = [], pos = 0, start, ch, lastComma, nextStart, cookiesSeparatorFound;
+      var cookiesStrings = [], pos = 0, start2, ch, lastComma, nextStart, cookiesSeparatorFound;
       function skipWhitespace() {
         for (; pos < cookiesString.length && /\s/.test(cookiesString.charAt(pos)); )
           pos += 1;
@@ -2931,14 +2931,14 @@ var require_set_cookie = __commonJS({
         return ch = cookiesString.charAt(pos), ch !== "=" && ch !== ";" && ch !== ",";
       }
       for (; pos < cookiesString.length; ) {
-        for (start = pos, cookiesSeparatorFound = !1; skipWhitespace(); )
+        for (start2 = pos, cookiesSeparatorFound = !1; skipWhitespace(); )
           if (ch = cookiesString.charAt(pos), ch === ",") {
             for (lastComma = pos, pos += 1, skipWhitespace(), nextStart = pos; pos < cookiesString.length && notSpecialChar(); )
               pos += 1;
-            pos < cookiesString.length && cookiesString.charAt(pos) === "=" ? (cookiesSeparatorFound = !0, pos = nextStart, cookiesStrings.push(cookiesString.substring(start, lastComma)), start = pos) : pos = lastComma + 1;
+            pos < cookiesString.length && cookiesString.charAt(pos) === "=" ? (cookiesSeparatorFound = !0, pos = nextStart, cookiesStrings.push(cookiesString.substring(start2, lastComma)), start2 = pos) : pos = lastComma + 1;
           } else
             pos += 1;
-        (!cookiesSeparatorFound || pos >= cookiesString.length) && cookiesStrings.push(cookiesString.substring(start, cookiesString.length));
+        (!cookiesSeparatorFound || pos >= cookiesString.length) && cookiesStrings.push(cookiesString.substring(start2, cookiesString.length));
       }
       return cookiesStrings;
     }
@@ -2953,8 +2953,8 @@ var require_set_cookie = __commonJS({
 function getDocumentHeadersRR(build, context) {
   return (context.errors ? context.matches.slice(0, context.matches.findIndex((m) => context.errors[m.route.id]) + 1) : context.matches).reduce((parentHeaders, match) => {
     let {
-      id
-    } = match.route, routeModule = build.routes[id].module, loaderHeaders = context.loaderHeaders[id] || new Headers(), actionHeaders = context.actionHeaders[id] || new Headers(), headers = new Headers(routeModule.headers ? typeof routeModule.headers == "function" ? routeModule.headers({
+      id: id2
+    } = match.route, routeModule = build.routes[id2].module, loaderHeaders = context.loaderHeaders[id2] || new Headers(), actionHeaders = context.actionHeaders[id2] || new Headers(), headers = new Headers(routeModule.headers ? typeof routeModule.headers == "function" ? routeModule.headers({
       loaderHeaders,
       parentHeaders,
       actionHeaders
@@ -3145,8 +3145,8 @@ async function handleDataRequestRR(serverMode, staticHandler, routeId, request, 
       });
     }
     if (UNSAFE_DEFERRED_SYMBOL in response) {
-      let deferredData = response[UNSAFE_DEFERRED_SYMBOL], body = createDeferredReadableStream(deferredData, request.signal, serverMode), init = deferredData.init || {}, headers = new Headers(init.headers);
-      return headers.set("Content-Type", "text/remix-deferred"), init.headers = headers, new Response(body, init);
+      let deferredData = response[UNSAFE_DEFERRED_SYMBOL], body = createDeferredReadableStream(deferredData, request.signal, serverMode), init2 = deferredData.init || {}, headers = new Headers(init2.headers);
+      return headers.set("Content-Type", "text/remix-deferred"), init2.headers = headers, new Response(body, init2);
     }
     return response;
   } catch (error) {
@@ -3312,11 +3312,11 @@ var createSession, isSession, createSessionStorageFactory, init_sessions = __esm
   "node_modules/@remix-run/server-runtime/dist/esm/sessions.js"() {
     init_cookies();
     init_warnings();
-    createSession = (initialData = {}, id = "") => {
+    createSession = (initialData = {}, id2 = "") => {
       let map = new Map(Object.entries(initialData));
       return {
         get id() {
-          return id;
+          return id2;
         },
         get data() {
           return Object.fromEntries(map);
@@ -3343,7 +3343,7 @@ var createSession, isSession, createSessionStorageFactory, init_sessions = __esm
           map.delete(name);
         }
       };
-    }, isSession = (object) => object != null && typeof object.id == "string" && typeof object.data < "u" && typeof object.has == "function" && typeof object.get == "function" && typeof object.set == "function" && typeof object.flash == "function" && typeof object.unset == "function", createSessionStorageFactory = (createCookie) => ({
+    }, isSession = (object3) => object3 != null && typeof object3.id == "string" && typeof object3.data < "u" && typeof object3.has == "function" && typeof object3.get == "function" && typeof object3.set == "function" && typeof object3.flash == "function" && typeof object3.unset == "function", createSessionStorageFactory = (createCookie) => ({
       cookie: cookieArg,
       createData,
       readData,
@@ -3353,15 +3353,15 @@ var createSession, isSession, createSessionStorageFactory, init_sessions = __esm
       let cookie = isCookie(cookieArg) ? cookieArg : createCookie((cookieArg == null ? void 0 : cookieArg.name) || "__session", cookieArg);
       return warnOnceAboutSigningSessionCookie(cookie), {
         async getSession(cookieHeader, options) {
-          let id = cookieHeader && await cookie.parse(cookieHeader, options), data = id && await readData(id);
-          return createSession(data || {}, id || "");
+          let id2 = cookieHeader && await cookie.parse(cookieHeader, options), data = id2 && await readData(id2);
+          return createSession(data || {}, id2 || "");
         },
         async commitSession(session, options) {
           let {
-            id,
+            id: id2,
             data
           } = session;
-          return id ? await updateData(id, data, cookie.expires) : id = await createData(data, cookie.expires), cookie.serialize(id, options);
+          return id2 ? await updateData(id2, data, cookie.expires) : id2 = await createData(data, cookie.expires), cookie.serialize(id2, options);
         },
         async destroySession(session, options) {
           return await deleteData(session.id), cookie.serialize("", {
@@ -3414,32 +3414,32 @@ var createMemorySessionStorageFactory, init_memoryStorage = __esm({
       return createSessionStorage({
         cookie,
         async createData(data, expires) {
-          let id = (++uniqueId).toString();
-          return map.set(id, {
+          let id2 = (++uniqueId).toString();
+          return map.set(id2, {
             data,
             expires
-          }), id;
+          }), id2;
         },
-        async readData(id) {
-          if (map.has(id)) {
+        async readData(id2) {
+          if (map.has(id2)) {
             let {
               data,
               expires
-            } = map.get(id);
+            } = map.get(id2);
             if (!expires || expires > new Date())
               return data;
-            expires && map.delete(id);
+            expires && map.delete(id2);
           }
           return null;
         },
-        async updateData(id, data, expires) {
-          map.set(id, {
+        async updateData(id2, data, expires) {
+          map.set(id2, {
             data,
             expires
           });
         },
-        async deleteData(id) {
-          map.delete(id);
+        async deleteData(id2) {
+          map.delete(id2);
         }
       });
     };
@@ -3459,7 +3459,7 @@ var MaxPartSizeExceededError, init_errors2 = __esm({
 
 // node_modules/@remix-run/server-runtime/dist/esm/upload/memoryUploadHandler.js
 function createMemoryUploadHandler({
-  filter,
+  filter: filter2,
   maxPartSize = 3e6
 } = {}) {
   return async ({
@@ -3468,7 +3468,7 @@ function createMemoryUploadHandler({
     name,
     data
   }) => {
-    if (filter && !await filter({
+    if (filter2 && !await filter2({
       filename,
       contentType,
       name
@@ -3531,7 +3531,7 @@ var require_crypto = __commonJS({
   "node_modules/@remix-run/cloudflare/dist/crypto.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: !0 });
-    var encoder = new TextEncoder(), sign = async (value, secret) => {
+    var encoder = new TextEncoder(), sign2 = async (value, secret) => {
       let key = await createKey2(secret, ["sign"]), data = encoder.encode(value), signature = await crypto.subtle.sign("HMAC", key, data), hash = btoa(String.fromCharCode(...new Uint8Array(signature))).replace(/=+$/, "");
       return value + "." + hash;
     }, unsign = async (signed, secret) => {
@@ -3550,7 +3550,7 @@ var require_crypto = __commonJS({
         array[i] = byteString.charCodeAt(i);
       return array;
     }
-    exports.sign = sign;
+    exports.sign = sign2;
     exports.unsign = unsign;
   }
 });
@@ -3587,24 +3587,24 @@ var require_workersKVStorage = __commonJS({
           for (; ; ) {
             let randomBytes = new Uint8Array(8);
             crypto.getRandomValues(randomBytes);
-            let id = [...randomBytes].map((x) => x.toString(16).padStart(2, "0")).join("");
-            if (!await kv.get(id, "json"))
-              return await kv.put(id, JSON.stringify(data), {
+            let id2 = [...randomBytes].map((x) => x.toString(16).padStart(2, "0")).join("");
+            if (!await kv.get(id2, "json"))
+              return await kv.put(id2, JSON.stringify(data), {
                 expiration: expires ? Math.round(expires.getTime() / 1e3) : void 0
-              }), id;
+              }), id2;
           }
         },
-        async readData(id) {
-          let session = await kv.get(id);
+        async readData(id2) {
+          let session = await kv.get(id2);
           return session ? JSON.parse(session) : null;
         },
-        async updateData(id, data, expires) {
-          await kv.put(id, JSON.stringify(data), {
+        async updateData(id2, data, expires) {
+          await kv.put(id2, JSON.stringify(data), {
             expiration: expires ? Math.round(expires.getTime() / 1e3) : void 0
           });
         },
-        async deleteData(id) {
-          await kv.delete(id);
+        async deleteData(id2) {
+          await kv.delete(id2);
         }
       });
     }
@@ -3890,9 +3890,9 @@ var require_react_development = __commonJS({
               var outerName = type.displayName || null;
               return outerName !== null ? outerName : getComponentNameFromType(type.type) || "Memo";
             case REACT_LAZY_TYPE: {
-              var lazyComponent = type, payload = lazyComponent._payload, init = lazyComponent._init;
+              var lazyComponent = type, payload = lazyComponent._payload, init2 = lazyComponent._init;
               try {
-                return getComponentNameFromType(init(payload));
+                return getComponentNameFromType(init2(payload));
               } catch {
                 return null;
               }
@@ -3947,7 +3947,7 @@ var require_react_development = __commonJS({
           didWarnAboutStringRefs[componentName] || (error('Component "%s" contains the string ref "%s". Support for string refs will be removed in a future major release. This case cannot be automatically converted to an arrow function. We ask you to manually fix this case by using useRef() or createRef() instead. Learn more about using refs safely here: https://reactjs.org/link/strict-mode-string-ref', componentName, config.ref), didWarnAboutStringRefs[componentName] = !0);
         }
       }
-      var ReactElement = function(type, key, ref, self, source, owner, props) {
+      var ReactElement = function(type, key, ref, self2, source, owner, props) {
         var element = {
           $$typeof: REACT_ELEMENT_TYPE,
           type,
@@ -3965,7 +3965,7 @@ var require_react_development = __commonJS({
           configurable: !1,
           enumerable: !1,
           writable: !1,
-          value: self
+          value: self2
         }), Object.defineProperty(element, "_source", {
           configurable: !1,
           enumerable: !1,
@@ -3973,16 +3973,16 @@ var require_react_development = __commonJS({
           value: source
         }), Object.freeze && (Object.freeze(element.props), Object.freeze(element)), element;
       };
-      function createElement7(type, config, children) {
-        var propName, props = {}, key = null, ref = null, self = null, source = null;
+      function createElement7(type, config, children2) {
+        var propName, props = {}, key = null, ref = null, self2 = null, source = null;
         if (config != null) {
-          hasValidRef(config) && (ref = config.ref, warnIfStringRefCannotBeAutoConverted(config)), hasValidKey(config) && (checkKeyStringCoercion(config.key), key = "" + config.key), self = config.__self === void 0 ? null : config.__self, source = config.__source === void 0 ? null : config.__source;
+          hasValidRef(config) && (ref = config.ref, warnIfStringRefCannotBeAutoConverted(config)), hasValidKey(config) && (checkKeyStringCoercion(config.key), key = "" + config.key), self2 = config.__self === void 0 ? null : config.__self, source = config.__source === void 0 ? null : config.__source;
           for (propName in config)
             hasOwnProperty.call(config, propName) && !RESERVED_PROPS.hasOwnProperty(propName) && (props[propName] = config[propName]);
         }
         var childrenLength = arguments.length - 2;
         if (childrenLength === 1)
-          props.children = children;
+          props.children = children2;
         else if (childrenLength > 1) {
           for (var childArray = Array(childrenLength), i = 0; i < childrenLength; i++)
             childArray[i] = arguments[i + 2];
@@ -3997,16 +3997,16 @@ var require_react_development = __commonJS({
           var displayName = typeof type == "function" ? type.displayName || type.name || "Unknown" : type;
           key && defineKeyPropWarningGetter(props, displayName), ref && defineRefPropWarningGetter(props, displayName);
         }
-        return ReactElement(type, key, ref, self, source, ReactCurrentOwner.current, props);
+        return ReactElement(type, key, ref, self2, source, ReactCurrentOwner.current, props);
       }
       function cloneAndReplaceKey(oldElement, newKey) {
         var newElement = ReactElement(oldElement.type, newKey, oldElement.ref, oldElement._self, oldElement._source, oldElement._owner, oldElement.props);
         return newElement;
       }
-      function cloneElement(element, config, children) {
+      function cloneElement(element, config, children2) {
         if (element == null)
           throw new Error("React.cloneElement(...): The argument must be a React element, but you passed " + element + ".");
-        var propName, props = assign({}, element.props), key = element.key, ref = element.ref, self = element._self, source = element._source, owner = element._owner;
+        var propName, props = assign({}, element.props), key = element.key, ref = element.ref, self2 = element._self, source = element._source, owner = element._owner;
         if (config != null) {
           hasValidRef(config) && (ref = config.ref, owner = ReactCurrentOwner.current), hasValidKey(config) && (checkKeyStringCoercion(config.key), key = "" + config.key);
           var defaultProps;
@@ -4016,16 +4016,16 @@ var require_react_development = __commonJS({
         }
         var childrenLength = arguments.length - 2;
         if (childrenLength === 1)
-          props.children = children;
+          props.children = children2;
         else if (childrenLength > 1) {
           for (var childArray = Array(childrenLength), i = 0; i < childrenLength; i++)
             childArray[i] = arguments[i + 2];
           props.children = childArray;
         }
-        return ReactElement(element.type, key, ref, self, source, owner, props);
+        return ReactElement(element.type, key, ref, self2, source, owner, props);
       }
-      function isValidElement2(object) {
-        return typeof object == "object" && object !== null && object.$$typeof === REACT_ELEMENT_TYPE;
+      function isValidElement2(object3) {
+        return typeof object3 == "object" && object3 !== null && object3.$$typeof === REACT_ELEMENT_TYPE;
       }
       var SEPARATOR = ".", SUBSEPARATOR = ":";
       function escape2(key) {
@@ -4044,11 +4044,11 @@ var require_react_development = __commonJS({
       function getElementKey(element, index) {
         return typeof element == "object" && element !== null && element.key != null ? (checkKeyStringCoercion(element.key), escape2("" + element.key)) : index.toString(36);
       }
-      function mapIntoArray(children, array, escapedPrefix, nameSoFar, callback) {
-        var type = typeof children;
-        (type === "undefined" || type === "boolean") && (children = null);
+      function mapIntoArray(children2, array, escapedPrefix, nameSoFar, callback) {
+        var type = typeof children2;
+        (type === "undefined" || type === "boolean") && (children2 = null);
         var invokeCallback = !1;
-        if (children === null)
+        if (children2 === null)
           invokeCallback = !0;
         else
           switch (type) {
@@ -4057,14 +4057,14 @@ var require_react_development = __commonJS({
               invokeCallback = !0;
               break;
             case "object":
-              switch (children.$$typeof) {
+              switch (children2.$$typeof) {
                 case REACT_ELEMENT_TYPE:
                 case REACT_PORTAL_TYPE:
                   invokeCallback = !0;
               }
           }
         if (invokeCallback) {
-          var _child = children, mappedChild = callback(_child), childKey = nameSoFar === "" ? SEPARATOR + getElementKey(_child, 0) : nameSoFar;
+          var _child = children2, mappedChild = callback(_child), childKey = nameSoFar === "" ? SEPARATOR + getElementKey(_child, 0) : nameSoFar;
           if (isArray(mappedChild)) {
             var escapedChildKey = "";
             childKey != null && (escapedChildKey = escapeUserProvidedKey(childKey) + "/"), mapIntoArray(mappedChild, array, escapedChildKey, "", function(c) {
@@ -4078,51 +4078,51 @@ var require_react_development = __commonJS({
           return 1;
         }
         var child, nextName, subtreeCount = 0, nextNamePrefix = nameSoFar === "" ? SEPARATOR : nameSoFar + SUBSEPARATOR;
-        if (isArray(children))
-          for (var i = 0; i < children.length; i++)
-            child = children[i], nextName = nextNamePrefix + getElementKey(child, i), subtreeCount += mapIntoArray(child, array, escapedPrefix, nextName, callback);
+        if (isArray(children2))
+          for (var i = 0; i < children2.length; i++)
+            child = children2[i], nextName = nextNamePrefix + getElementKey(child, i), subtreeCount += mapIntoArray(child, array, escapedPrefix, nextName, callback);
         else {
-          var iteratorFn = getIteratorFn(children);
+          var iteratorFn = getIteratorFn(children2);
           if (typeof iteratorFn == "function") {
-            var iterableChildren = children;
+            var iterableChildren = children2;
             iteratorFn === iterableChildren.entries && (didWarnAboutMaps || warn("Using Maps as children is not supported. Use an array of keyed ReactElements instead."), didWarnAboutMaps = !0);
             for (var iterator = iteratorFn.call(iterableChildren), step, ii = 0; !(step = iterator.next()).done; )
               child = step.value, nextName = nextNamePrefix + getElementKey(child, ii++), subtreeCount += mapIntoArray(child, array, escapedPrefix, nextName, callback);
           } else if (type === "object") {
-            var childrenString = String(children);
-            throw new Error("Objects are not valid as a React child (found: " + (childrenString === "[object Object]" ? "object with keys {" + Object.keys(children).join(", ") + "}" : childrenString) + "). If you meant to render a collection of children, use an array instead.");
+            var childrenString = String(children2);
+            throw new Error("Objects are not valid as a React child (found: " + (childrenString === "[object Object]" ? "object with keys {" + Object.keys(children2).join(", ") + "}" : childrenString) + "). If you meant to render a collection of children, use an array instead.");
           }
         }
         return subtreeCount;
       }
-      function mapChildren(children, func, context) {
-        if (children == null)
-          return children;
+      function mapChildren(children2, func, context) {
+        if (children2 == null)
+          return children2;
         var result = [], count = 0;
-        return mapIntoArray(children, result, "", "", function(child) {
+        return mapIntoArray(children2, result, "", "", function(child) {
           return func.call(context, child, count++);
         }), result;
       }
-      function countChildren(children) {
+      function countChildren(children2) {
         var n = 0;
-        return mapChildren(children, function() {
+        return mapChildren(children2, function() {
           n++;
         }), n;
       }
-      function forEachChildren(children, forEachFunc, forEachContext) {
-        mapChildren(children, function() {
+      function forEachChildren(children2, forEachFunc, forEachContext) {
+        mapChildren(children2, function() {
           forEachFunc.apply(this, arguments);
         }, forEachContext);
       }
-      function toArray(children) {
-        return mapChildren(children, function(child) {
+      function toArray(children2) {
+        return mapChildren(children2, function(child) {
           return child;
         }) || [];
       }
-      function onlyChild(children) {
-        if (!isValidElement2(children))
+      function onlyChild(children2) {
+        if (!isValidElement2(children2))
           throw new Error("React.Children.only expected to receive a single React element child.");
-        return children;
+        return children2;
       }
       function createContext3(defaultValue) {
         var context = {
@@ -4330,41 +4330,41 @@ See https://reactjs.org/link/invalid-hook-call for tips about how to debug and f
         }
         return dispatcher.useContext(Context);
       }
-      function useState5(initialState) {
+      function useState6(initialState) {
         var dispatcher = resolveDispatcher();
         return dispatcher.useState(initialState);
       }
-      function useReducer(reducer, initialArg, init) {
+      function useReducer(reducer, initialArg, init2) {
         var dispatcher = resolveDispatcher();
-        return dispatcher.useReducer(reducer, initialArg, init);
+        return dispatcher.useReducer(reducer, initialArg, init2);
       }
       function useRef3(initialValue) {
         var dispatcher = resolveDispatcher();
         return dispatcher.useRef(initialValue);
       }
-      function useEffect5(create, deps) {
+      function useEffect6(create2, deps) {
         var dispatcher = resolveDispatcher();
-        return dispatcher.useEffect(create, deps);
+        return dispatcher.useEffect(create2, deps);
       }
-      function useInsertionEffect(create, deps) {
+      function useInsertionEffect(create2, deps) {
         var dispatcher = resolveDispatcher();
-        return dispatcher.useInsertionEffect(create, deps);
+        return dispatcher.useInsertionEffect(create2, deps);
       }
-      function useLayoutEffect4(create, deps) {
+      function useLayoutEffect4(create2, deps) {
         var dispatcher = resolveDispatcher();
-        return dispatcher.useLayoutEffect(create, deps);
+        return dispatcher.useLayoutEffect(create2, deps);
       }
       function useCallback3(callback, deps) {
         var dispatcher = resolveDispatcher();
         return dispatcher.useCallback(callback, deps);
       }
-      function useMemo5(create, deps) {
+      function useMemo5(create2, deps) {
         var dispatcher = resolveDispatcher();
-        return dispatcher.useMemo(create, deps);
+        return dispatcher.useMemo(create2, deps);
       }
-      function useImperativeHandle(ref, create, deps) {
+      function useImperativeHandle(ref, create2, deps) {
         var dispatcher = resolveDispatcher();
-        return dispatcher.useImperativeHandle(ref, create, deps);
+        return dispatcher.useImperativeHandle(ref, create2, deps);
       }
       function useDebugValue2(value, formatterFn) {
         {
@@ -4473,9 +4473,9 @@ See https://reactjs.org/link/invalid-hook-call for tips about how to debug and f
         if (!fn || reentry)
           return "";
         {
-          var frame = componentFrameCache.get(fn);
-          if (frame !== void 0)
-            return frame;
+          var frame2 = componentFrameCache.get(fn);
+          if (frame2 !== void 0)
+            return frame2;
         }
         var control;
         reentry = !0;
@@ -4567,9 +4567,9 @@ See https://reactjs.org/link/invalid-hook-call for tips about how to debug and f
             case REACT_MEMO_TYPE:
               return describeUnknownElementTypeFrameInDEV(type.type, source, ownerFn);
             case REACT_LAZY_TYPE: {
-              var lazyComponent = type, payload = lazyComponent._payload, init = lazyComponent._init;
+              var lazyComponent = type, payload = lazyComponent._payload, init2 = lazyComponent._init;
               try {
-                return describeUnknownElementTypeFrameInDEV(init(payload), source, ownerFn);
+                return describeUnknownElementTypeFrameInDEV(init2(payload), source, ownerFn);
               } catch {
               }
             }
@@ -4708,7 +4708,7 @@ Check the top-level render call using <` + parentName + ">.");
           fragment.ref !== null && (setCurrentlyValidatingElement$1(fragment), error("Invalid attribute `ref` supplied to `React.Fragment`."), setCurrentlyValidatingElement$1(null));
         }
       }
-      function createElementWithValidation(type, props, children) {
+      function createElementWithValidation(type, props, children2) {
         var validType = isValidElementType(type);
         if (!validType) {
           var info = "";
@@ -4738,7 +4738,7 @@ Check the top-level render call using <` + parentName + ">.");
           }
         }), validatedFactory;
       }
-      function cloneElementWithValidation(element, props, children) {
+      function cloneElementWithValidation(element, props, children2) {
         for (var newElement = cloneElement.apply(this, arguments), i = 2; i < arguments.length; i++)
           validateChildKeys(arguments[i], newElement.type);
         return validatePropTypes(newElement), newElement;
@@ -4869,7 +4869,7 @@ Check the top-level render call using <` + parentName + ">.");
         toArray,
         only: onlyChild
       };
-      exports.Children = Children2, exports.Component = Component2, exports.Fragment = REACT_FRAGMENT_TYPE, exports.Profiler = REACT_PROFILER_TYPE, exports.PureComponent = PureComponent, exports.StrictMode = REACT_STRICT_MODE_TYPE, exports.Suspense = REACT_SUSPENSE_TYPE, exports.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = ReactSharedInternals, exports.cloneElement = cloneElement$1, exports.createContext = createContext3, exports.createElement = createElement$1, exports.createFactory = createFactory, exports.createRef = createRef, exports.forwardRef = forwardRef3, exports.isValidElement = isValidElement2, exports.lazy = lazy, exports.memo = memo, exports.startTransition = startTransition, exports.unstable_act = act, exports.useCallback = useCallback3, exports.useContext = useContext5, exports.useDebugValue = useDebugValue2, exports.useDeferredValue = useDeferredValue, exports.useEffect = useEffect5, exports.useId = useId, exports.useImperativeHandle = useImperativeHandle, exports.useInsertionEffect = useInsertionEffect, exports.useLayoutEffect = useLayoutEffect4, exports.useMemo = useMemo5, exports.useReducer = useReducer, exports.useRef = useRef3, exports.useState = useState5, exports.useSyncExternalStore = useSyncExternalStore2, exports.useTransition = useTransition2, exports.version = ReactVersion, typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ < "u" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop == "function" && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(new Error());
+      exports.Children = Children2, exports.Component = Component2, exports.Fragment = REACT_FRAGMENT_TYPE, exports.Profiler = REACT_PROFILER_TYPE, exports.PureComponent = PureComponent, exports.StrictMode = REACT_STRICT_MODE_TYPE, exports.Suspense = REACT_SUSPENSE_TYPE, exports.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = ReactSharedInternals, exports.cloneElement = cloneElement$1, exports.createContext = createContext3, exports.createElement = createElement$1, exports.createFactory = createFactory, exports.createRef = createRef, exports.forwardRef = forwardRef3, exports.isValidElement = isValidElement2, exports.lazy = lazy, exports.memo = memo, exports.startTransition = startTransition, exports.unstable_act = act, exports.useCallback = useCallback3, exports.useContext = useContext5, exports.useDebugValue = useDebugValue2, exports.useDeferredValue = useDeferredValue, exports.useEffect = useEffect6, exports.useId = useId, exports.useImperativeHandle = useImperativeHandle, exports.useInsertionEffect = useInsertionEffect, exports.useLayoutEffect = useLayoutEffect4, exports.useMemo = useMemo5, exports.useReducer = useReducer, exports.useRef = useRef3, exports.useState = useState6, exports.useSyncExternalStore = useSyncExternalStore2, exports.useTransition = useTransition2, exports.version = ReactVersion, typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ < "u" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop == "function" && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(new Error());
     })();
   }
 });
@@ -4945,7 +4945,7 @@ function useHref(to, _temp) {
   );
   let {
     basename,
-    navigator
+    navigator: navigator2
   } = React.useContext(NavigationContext), {
     hash,
     pathname,
@@ -4953,7 +4953,7 @@ function useHref(to, _temp) {
   } = useResolvedPath(to, {
     relative
   }), joinedPathname = pathname;
-  return basename !== "/" && (joinedPathname = pathname === "/" ? basename : joinPaths([basename, pathname])), navigator.createHref({
+  return basename !== "/" && (joinedPathname = pathname === "/" ? basename : joinPaths([basename, pathname])), navigator2.createHref({
     pathname: joinedPathname,
     search,
     hash
@@ -4988,7 +4988,7 @@ function useNavigate() {
   );
   let {
     basename,
-    navigator
+    navigator: navigator2
   } = React.useContext(NavigationContext), {
     matches
   } = React.useContext(RouteContext), {
@@ -5000,12 +5000,12 @@ function useNavigate() {
     if (options === void 0 && (options = {}), warning(activeRef.current, "You should call navigate() in a React.useEffect(), not when your component is first rendered."), !activeRef.current)
       return;
     if (typeof to == "number") {
-      navigator.go(to);
+      navigator2.go(to);
       return;
     }
     let path = resolveTo(to, JSON.parse(routePathnamesJson), locationPathname, options.relative === "path");
-    basename !== "/" && (path.pathname = path.pathname === "/" ? basename : joinPaths([basename, path.pathname])), (options.replace ? navigator.replace : navigator.push)(path, options.state, options);
-  }, [basename, navigator, routePathnamesJson, locationPathname]);
+    basename !== "/" && (path.pathname = path.pathname === "/" ? basename : joinPaths([basename, path.pathname])), (options.replace ? navigator2.replace : navigator2.push)(path, options.state, options);
+  }, [basename, navigator2, routePathnamesJson, locationPathname]);
 }
 function useOutletContext() {
   return React.useContext(OutletContext);
@@ -5038,7 +5038,7 @@ function useRoutes(routes2, locationArg) {
     "useRoutes() may be used only in the context of a <Router> component."
   );
   let {
-    navigator
+    navigator: navigator2
   } = React.useContext(NavigationContext), dataRouterStateContext = React.useContext(DataRouterStateContext), {
     matches: parentMatches
   } = React.useContext(RouteContext), routeMatch = parentMatches[parentMatches.length - 1], parentParams = routeMatch ? routeMatch.params : {}, parentPathname = routeMatch ? routeMatch.pathname : "/", parentPathnameBase = routeMatch ? routeMatch.pathnameBase : "/", parentRoute = routeMatch && routeMatch.route;
@@ -5063,11 +5063,11 @@ function useRoutes(routes2, locationArg) {
     params: Object.assign({}, parentParams, match.params),
     pathname: joinPaths([
       parentPathnameBase,
-      navigator.encodeLocation ? navigator.encodeLocation(match.pathname).pathname : match.pathname
+      navigator2.encodeLocation ? navigator2.encodeLocation(match.pathname).pathname : match.pathname
     ]),
     pathnameBase: match.pathnameBase === "/" ? parentPathnameBase : joinPaths([
       parentPathnameBase,
-      navigator.encodeLocation ? navigator.encodeLocation(match.pathnameBase).pathname : match.pathnameBase
+      navigator2.encodeLocation ? navigator2.encodeLocation(match.pathnameBase).pathname : match.pathnameBase
     ])
   })), parentMatches, dataRouterStateContext || void 0);
   return locationArg && renderedMatches ? /* @__PURE__ */ React.createElement(LocationContext.Provider, {
@@ -5107,11 +5107,11 @@ function RenderedRoute(_ref) {
   let {
     routeContext,
     match,
-    children
+    children: children2
   } = _ref, dataRouterContext = React.useContext(DataRouterContext);
   return dataRouterContext && dataRouterContext.static && dataRouterContext.staticContext && (match.route.errorElement || match.route.ErrorBoundary) && (dataRouterContext.staticContext._deepestRenderedBoundaryId = match.route.id), /* @__PURE__ */ React.createElement(RouteContext.Provider, {
     value: routeContext
-  }, children);
+  }, children2);
 }
 function _renderMatches(matches, parentMatches, dataRouterState) {
   if (parentMatches === void 0 && (parentMatches = []), matches == null)
@@ -5128,14 +5128,14 @@ function _renderMatches(matches, parentMatches, dataRouterState) {
     let error = match.route.id ? errors == null ? void 0 : errors[match.route.id] : null, errorElement = null;
     dataRouterState && (match.route.ErrorBoundary ? errorElement = /* @__PURE__ */ React.createElement(match.route.ErrorBoundary, null) : match.route.errorElement ? errorElement = match.route.errorElement : errorElement = /* @__PURE__ */ React.createElement(DefaultErrorComponent, null));
     let matches2 = parentMatches.concat(renderedMatches.slice(0, index + 1)), getChildren = () => {
-      let children = outlet;
-      return error ? children = errorElement : match.route.Component ? children = /* @__PURE__ */ React.createElement(match.route.Component, null) : match.route.element && (children = match.route.element), /* @__PURE__ */ React.createElement(RenderedRoute, {
+      let children2 = outlet;
+      return error ? children2 = errorElement : match.route.Component ? children2 = /* @__PURE__ */ React.createElement(match.route.Component, null) : match.route.element && (children2 = match.route.element), /* @__PURE__ */ React.createElement(RenderedRoute, {
         match,
         routeContext: {
           outlet,
           matches: matches2
         },
-        children
+        children: children2
       });
     };
     return dataRouterState && (match.route.ErrorBoundary || match.route.errorElement || index === 0) ? /* @__PURE__ */ React.createElement(RenderErrorBoundary, {
@@ -5243,7 +5243,7 @@ function RouterProvider(_ref) {
     router.subscribe,
     getState,
     getState
-  ), navigator = React.useMemo(() => ({
+  ), navigator2 = React.useMemo(() => ({
     createHref: router.createHref,
     encodeLocation: router.encodeLocation,
     go: (n) => router.navigate(n),
@@ -5258,10 +5258,10 @@ function RouterProvider(_ref) {
     })
   }), [router]), basename = router.basename || "/", dataRouterContext = React.useMemo(() => ({
     router,
-    navigator,
+    navigator: navigator2,
     static: !1,
     basename
-  }), [router, navigator, basename]);
+  }), [router, navigator2, basename]);
   return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(DataRouterContext.Provider, {
     value: dataRouterContext
   }, /* @__PURE__ */ React.createElement(DataRouterStateContext.Provider, {
@@ -5270,13 +5270,13 @@ function RouterProvider(_ref) {
     basename: router.basename,
     location: router.state.location,
     navigationType: router.state.historyAction,
-    navigator
+    navigator: navigator2
   }, router.state.initialized ? /* @__PURE__ */ React.createElement(Routes, null) : fallbackElement))), null);
 }
 function MemoryRouter(_ref2) {
   let {
     basename,
-    children,
+    children: children2,
     initialEntries,
     initialIndex
   } = _ref2, historyRef = React.useRef();
@@ -5291,7 +5291,7 @@ function MemoryRouter(_ref2) {
   });
   return React.useLayoutEffect(() => history.listen(setState), [history]), /* @__PURE__ */ React.createElement(Router, {
     basename,
-    children,
+    children: children2,
     location: state.location,
     navigationType: state.action,
     navigator: history
@@ -5326,18 +5326,18 @@ function Route(_props) {
 function Router(_ref4) {
   let {
     basename: basenameProp = "/",
-    children = null,
+    children: children2 = null,
     location: locationProp,
     navigationType = Action.Pop,
-    navigator,
+    navigator: navigator2,
     static: staticProp = !1
   } = _ref4;
   useInRouterContext() && invariant(!1, "You cannot render a <Router> inside another <Router>. You should never have more than one in your app.");
   let basename = basenameProp.replace(/^\/*/, "/"), navigationContext = React.useMemo(() => ({
     basename,
-    navigator,
+    navigator: navigator2,
     static: staticProp
-  }), [basename, navigator, staticProp]);
+  }), [basename, navigator2, staticProp]);
   typeof locationProp == "string" && (locationProp = parsePath(locationProp));
   let {
     pathname = "/",
@@ -5361,38 +5361,38 @@ function Router(_ref4) {
   return warning(locationContext != null, '<Router basename="' + basename + '"> is not able to match the URL ' + ('"' + pathname + search + hash + '" because it does not start with the ') + "basename, so the <Router> won't render anything."), locationContext == null ? null : /* @__PURE__ */ React.createElement(NavigationContext.Provider, {
     value: navigationContext
   }, /* @__PURE__ */ React.createElement(LocationContext.Provider, {
-    children,
+    children: children2,
     value: locationContext
   }));
 }
 function Routes(_ref5) {
   let {
-    children,
+    children: children2,
     location
-  } = _ref5, dataRouterContext = React.useContext(DataRouterContext), routes2 = dataRouterContext && !children ? dataRouterContext.router.routes : createRoutesFromChildren(children);
+  } = _ref5, dataRouterContext = React.useContext(DataRouterContext), routes2 = dataRouterContext && !children2 ? dataRouterContext.router.routes : createRoutesFromChildren(children2);
   return useRoutes(routes2, location);
 }
 function Await(_ref6) {
   let {
-    children,
+    children: children2,
     errorElement,
     resolve
   } = _ref6;
   return /* @__PURE__ */ React.createElement(AwaitErrorBoundary, {
     resolve,
     errorElement
-  }, /* @__PURE__ */ React.createElement(ResolveAwait, null, children));
+  }, /* @__PURE__ */ React.createElement(ResolveAwait, null, children2));
 }
 function ResolveAwait(_ref7) {
   let {
-    children
-  } = _ref7, data = useAsyncValue(), toRender = typeof children == "function" ? children(data) : children;
+    children: children2
+  } = _ref7, data = useAsyncValue(), toRender = typeof children2 == "function" ? children2(data) : children2;
   return /* @__PURE__ */ React.createElement(React.Fragment, null, toRender);
 }
-function createRoutesFromChildren(children, parentPath) {
+function createRoutesFromChildren(children2, parentPath) {
   parentPath === void 0 && (parentPath = []);
   let routes2 = [];
-  return React.Children.forEach(children, (element, index) => {
+  return React.Children.forEach(children2, (element, index) => {
     if (!/* @__PURE__ */ React.isValidElement(element))
       return;
     let treePath = [...parentPath, index];
@@ -5529,7 +5529,7 @@ var React, is, useState2, useEffect2, useLayoutEffect2, useDebugValue, didWarnOl
       }
       render() {
         let {
-          children,
+          children: children2,
           errorElement,
           resolve
         } = this.props, promise = null, status = AwaitRenderStatus.pending;
@@ -5568,7 +5568,7 @@ var React, is, useState2, useEffect2, useLayoutEffect2, useDebugValue, didWarnOl
         if (status === AwaitRenderStatus.success)
           return /* @__PURE__ */ React.createElement(AwaitContext.Provider, {
             value: promise,
-            children
+            children: children2
           });
         throw promise;
       }
@@ -5667,17 +5667,17 @@ function _objectWithoutPropertiesLoose(source, excluded) {
     key = sourceKeys[i], !(excluded.indexOf(key) >= 0) && (target[key] = source[key]);
   return target;
 }
-function isHtmlElement(object) {
-  return object != null && typeof object.tagName == "string";
+function isHtmlElement(object3) {
+  return object3 != null && typeof object3.tagName == "string";
 }
-function isButtonElement(object) {
-  return isHtmlElement(object) && object.tagName.toLowerCase() === "button";
+function isButtonElement(object3) {
+  return isHtmlElement(object3) && object3.tagName.toLowerCase() === "button";
 }
-function isFormElement(object) {
-  return isHtmlElement(object) && object.tagName.toLowerCase() === "form";
+function isFormElement(object3) {
+  return isHtmlElement(object3) && object3.tagName.toLowerCase() === "form";
 }
-function isInputElement(object) {
-  return isHtmlElement(object) && object.tagName.toLowerCase() === "input";
+function isInputElement(object3) {
+  return isHtmlElement(object3) && object3.tagName.toLowerCase() === "input";
 }
 function isModifiedEvent(event) {
   return !!(event.metaKey || event.altKey || event.ctrlKey || event.shiftKey);
@@ -5685,9 +5685,9 @@ function isModifiedEvent(event) {
 function shouldProcessLinkClick(event, target) {
   return event.button === 0 && (!target || target === "_self") && !isModifiedEvent(event);
 }
-function createSearchParams(init) {
-  return init === void 0 && (init = ""), new URLSearchParams(typeof init == "string" || Array.isArray(init) || init instanceof URLSearchParams ? init : Object.keys(init).reduce((memo, key) => {
-    let value = init[key];
+function createSearchParams(init2) {
+  return init2 === void 0 && (init2 = ""), new URLSearchParams(typeof init2 == "string" || Array.isArray(init2) || init2 instanceof URLSearchParams ? init2 : Object.keys(init2).reduce((memo, key) => {
+    let value = init2[key];
     return memo.concat(Array.isArray(value) ? value.map((v) => [key, v]) : [[key, value]]);
   }, []));
 }
@@ -5781,7 +5781,7 @@ function deserializeErrors(errors) {
 function BrowserRouter(_ref) {
   let {
     basename,
-    children,
+    children: children2,
     window: window2
   } = _ref, historyRef = React2.useRef();
   historyRef.current == null && (historyRef.current = createBrowserHistory({
@@ -5794,7 +5794,7 @@ function BrowserRouter(_ref) {
   });
   return React2.useLayoutEffect(() => history.listen(setState), [history]), /* @__PURE__ */ React2.createElement(Router, {
     basename,
-    children,
+    children: children2,
     location: state.location,
     navigationType: state.action,
     navigator: history
@@ -5803,7 +5803,7 @@ function BrowserRouter(_ref) {
 function HashRouter(_ref2) {
   let {
     basename,
-    children,
+    children: children2,
     window: window2
   } = _ref2, historyRef = React2.useRef();
   historyRef.current == null && (historyRef.current = createHashHistory({
@@ -5816,7 +5816,7 @@ function HashRouter(_ref2) {
   });
   return React2.useLayoutEffect(() => history.listen(setState), [history]), /* @__PURE__ */ React2.createElement(Router, {
     basename,
-    children,
+    children: children2,
     location: state.location,
     navigationType: state.action,
     navigator: history
@@ -5825,7 +5825,7 @@ function HashRouter(_ref2) {
 function HistoryRouter(_ref3) {
   let {
     basename,
-    children,
+    children: children2,
     history
   } = _ref3, [state, setState] = React2.useState({
     action: history.action,
@@ -5833,7 +5833,7 @@ function HistoryRouter(_ref3) {
   });
   return React2.useLayoutEffect(() => history.listen(setState), [history]), /* @__PURE__ */ React2.createElement(Router, {
     basename,
-    children,
+    children: children2,
     location: state.location,
     navigationType: state.action,
     navigator: history
@@ -6101,12 +6101,12 @@ var React2, defaultMethod, defaultEncType, _excluded, _excluded2, _excluded3, is
         end = !1,
         style: styleProp,
         to,
-        children
+        children: children2
       } = _ref5, rest = _objectWithoutPropertiesLoose(_ref5, _excluded2), path = useResolvedPath(to, {
         relative: rest.relative
       }), location = useLocation(), routerState = React2.useContext(DataRouterStateContext), {
-        navigator
-      } = React2.useContext(NavigationContext), toPathname = navigator.encodeLocation ? navigator.encodeLocation(path).pathname : path.pathname, locationPathname = location.pathname, nextLocationPathname = routerState && routerState.navigation && routerState.navigation.location ? routerState.navigation.location.pathname : null;
+        navigator: navigator2
+      } = React2.useContext(NavigationContext), toPathname = navigator2.encodeLocation ? navigator2.encodeLocation(path).pathname : path.pathname, locationPathname = location.pathname, nextLocationPathname = routerState && routerState.navigation && routerState.navigation.location ? routerState.navigation.location.pathname : null;
       caseSensitive || (locationPathname = locationPathname.toLowerCase(), nextLocationPathname = nextLocationPathname ? nextLocationPathname.toLowerCase() : null, toPathname = toPathname.toLowerCase());
       let isActive = locationPathname === toPathname || !end && locationPathname.startsWith(toPathname) && locationPathname.charAt(toPathname.length) === "/", isPending = nextLocationPathname != null && (nextLocationPathname === toPathname || !end && nextLocationPathname.startsWith(toPathname) && nextLocationPathname.charAt(toPathname.length) === "/"), ariaCurrent = isActive ? ariaCurrentProp : void 0, className;
       typeof classNameProp == "function" ? className = classNameProp({
@@ -6123,10 +6123,10 @@ var React2, defaultMethod, defaultEncType, _excluded, _excluded2, _excluded3, is
         ref,
         style,
         to
-      }), typeof children == "function" ? children({
+      }), typeof children2 == "function" ? children2({
         isActive,
         isPending
-      }) : children);
+      }) : children2);
     });
     NavLink.displayName = "NavLink";
     Form = /* @__PURE__ */ React2.forwardRef((props, ref) => /* @__PURE__ */ React2.createElement(FormImpl, _extends3({}, props, {
@@ -6203,7 +6203,7 @@ var require_server = __commonJS({
     var React__namespace = /* @__PURE__ */ _interopNamespace(React7);
     function StaticRouter({
       basename,
-      children,
+      children: children2,
       location: locationProp = "/"
     }) {
       typeof locationProp == "string" && (locationProp = reactRouterDom.parsePath(locationProp));
@@ -6216,7 +6216,7 @@ var require_server = __commonJS({
       }, staticNavigator = getStatelessNavigator();
       return /* @__PURE__ */ React__namespace.createElement(reactRouterDom.Router, {
         basename,
-        children,
+        children: children2,
         location,
         navigationType: action,
         navigator: staticNavigator,
@@ -7668,8 +7668,8 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
         return responseState.boundaryPrefix + generatedID.toString(16);
       }
       function makeId(responseState, treeId, localId) {
-        var idPrefix = responseState.idPrefix, id = ":" + idPrefix + "R" + treeId;
-        return localId > 0 && (id += "H" + localId.toString(32)), id + ":";
+        var idPrefix = responseState.idPrefix, id2 = ":" + idPrefix + "R" + treeId;
+        return localId > 0 && (id2 += "H" + localId.toString(32)), id2 + ":";
       }
       function encodeHTMLTextNode(text) {
         return escapeTextForBrowser(text);
@@ -7696,10 +7696,10 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
         var isFirst = !0;
         for (var styleName in style)
           if (!!hasOwnProperty.call(style, styleName)) {
-            var styleValue = style[styleName];
-            if (!(styleValue == null || typeof styleValue == "boolean" || styleValue === "")) {
+            var styleValue2 = style[styleName];
+            if (!(styleValue2 == null || typeof styleValue2 == "boolean" || styleValue2 === "")) {
               var nameChunk = void 0, valueChunk = void 0, isCustomProperty = styleName.indexOf("--") === 0;
-              isCustomProperty ? (nameChunk = escapeTextForBrowser(styleName), checkCSSPropertyStringCoercion(styleValue, styleName), valueChunk = escapeTextForBrowser(("" + styleValue).trim())) : (warnValidStyle$1(styleName, styleValue), nameChunk = processStyleName(styleName), typeof styleValue == "number" ? styleValue !== 0 && !hasOwnProperty.call(isUnitlessNumber, styleName) ? valueChunk = styleValue + "px" : valueChunk = "" + styleValue : (checkCSSPropertyStringCoercion(styleValue, styleName), valueChunk = escapeTextForBrowser(("" + styleValue).trim()))), isFirst ? (isFirst = !1, target.push(styleAttributeStart, nameChunk, styleAssign, valueChunk)) : target.push(styleSeparator, nameChunk, styleAssign, valueChunk);
+              isCustomProperty ? (nameChunk = escapeTextForBrowser(styleName), checkCSSPropertyStringCoercion(styleValue2, styleName), valueChunk = escapeTextForBrowser(("" + styleValue2).trim())) : (warnValidStyle$1(styleName, styleValue2), nameChunk = processStyleName(styleName), typeof styleValue2 == "number" ? styleValue2 !== 0 && !hasOwnProperty.call(isUnitlessNumber, styleName) ? valueChunk = styleValue2 + "px" : valueChunk = "" + styleValue2 : (checkCSSPropertyStringCoercion(styleValue2, styleName), valueChunk = escapeTextForBrowser(("" + styleValue2).trim()))), isFirst ? (isFirst = !1, target.push(styleAttributeStart, nameChunk, styleAssign, valueChunk)) : target.push(styleSeparator, nameChunk, styleAssign, valueChunk);
             }
           }
         isFirst || target.push(attributeEnd);
@@ -7762,9 +7762,9 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
         }
       }
       var endOfStartTag = ">", endOfStartTagSelfClosing = "/>";
-      function pushInnerHTML(target, innerHTML, children) {
+      function pushInnerHTML(target, innerHTML, children2) {
         if (innerHTML != null) {
-          if (children != null)
+          if (children2 != null)
             throw new Error("Can only set one of `children` or `props.dangerouslySetInnerHTML`.");
           if (typeof innerHTML != "object" || !("__html" in innerHTML))
             throw new Error("`props.dangerouslySetInnerHTML` must be in the form `{__html: ...}`. Please visit https://reactjs.org/link/dangerously-set-inner-html for more information.");
@@ -7784,7 +7784,7 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
       }
       function pushStartSelect(target, props, responseState) {
         checkControlledValueProps("select", props), checkSelectProp(props, "value"), checkSelectProp(props, "defaultValue"), props.value !== void 0 && props.defaultValue !== void 0 && !didWarnDefaultSelectValue && (error("Select elements must be either controlled or uncontrolled (specify either the value prop, or the defaultValue prop, but not both). Decide between using a controlled or uncontrolled select element and remove one of these props. More info: https://reactjs.org/link/controlled-components"), didWarnDefaultSelectValue = !0), target.push(startChunkForTag("select"));
-        var children = null, innerHTML = null;
+        var children2 = null, innerHTML = null;
         for (var propKey in props)
           if (hasOwnProperty.call(props, propKey)) {
             var propValue = props[propKey];
@@ -7792,7 +7792,7 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
               continue;
             switch (propKey) {
               case "children":
-                children = propValue;
+                children2 = propValue;
                 break;
               case "dangerouslySetInnerHTML":
                 innerHTML = propValue;
@@ -7805,11 +7805,11 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
                 break;
             }
           }
-        return target.push(endOfStartTag), pushInnerHTML(target, innerHTML, children), children;
+        return target.push(endOfStartTag), pushInnerHTML(target, innerHTML, children2), children2;
       }
-      function flattenOptionChildren(children) {
+      function flattenOptionChildren(children2) {
         var content = "";
-        return React7.Children.forEach(children, function(child) {
+        return React7.Children.forEach(children2, function(child) {
           child != null && (content += child, !didWarnInvalidOptionChildren && typeof child != "string" && typeof child != "number" && (didWarnInvalidOptionChildren = !0, error("Cannot infer the option value of complex children. Pass a `value` prop or use a plain string as children to <option>.")));
         }), content;
       }
@@ -7817,7 +7817,7 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
       function pushStartOption(target, props, responseState, formatContext) {
         var selectedValue = formatContext.selectedValue;
         target.push(startChunkForTag("option"));
-        var children = null, value = null, selected = null, innerHTML = null;
+        var children2 = null, value = null, selected = null, innerHTML = null;
         for (var propKey in props)
           if (hasOwnProperty.call(props, propKey)) {
             var propValue = props[propKey];
@@ -7825,7 +7825,7 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
               continue;
             switch (propKey) {
               case "children":
-                children = propValue;
+                children2 = propValue;
                 break;
               case "selected":
                 selected = propValue, didWarnSelectedSetOnOption || (error("Use the `defaultValue` or `value` props on <select> instead of setting `selected` on <option>."), didWarnSelectedSetOnOption = !0);
@@ -7842,7 +7842,7 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
           }
         if (selectedValue != null) {
           var stringValue;
-          if (value !== null ? (checkAttributeStringCoercion(value, "value"), stringValue = "" + value) : (innerHTML !== null && (didWarnInvalidOptionInnerHTML || (didWarnInvalidOptionInnerHTML = !0, error("Pass a `value` prop if you set dangerouslyInnerHTML so React knows which value should be selected."))), stringValue = flattenOptionChildren(children)), isArray(selectedValue))
+          if (value !== null ? (checkAttributeStringCoercion(value, "value"), stringValue = "" + value) : (innerHTML !== null && (didWarnInvalidOptionInnerHTML || (didWarnInvalidOptionInnerHTML = !0, error("Pass a `value` prop if you set dangerouslyInnerHTML so React knows which value should be selected."))), stringValue = flattenOptionChildren(children2)), isArray(selectedValue))
             for (var i = 0; i < selectedValue.length; i++) {
               checkAttributeStringCoercion(selectedValue[i], "value");
               var v = "" + selectedValue[i];
@@ -7855,7 +7855,7 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
             checkAttributeStringCoercion(selectedValue, "select.value"), "" + selectedValue === stringValue && target.push(selectedMarkerAttribute);
         } else
           selected && target.push(selectedMarkerAttribute);
-        return target.push(endOfStartTag), pushInnerHTML(target, innerHTML, children), children;
+        return target.push(endOfStartTag), pushInnerHTML(target, innerHTML, children2), children2;
       }
       function pushInput(target, props, responseState) {
         checkControlledValueProps("input", props), props.checked !== void 0 && props.defaultChecked !== void 0 && !didWarnDefaultChecked && (error("%s contains an input of type %s with both checked and defaultChecked props. Input elements must be either controlled or uncontrolled (specify either the checked prop, or the defaultChecked prop, but not both). Decide between using a controlled or uncontrolled input element and remove one of these props. More info: https://reactjs.org/link/controlled-components", "A component", props.type), didWarnDefaultChecked = !0), props.value !== void 0 && props.defaultValue !== void 0 && !didWarnDefaultInputValue && (error("%s contains an input of type %s with both value and defaultValue props. Input elements must be either controlled or uncontrolled (specify either the value prop, or the defaultValue prop, but not both). Decide between using a controlled or uncontrolled input element and remove one of these props. More info: https://reactjs.org/link/controlled-components", "A component", props.type), didWarnDefaultInputValue = !0), target.push(startChunkForTag("input"));
@@ -7890,7 +7890,7 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
       }
       function pushStartTextArea(target, props, responseState) {
         checkControlledValueProps("textarea", props), props.value !== void 0 && props.defaultValue !== void 0 && !didWarnDefaultTextareaValue && (error("Textarea elements must be either controlled or uncontrolled (specify either the value prop, or the defaultValue prop, but not both). Decide between using a controlled or uncontrolled textarea and remove one of these props. More info: https://reactjs.org/link/controlled-components"), didWarnDefaultTextareaValue = !0), target.push(startChunkForTag("textarea"));
-        var value = null, defaultValue = null, children = null;
+        var value = null, defaultValue = null, children2 = null;
         for (var propKey in props)
           if (hasOwnProperty.call(props, propKey)) {
             var propValue = props[propKey];
@@ -7898,7 +7898,7 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
               continue;
             switch (propKey) {
               case "children":
-                children = propValue;
+                children2 = propValue;
                 break;
               case "value":
                 value = propValue;
@@ -7913,15 +7913,15 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
                 break;
             }
           }
-        if (value === null && defaultValue !== null && (value = defaultValue), target.push(endOfStartTag), children != null) {
+        if (value === null && defaultValue !== null && (value = defaultValue), target.push(endOfStartTag), children2 != null) {
           if (error("Use the `defaultValue` or `value` props instead of setting children on <textarea>."), value != null)
             throw new Error("If you supply `defaultValue` on a <textarea>, do not pass children.");
-          if (isArray(children)) {
-            if (children.length > 1)
+          if (isArray(children2)) {
+            if (children2.length > 1)
               throw new Error("<textarea> can only have at most one child.");
-            checkHtmlStringCoercion(children[0]), value = "" + children[0];
+            checkHtmlStringCoercion(children2[0]), value = "" + children2[0];
           }
-          checkHtmlStringCoercion(children), value = "" + children;
+          checkHtmlStringCoercion(children2), value = "" + children2;
         }
         return typeof value == "string" && value[0] === `
 ` && target.push(leadingNewline), value !== null && (checkAttributeStringCoercion(value, "value"), target.push(encodeHTMLTextNode("" + value))), null;
@@ -7964,7 +7964,7 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
       }
       function pushStartTitle(target, props, responseState) {
         target.push(startChunkForTag("title"));
-        var children = null;
+        var children2 = null;
         for (var propKey in props)
           if (hasOwnProperty.call(props, propKey)) {
             var propValue = props[propKey];
@@ -7972,7 +7972,7 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
               continue;
             switch (propKey) {
               case "children":
-                children = propValue;
+                children2 = propValue;
                 break;
               case "dangerouslySetInnerHTML":
                 throw new Error("`dangerouslySetInnerHTML` does not make sense on <title>.");
@@ -7983,14 +7983,14 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
           }
         target.push(endOfStartTag);
         {
-          var child = Array.isArray(children) && children.length < 2 ? children[0] || null : children;
-          Array.isArray(children) && children.length > 1 ? error("A title element received an array with more than 1 element as children. In browsers title Elements can only have Text Nodes as children. If the children being rendered output more than a single text node in aggregate the browser will display markup and comments as text in the title and hydration will likely fail and fall back to client rendering") : child != null && child.$$typeof != null ? error("A title element received a React element for children. In the browser title Elements can only have Text Nodes as children. If the children being rendered output more than a single text node in aggregate the browser will display markup and comments as text in the title and hydration will likely fail and fall back to client rendering") : child != null && typeof child != "string" && typeof child != "number" && error("A title element received a value that was not a string or number for children. In the browser title Elements can only have Text Nodes as children. If the children being rendered output more than a single text node in aggregate the browser will display markup and comments as text in the title and hydration will likely fail and fall back to client rendering");
+          var child = Array.isArray(children2) && children2.length < 2 ? children2[0] || null : children2;
+          Array.isArray(children2) && children2.length > 1 ? error("A title element received an array with more than 1 element as children. In browsers title Elements can only have Text Nodes as children. If the children being rendered output more than a single text node in aggregate the browser will display markup and comments as text in the title and hydration will likely fail and fall back to client rendering") : child != null && child.$$typeof != null ? error("A title element received a React element for children. In the browser title Elements can only have Text Nodes as children. If the children being rendered output more than a single text node in aggregate the browser will display markup and comments as text in the title and hydration will likely fail and fall back to client rendering") : child != null && typeof child != "string" && typeof child != "number" && error("A title element received a value that was not a string or number for children. In the browser title Elements can only have Text Nodes as children. If the children being rendered output more than a single text node in aggregate the browser will display markup and comments as text in the title and hydration will likely fail and fall back to client rendering");
         }
-        return children;
+        return children2;
       }
       function pushStartGenericElement(target, props, tag, responseState) {
         target.push(startChunkForTag(tag));
-        var children = null, innerHTML = null;
+        var children2 = null, innerHTML = null;
         for (var propKey in props)
           if (hasOwnProperty.call(props, propKey)) {
             var propValue = props[propKey];
@@ -7998,7 +7998,7 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
               continue;
             switch (propKey) {
               case "children":
-                children = propValue;
+                children2 = propValue;
                 break;
               case "dangerouslySetInnerHTML":
                 innerHTML = propValue;
@@ -8008,11 +8008,11 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
                 break;
             }
           }
-        return target.push(endOfStartTag), pushInnerHTML(target, innerHTML, children), typeof children == "string" ? (target.push(encodeHTMLTextNode(children)), null) : children;
+        return target.push(endOfStartTag), pushInnerHTML(target, innerHTML, children2), typeof children2 == "string" ? (target.push(encodeHTMLTextNode(children2)), null) : children2;
       }
       function pushStartCustomElement(target, props, tag, responseState) {
         target.push(startChunkForTag(tag));
-        var children = null, innerHTML = null;
+        var children2 = null, innerHTML = null;
         for (var propKey in props)
           if (hasOwnProperty.call(props, propKey)) {
             var propValue = props[propKey];
@@ -8020,7 +8020,7 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
               continue;
             switch (propKey) {
               case "children":
-                children = propValue;
+                children2 = propValue;
                 break;
               case "dangerouslySetInnerHTML":
                 innerHTML = propValue;
@@ -8036,13 +8036,13 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
                 break;
             }
           }
-        return target.push(endOfStartTag), pushInnerHTML(target, innerHTML, children), children;
+        return target.push(endOfStartTag), pushInnerHTML(target, innerHTML, children2), children2;
       }
       var leadingNewline = `
 `;
       function pushStartPreformattedElement(target, props, tag, responseState) {
         target.push(startChunkForTag(tag));
-        var children = null, innerHTML = null;
+        var children2 = null, innerHTML = null;
         for (var propKey in props)
           if (hasOwnProperty.call(props, propKey)) {
             var propValue = props[propKey];
@@ -8050,7 +8050,7 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
               continue;
             switch (propKey) {
               case "children":
-                children = propValue;
+                children2 = propValue;
                 break;
               case "dangerouslySetInnerHTML":
                 innerHTML = propValue;
@@ -8061,7 +8061,7 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
             }
           }
         if (target.push(endOfStartTag), innerHTML != null) {
-          if (children != null)
+          if (children2 != null)
             throw new Error("Can only set one of `children` or `props.dangerouslySetInnerHTML`.");
           if (typeof innerHTML != "object" || !("__html" in innerHTML))
             throw new Error("`props.dangerouslySetInnerHTML` must be in the form `{__html: ...}`. Please visit https://reactjs.org/link/dangerously-set-inner-html for more information.");
@@ -8069,8 +8069,8 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
           html != null && (typeof html == "string" && html.length > 0 && html[0] === `
 ` ? target.push(leadingNewline, html) : (checkHtmlStringCoercion(html), target.push("" + html)));
         }
-        return typeof children == "string" && children[0] === `
-` && target.push(leadingNewline), children;
+        return typeof children2 == "string" && children2[0] === `
+` && target.push(leadingNewline), children2;
       }
       var VALID_TAG_REGEX = /^[a-zA-Z][a-zA-Z:_\.\-\d]*$/, validatedTagCache = /* @__PURE__ */ new Map();
       function startChunkForTag(tag) {
@@ -8159,19 +8159,19 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
         return i < bootstrapChunks.length ? writeChunkAndReturn(destination, bootstrapChunks[i]) : !0;
       }
       var placeholder1 = '<template id="', placeholder2 = '"></template>';
-      function writePlaceholder(destination, responseState, id) {
+      function writePlaceholder(destination, responseState, id2) {
         writeChunk(destination, placeholder1), writeChunk(destination, responseState.placeholderPrefix);
-        var formattedID = id.toString(16);
+        var formattedID = id2.toString(16);
         return writeChunk(destination, formattedID), writeChunkAndReturn(destination, placeholder2);
       }
       var startCompletedSuspenseBoundary = "<!--$-->", startPendingSuspenseBoundary1 = '<!--$?--><template id="', startPendingSuspenseBoundary2 = '"></template>', startClientRenderedSuspenseBoundary = "<!--$!-->", endSuspenseBoundary = "<!--/$-->", clientRenderedSuspenseBoundaryError1 = "<template", clientRenderedSuspenseBoundaryErrorAttrInterstitial = '"', clientRenderedSuspenseBoundaryError1A = ' data-dgst="', clientRenderedSuspenseBoundaryError1B = ' data-msg="', clientRenderedSuspenseBoundaryError1C = ' data-stck="', clientRenderedSuspenseBoundaryError2 = "></template>";
       function writeStartCompletedSuspenseBoundary(destination, responseState) {
         return writeChunkAndReturn(destination, startCompletedSuspenseBoundary);
       }
-      function writeStartPendingSuspenseBoundary(destination, responseState, id) {
-        if (writeChunk(destination, startPendingSuspenseBoundary1), id === null)
+      function writeStartPendingSuspenseBoundary(destination, responseState, id2) {
+        if (writeChunk(destination, startPendingSuspenseBoundary1), id2 === null)
           throw new Error("An ID must have been assigned before we can complete the boundary.");
-        return writeChunk(destination, id), writeChunkAndReturn(destination, startPendingSuspenseBoundary2);
+        return writeChunk(destination, id2), writeChunkAndReturn(destination, startPendingSuspenseBoundary2);
       }
       function writeStartClientRenderedSuspenseBoundary(destination, responseState, errorDigest, errorMesssage, errorComponentStack) {
         var result;
@@ -8187,23 +8187,23 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
         return writeChunkAndReturn(destination, endSuspenseBoundary);
       }
       var startSegmentHTML = '<div hidden id="', startSegmentHTML2 = '">', endSegmentHTML = "</div>", startSegmentSVG = '<svg aria-hidden="true" style="display:none" id="', startSegmentSVG2 = '">', endSegmentSVG = "</svg>", startSegmentMathML = '<math aria-hidden="true" style="display:none" id="', startSegmentMathML2 = '">', endSegmentMathML = "</math>", startSegmentTable = '<table hidden id="', startSegmentTable2 = '">', endSegmentTable = "</table>", startSegmentTableBody = '<table hidden><tbody id="', startSegmentTableBody2 = '">', endSegmentTableBody = "</tbody></table>", startSegmentTableRow = '<table hidden><tr id="', startSegmentTableRow2 = '">', endSegmentTableRow = "</tr></table>", startSegmentColGroup = '<table hidden><colgroup id="', startSegmentColGroup2 = '">', endSegmentColGroup = "</colgroup></table>";
-      function writeStartSegment(destination, responseState, formatContext, id) {
+      function writeStartSegment(destination, responseState, formatContext, id2) {
         switch (formatContext.insertionMode) {
           case ROOT_HTML_MODE:
           case HTML_MODE:
-            return writeChunk(destination, startSegmentHTML), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, id.toString(16)), writeChunkAndReturn(destination, startSegmentHTML2);
+            return writeChunk(destination, startSegmentHTML), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, id2.toString(16)), writeChunkAndReturn(destination, startSegmentHTML2);
           case SVG_MODE:
-            return writeChunk(destination, startSegmentSVG), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, id.toString(16)), writeChunkAndReturn(destination, startSegmentSVG2);
+            return writeChunk(destination, startSegmentSVG), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, id2.toString(16)), writeChunkAndReturn(destination, startSegmentSVG2);
           case MATHML_MODE:
-            return writeChunk(destination, startSegmentMathML), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, id.toString(16)), writeChunkAndReturn(destination, startSegmentMathML2);
+            return writeChunk(destination, startSegmentMathML), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, id2.toString(16)), writeChunkAndReturn(destination, startSegmentMathML2);
           case HTML_TABLE_MODE:
-            return writeChunk(destination, startSegmentTable), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, id.toString(16)), writeChunkAndReturn(destination, startSegmentTable2);
+            return writeChunk(destination, startSegmentTable), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, id2.toString(16)), writeChunkAndReturn(destination, startSegmentTable2);
           case HTML_TABLE_BODY_MODE:
-            return writeChunk(destination, startSegmentTableBody), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, id.toString(16)), writeChunkAndReturn(destination, startSegmentTableBody2);
+            return writeChunk(destination, startSegmentTableBody), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, id2.toString(16)), writeChunkAndReturn(destination, startSegmentTableBody2);
           case HTML_TABLE_ROW_MODE:
-            return writeChunk(destination, startSegmentTableRow), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, id.toString(16)), writeChunkAndReturn(destination, startSegmentTableRow2);
+            return writeChunk(destination, startSegmentTableRow), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, id2.toString(16)), writeChunkAndReturn(destination, startSegmentTableRow2);
           case HTML_COLGROUP_MODE:
-            return writeChunk(destination, startSegmentColGroup), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, id.toString(16)), writeChunkAndReturn(destination, startSegmentColGroup2);
+            return writeChunk(destination, startSegmentColGroup), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, id2.toString(16)), writeChunkAndReturn(destination, startSegmentColGroup2);
           default:
             throw new Error("Unknown insertion mode. This is a bug in React.");
         }
@@ -8357,9 +8357,9 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
               var outerName = type.displayName || null;
               return outerName !== null ? outerName : getComponentNameFromType(type.type) || "Memo";
             case REACT_LAZY_TYPE: {
-              var lazyComponent = type, payload = lazyComponent._payload, init = lazyComponent._init;
+              var lazyComponent = type, payload = lazyComponent._payload, init2 = lazyComponent._init;
               try {
-                return getComponentNameFromType(init(payload));
+                return getComponentNameFromType(init2(payload));
               } catch {
                 return null;
               }
@@ -8452,9 +8452,9 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
         if (!fn || reentry)
           return "";
         {
-          var frame = componentFrameCache.get(fn);
-          if (frame !== void 0)
-            return frame;
+          var frame2 = componentFrameCache.get(fn);
+          if (frame2 !== void 0)
+            return frame2;
         }
         var control;
         reentry = !0;
@@ -8549,9 +8549,9 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
             case REACT_MEMO_TYPE:
               return describeUnknownElementTypeFrameInDEV(type.type, source, ownerFn);
             case REACT_LAZY_TYPE: {
-              var lazyComponent = type, payload = lazyComponent._payload, init = lazyComponent._init;
+              var lazyComponent = type, payload = lazyComponent._payload, init2 = lazyComponent._init;
               try {
-                return describeUnknownElementTypeFrameInDEV(init(payload), source, ownerFn);
+                return describeUnknownElementTypeFrameInDEV(init2(payload), source, ownerFn);
               } catch {
               }
             }
@@ -8704,10 +8704,10 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
         var value = context._currentValue2;
         return value;
       }
-      function get(key) {
+      function get3(key) {
         return key._reactInternals;
       }
-      function set(key, value) {
+      function set3(key, value) {
         key._reactInternals = value;
       }
       var didWarnAboutNoopUpdateForComponent = {}, didWarnAboutDeprecatedWillMount = {}, didWarnAboutUninitializedState, didWarnAboutGetSnapshotBeforeUpdateWithoutDidUpdate, didWarnAboutLegacyLifecyclesAndDerivedState, didWarnAboutUndefinedDerivedState, warnOnUndefinedDerivedState, warnOnInvalidCallback, didWarnAboutDirectlyAssigningPropsToState, didWarnAboutContextTypeAndContextTypes, didWarnAboutInvalidateContextType;
@@ -8741,15 +8741,15 @@ Please check the code for the %s component.`, callerName, callerName, componentN
           return !1;
         },
         enqueueSetState: function(inst, payload, callback) {
-          var internals = get(inst);
+          var internals = get3(inst);
           internals.queue === null ? warnNoop(inst, "setState") : (internals.queue.push(payload), callback != null && warnOnInvalidCallback(callback, "setState"));
         },
         enqueueReplaceState: function(inst, payload, callback) {
-          var internals = get(inst);
+          var internals = get3(inst);
           internals.replace = !0, internals.queue = [payload], callback != null && warnOnInvalidCallback(callback, "setState");
         },
         enqueueForceUpdate: function(inst, callback) {
-          var internals = get(inst);
+          var internals = get3(inst);
           internals.queue === null ? warnNoop(inst, "forceUpdate") : callback != null && warnOnInvalidCallback(callback, "setState");
         }
       };
@@ -8845,7 +8845,7 @@ Please update the following components: %s`,
           queue: [],
           replace: !1
         };
-        set(instance, internalInstance);
+        set3(instance, internalInstance);
         var contextType = ctor.contextType;
         if (typeof contextType == "object" && contextType !== null ? instance.context = readContext(contextType) : instance.context = maskedLegacyContext, instance.state === newProps) {
           var componentName = getComponentNameFromType(ctor) || "Component";
@@ -8859,15 +8859,15 @@ Please update the following components: %s`,
         overflow: ""
       };
       function getTreeId(context) {
-        var overflow = context.overflow, idWithLeadingBit = context.id, id = idWithLeadingBit & ~getLeadingBit(idWithLeadingBit);
-        return id.toString(32) + overflow;
+        var overflow = context.overflow, idWithLeadingBit = context.id, id2 = idWithLeadingBit & ~getLeadingBit(idWithLeadingBit);
+        return id2.toString(32) + overflow;
       }
       function pushTreeContext(baseContext, totalChildren, index) {
         var baseIdWithLeadingBit = baseContext.id, baseOverflow = baseContext.overflow, baseLength = getBitLength(baseIdWithLeadingBit) - 1, baseId = baseIdWithLeadingBit & ~(1 << baseLength), slot = index + 1, length = getBitLength(totalChildren) + baseLength;
         if (length > 30) {
-          var numberOfOverflowBits = baseLength - baseLength % 5, newOverflowBits = (1 << numberOfOverflowBits) - 1, newOverflow = (baseId & newOverflowBits).toString(32), restOfBaseId = baseId >> numberOfOverflowBits, restOfBaseLength = baseLength - numberOfOverflowBits, restOfLength = getBitLength(totalChildren) + restOfBaseLength, restOfNewBits = slot << restOfBaseLength, id = restOfNewBits | restOfBaseId, overflow = newOverflow + baseOverflow;
+          var numberOfOverflowBits = baseLength - baseLength % 5, newOverflowBits = (1 << numberOfOverflowBits) - 1, newOverflow = (baseId & newOverflowBits).toString(32), restOfBaseId = baseId >> numberOfOverflowBits, restOfBaseLength = baseLength - numberOfOverflowBits, restOfLength = getBitLength(totalChildren) + restOfBaseLength, restOfNewBits = slot << restOfBaseLength, id2 = restOfNewBits | restOfBaseId, overflow = newOverflow + baseOverflow;
           return {
-            id: 1 << restOfLength | id,
+            id: 1 << restOfLength | id2,
             overflow
           };
         } else {
@@ -8881,13 +8881,13 @@ Please update the following components: %s`,
       function getBitLength(number) {
         return 32 - clz32(number);
       }
-      function getLeadingBit(id) {
-        return 1 << getBitLength(id) - 1;
+      function getLeadingBit(id2) {
+        return 1 << getBitLength(id2) - 1;
       }
-      var clz32 = Math.clz32 ? Math.clz32 : clz32Fallback, log = Math.log, LN2 = Math.LN2;
+      var clz32 = Math.clz32 ? Math.clz32 : clz32Fallback, log2 = Math.log, LN2 = Math.LN2;
       function clz32Fallback(x) {
         var asUint = x >>> 0;
-        return asUint === 0 ? 32 : 31 - (log(asUint) / LN2 | 0) | 0;
+        return asUint === 0 ? 32 : 31 - (log2(asUint) / LN2 | 0) | 0;
       }
       function is2(x, y) {
         return x === y && (x !== 0 || 1 / x === 1 / y) || x !== x && y !== y;
@@ -8929,10 +8929,10 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
       function prepareToUseHooks(task, componentIdentity) {
         currentlyRenderingComponent = componentIdentity, currentlyRenderingTask = task, isInHookUserCodeInDev = !1, localIdCounter = 0;
       }
-      function finishHooks(Component2, props, children, refOrContext) {
+      function finishHooks(Component2, props, children2, refOrContext) {
         for (; didScheduleRenderPhaseUpdate; )
-          didScheduleRenderPhaseUpdate = !1, localIdCounter = 0, numberOfReRenders += 1, workInProgressHook = null, children = Component2(props, refOrContext);
-        return resetHooksState(), children;
+          didScheduleRenderPhaseUpdate = !1, localIdCounter = 0, numberOfReRenders += 1, workInProgressHook = null, children2 = Component2(props, refOrContext);
+        return resetHooksState(), children2;
       }
       function checkDidRenderIdHook() {
         var didRenderIdHook = localIdCounter !== 0;
@@ -8950,15 +8950,15 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
       function basicStateReducer(state, action) {
         return typeof action == "function" ? action(state) : action;
       }
-      function useState5(initialState) {
+      function useState6(initialState) {
         return currentHookNameInDev = "useState", useReducer(
           basicStateReducer,
           initialState
         );
       }
-      function useReducer(reducer, initialArg, init) {
+      function useReducer(reducer, initialArg, init2) {
         if (reducer !== basicStateReducer && (currentHookNameInDev = "useReducer"), currentlyRenderingComponent = resolveCurrentlyRenderingComponent(), workInProgressHook = createWorkInProgressHook(), isReRender) {
-          var queue = workInProgressHook.queue, dispatch = queue.dispatch;
+          var queue = workInProgressHook.queue, dispatch2 = queue.dispatch;
           if (renderPhaseUpdates !== null) {
             var firstRenderPhaseUpdate = renderPhaseUpdates.get(queue);
             if (firstRenderPhaseUpdate !== void 0) {
@@ -8968,14 +8968,14 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
                 var action = update.action;
                 isInHookUserCodeInDev = !0, newState = reducer(newState, action), isInHookUserCodeInDev = !1, update = update.next;
               } while (update !== null);
-              return workInProgressHook.memoizedState = newState, [newState, dispatch];
+              return workInProgressHook.memoizedState = newState, [newState, dispatch2];
             }
           }
-          return [workInProgressHook.memoizedState, dispatch];
+          return [workInProgressHook.memoizedState, dispatch2];
         } else {
           isInHookUserCodeInDev = !0;
           var initialState;
-          reducer === basicStateReducer ? initialState = typeof initialArg == "function" ? initialArg() : initialArg : initialState = init !== void 0 ? init(initialArg) : initialArg, isInHookUserCodeInDev = !1, workInProgressHook.memoizedState = initialState;
+          reducer === basicStateReducer ? initialState = typeof initialArg == "function" ? initialArg() : initialArg : initialState = init2 !== void 0 ? init2(initialArg) : initialArg, isInHookUserCodeInDev = !1, workInProgressHook.memoizedState = initialState;
           var _queue = workInProgressHook.queue = {
             last: null,
             dispatch: null
@@ -9009,7 +9009,7 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
         } else
           return previousRef;
       }
-      function useLayoutEffect4(create, inputs) {
+      function useLayoutEffect4(create2, inputs) {
         currentHookNameInDev = "useLayoutEffect", error("useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.");
       }
       function dispatchAction(componentIdentity, queue, action) {
@@ -9061,7 +9061,7 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
         var localId = localIdCounter++;
         return makeId(responseState, treeId, localId);
       }
-      function noop() {
+      function noop3() {
       }
       var Dispatcher = {
         readContext: readContext$1,
@@ -9069,13 +9069,13 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
         useMemo: useMemo5,
         useReducer,
         useRef: useRef3,
-        useState: useState5,
-        useInsertionEffect: noop,
+        useState: useState6,
+        useInsertionEffect: noop3,
         useLayoutEffect: useLayoutEffect4,
         useCallback: useCallback3,
-        useImperativeHandle: noop,
-        useEffect: noop,
-        useDebugValue: noop,
+        useImperativeHandle: noop3,
+        useEffect: noop3,
+        useDebugValue: noop3,
         useDeferredValue,
         useTransition: useTransition2,
         useId,
@@ -9115,7 +9115,7 @@ Error generating stack: ` + x.message + `
       }
       function noop$1() {
       }
-      function createRequest(children, responseState, rootFormatContext, progressiveChunkSize, onError2, onAllReady, onShellReady, onShellError, onFatalError) {
+      function createRequest(children2, responseState, rootFormatContext, progressiveChunkSize, onError2, onAllReady, onShellReady, onShellError, onFatalError) {
         var pingedTasks = [], abortSet = /* @__PURE__ */ new Set(), request = {
           destination: null,
           responseState,
@@ -9145,7 +9145,7 @@ Error generating stack: ` + x.message + `
           !1
         );
         rootSegment.parentFlushed = !0;
-        var rootTask = createTask(request, children, null, rootSegment, abortSet, emptyContextObject, rootContextSnapshot, emptyTreeContext);
+        var rootTask = createTask(request, children2, null, rootSegment, abortSet, emptyContextObject, rootContextSnapshot, emptyTreeContext);
         return pingedTasks.push(rootTask), request;
       }
       function pingTask(request, task) {
@@ -9281,10 +9281,10 @@ Error generating stack: ` + x.message + `
       }
       function renderHostElement(request, task, type, props) {
         pushBuiltInComponentStackInDEV(task, type);
-        var segment = task.blockedSegment, children = pushStartInstance(segment.chunks, type, props, request.responseState, segment.formatContext);
+        var segment = task.blockedSegment, children2 = pushStartInstance(segment.chunks, type, props, request.responseState, segment.formatContext);
         segment.lastPushedText = !1;
         var prevContext = segment.formatContext;
-        segment.formatContext = getChildFormatContext(prevContext, type, props), renderNode(request, task, children), segment.formatContext = prevContext, pushEndInstance(segment.chunks, type), segment.lastPushedText = !1, popComponentStackInDEV(task);
+        segment.formatContext = getChildFormatContext(prevContext, type, props), renderNode(request, task, children2), segment.formatContext = prevContext, pushEndInstance(segment.chunks, type), segment.lastPushedText = !1, popComponentStackInDEV(task);
       }
       function shouldConstruct$1(Component2) {
         return Component2.prototype && Component2.prototype.isReactComponent;
@@ -9366,17 +9366,17 @@ Error generating stack: ` + x.message + `
       }
       function renderForwardRef(request, task, type, props, ref) {
         pushFunctionComponentStackInDEV(task, type.render);
-        var children = renderWithHooks(request, task, type.render, props, ref), hasId = checkDidRenderIdHook();
+        var children2 = renderWithHooks(request, task, type.render, props, ref), hasId = checkDidRenderIdHook();
         if (hasId) {
           var prevTreeContext = task.treeContext, totalChildren = 1, index = 0;
           task.treeContext = pushTreeContext(prevTreeContext, totalChildren, index);
           try {
-            renderNodeDestructive(request, task, children);
+            renderNodeDestructive(request, task, children2);
           } finally {
             task.treeContext = prevTreeContext;
           }
         } else
-          renderNodeDestructive(request, task, children);
+          renderNodeDestructive(request, task, children2);
         popComponentStackInDEV(task);
       }
       function renderMemo(request, task, type, props, ref) {
@@ -9391,12 +9391,12 @@ Error generating stack: ` + x.message + `
         renderNodeDestructive(request, task, newChildren);
       }
       function renderContextProvider(request, task, type, props) {
-        var context = type._context, value = props.value, children = props.children, prevSnapshot;
-        prevSnapshot = task.context, task.context = pushProvider(context, value), renderNodeDestructive(request, task, children), task.context = popProvider(context), prevSnapshot !== task.context && error("Popping the context provider did not return back to the original snapshot. This is a bug in React.");
+        var context = type._context, value = props.value, children2 = props.children, prevSnapshot;
+        prevSnapshot = task.context, task.context = pushProvider(context, value), renderNodeDestructive(request, task, children2), task.context = popProvider(context), prevSnapshot !== task.context && error("Popping the context provider did not return back to the original snapshot. This is a bug in React.");
       }
       function renderLazyComponent(request, task, lazyComponent, props, ref) {
         pushBuiltInComponentStackInDEV(task, "Lazy");
-        var payload = lazyComponent._payload, init = lazyComponent._init, Component2 = init(payload), resolvedProps = resolveDefaultProps(Component2, props);
+        var payload = lazyComponent._payload, init2 = lazyComponent._init, Component2 = init2(payload), resolvedProps = resolveDefaultProps(Component2, props);
         renderElement(request, task, Component2, resolvedProps, ref), popComponentStackInDEV(task);
       }
       function renderElement(request, task, type, props, ref) {
@@ -9479,9 +9479,9 @@ Error generating stack: ` + x.message + `
             case REACT_PORTAL_TYPE:
               throw new Error("Portals are not currently supported by the server renderer. Render them conditionally so that they only appear on the client render.");
             case REACT_LAZY_TYPE: {
-              var lazyNode = node, payload = lazyNode._payload, init = lazyNode._init, resolvedNode;
+              var lazyNode = node, payload = lazyNode._payload, init2 = lazyNode._init, resolvedNode;
               try {
-                resolvedNode = init(payload);
+                resolvedNode = init2(payload);
               } catch (x) {
                 throw typeof x == "object" && x !== null && typeof x.then == "function" && pushBuiltInComponentStackInDEV(task, "Lazy"), x;
               }
@@ -9500,11 +9500,11 @@ Error generating stack: ` + x.message + `
             if (iterator) {
               var step = iterator.next();
               if (!step.done) {
-                var children = [];
+                var children2 = [];
                 do
-                  children.push(step.value), step = iterator.next();
+                  children2.push(step.value), step = iterator.next();
                 while (!step.done);
-                renderChildrenArray(request, task, children);
+                renderChildrenArray(request, task, children2);
                 return;
               }
               return;
@@ -9525,12 +9525,12 @@ Error generating stack: ` + x.message + `
         }
         typeof node == "function" && error("Functions are not valid as a React child. This may happen if you return a Component instead of <Component /> from render. Or maybe you meant to call this function rather than return it.");
       }
-      function renderChildrenArray(request, task, children) {
-        for (var totalChildren = children.length, i = 0; i < totalChildren; i++) {
+      function renderChildrenArray(request, task, children2) {
+        for (var totalChildren = children2.length, i = 0; i < totalChildren; i++) {
           var prevTreeContext = task.treeContext;
           task.treeContext = pushTreeContext(prevTreeContext, totalChildren, i);
           try {
-            renderNode(request, task, children[i]);
+            renderNode(request, task, children2[i]);
           } finally {
             task.treeContext = prevTreeContext;
           }
@@ -9689,8 +9689,8 @@ Error generating stack: ` + x.message + `
           }
           case COMPLETED: {
             segment.status = FLUSHED;
-            for (var r = !0, chunks = segment.chunks, chunkIdx = 0, children = segment.children, childIdx = 0; childIdx < children.length; childIdx++) {
-              for (var nextChild = children[childIdx]; chunkIdx < nextChild.index; chunkIdx++)
+            for (var r = !0, chunks = segment.chunks, chunkIdx = 0, children2 = segment.children, childIdx = 0; childIdx < children2.length; childIdx++) {
+              for (var nextChild = children2[childIdx]; chunkIdx < nextChild.index; chunkIdx++)
                 writeChunk(destination, chunks[chunkIdx]);
               r = flushSegment(request, destination, nextChild);
             }
@@ -9710,8 +9710,8 @@ Error generating stack: ` + x.message + `
           return writeStartClientRenderedSuspenseBoundary$1(destination, request.responseState, boundary.errorDigest, boundary.errorMessage, boundary.errorComponentStack), flushSubtree(request, destination, segment), writeEndClientRenderedSuspenseBoundary$1(destination, request.responseState);
         if (boundary.pendingTasks > 0) {
           boundary.rootSegmentID = request.nextSegmentId++, boundary.completedSegments.length > 0 && request.partialBoundaries.push(boundary);
-          var id = boundary.id = assignSuspenseBoundaryID(request.responseState);
-          return writeStartPendingSuspenseBoundary(destination, request.responseState, id), flushSubtree(request, destination, segment), writeEndPendingSuspenseBoundary(destination, request.responseState);
+          var id2 = boundary.id = assignSuspenseBoundaryID(request.responseState);
+          return writeStartPendingSuspenseBoundary(destination, request.responseState, id2), flushSubtree(request, destination, segment), writeEndPendingSuspenseBoundary(destination, request.responseState);
         } else {
           if (boundary.byteSize > request.progressiveChunkSize)
             return boundary.rootSegmentID = request.nextSegmentId++, request.completedBoundaries.push(boundary), writeStartPendingSuspenseBoundary(destination, request.responseState, boundary.id), flushSubtree(request, destination, segment), writeEndPendingSuspenseBoundary(destination, request.responseState);
@@ -9831,7 +9831,7 @@ Error generating stack: ` + x.message + `
       }
       function onError() {
       }
-      function renderToStringImpl(children, options, generateStaticMarkup, abortReason) {
+      function renderToStringImpl(children2, options, generateStaticMarkup, abortReason) {
         var didFatal = !1, fatalError2 = null, result = "", destination = {
           push: function(chunk) {
             return chunk !== null && (result += chunk), !0;
@@ -9843,18 +9843,18 @@ Error generating stack: ` + x.message + `
         function onShellReady() {
           readyToStream = !0;
         }
-        var request = createRequest(children, createResponseState$1(generateStaticMarkup, options ? options.identifierPrefix : void 0), createRootFormatContext(), 1 / 0, onError, void 0, onShellReady, void 0, void 0);
+        var request = createRequest(children2, createResponseState$1(generateStaticMarkup, options ? options.identifierPrefix : void 0), createRootFormatContext(), 1 / 0, onError, void 0, onShellReady, void 0, void 0);
         if (startWork(request), abort(request, abortReason), startFlowing(request, destination), didFatal)
           throw fatalError2;
         if (!readyToStream)
           throw new Error("A component suspended while responding to synchronous input. This will cause the UI to be replaced with a loading indicator. To fix, updates that suspend should be wrapped with startTransition.");
         return result;
       }
-      function renderToString(children, options) {
-        return renderToStringImpl(children, options, !1, 'The server used "renderToString" which does not support Suspense. If you intended for this Suspense boundary to render the fallback content on the server consider throwing an Error somewhere within the Suspense boundary. If you intended to have the server wait for the suspended component please switch to "renderToReadableStream" which supports Suspense on the server');
+      function renderToString(children2, options) {
+        return renderToStringImpl(children2, options, !1, 'The server used "renderToString" which does not support Suspense. If you intended for this Suspense boundary to render the fallback content on the server consider throwing an Error somewhere within the Suspense boundary. If you intended to have the server wait for the suspended component please switch to "renderToReadableStream" which supports Suspense on the server');
       }
-      function renderToStaticMarkup(children, options) {
-        return renderToStringImpl(children, options, !0, 'The server used "renderToStaticMarkup" which does not support Suspense. If you intended to have the server wait for the suspended component please switch to "renderToReadableStream" which supports Suspense on the server');
+      function renderToStaticMarkup(children2, options) {
+        return renderToStringImpl(children2, options, !0, 'The server used "renderToStaticMarkup" which does not support Suspense. If you intended to have the server wait for the suspended component please switch to "renderToReadableStream" which supports Suspense on the server');
       }
       function renderToNodeStream() {
         throw new Error("ReactDOMServer.renderToNodeStream(): The streaming API is not available in the browser. Use ReactDOMServer.renderToString() instead.");
@@ -11144,8 +11144,8 @@ var require_react_dom_server_browser_development = __commonJS({
         return stringToPrecomputedChunk(responseState.boundaryPrefix + generatedID.toString(16));
       }
       function makeId(responseState, treeId, localId) {
-        var idPrefix = responseState.idPrefix, id = ":" + idPrefix + "R" + treeId;
-        return localId > 0 && (id += "H" + localId.toString(32)), id + ":";
+        var idPrefix = responseState.idPrefix, id2 = ":" + idPrefix + "R" + treeId;
+        return localId > 0 && (id2 += "H" + localId.toString(32)), id2 + ":";
       }
       function encodeHTMLTextNode(text) {
         return escapeTextForBrowser(text);
@@ -11172,10 +11172,10 @@ var require_react_dom_server_browser_development = __commonJS({
         var isFirst = !0;
         for (var styleName in style)
           if (!!hasOwnProperty.call(style, styleName)) {
-            var styleValue = style[styleName];
-            if (!(styleValue == null || typeof styleValue == "boolean" || styleValue === "")) {
+            var styleValue2 = style[styleName];
+            if (!(styleValue2 == null || typeof styleValue2 == "boolean" || styleValue2 === "")) {
               var nameChunk = void 0, valueChunk = void 0, isCustomProperty = styleName.indexOf("--") === 0;
-              isCustomProperty ? (nameChunk = stringToChunk(escapeTextForBrowser(styleName)), checkCSSPropertyStringCoercion(styleValue, styleName), valueChunk = stringToChunk(escapeTextForBrowser(("" + styleValue).trim()))) : (warnValidStyle$1(styleName, styleValue), nameChunk = processStyleName(styleName), typeof styleValue == "number" ? styleValue !== 0 && !hasOwnProperty.call(isUnitlessNumber, styleName) ? valueChunk = stringToChunk(styleValue + "px") : valueChunk = stringToChunk("" + styleValue) : (checkCSSPropertyStringCoercion(styleValue, styleName), valueChunk = stringToChunk(escapeTextForBrowser(("" + styleValue).trim())))), isFirst ? (isFirst = !1, target.push(styleAttributeStart, nameChunk, styleAssign, valueChunk)) : target.push(styleSeparator, nameChunk, styleAssign, valueChunk);
+              isCustomProperty ? (nameChunk = stringToChunk(escapeTextForBrowser(styleName)), checkCSSPropertyStringCoercion(styleValue2, styleName), valueChunk = stringToChunk(escapeTextForBrowser(("" + styleValue2).trim()))) : (warnValidStyle$1(styleName, styleValue2), nameChunk = processStyleName(styleName), typeof styleValue2 == "number" ? styleValue2 !== 0 && !hasOwnProperty.call(isUnitlessNumber, styleName) ? valueChunk = stringToChunk(styleValue2 + "px") : valueChunk = stringToChunk("" + styleValue2) : (checkCSSPropertyStringCoercion(styleValue2, styleName), valueChunk = stringToChunk(escapeTextForBrowser(("" + styleValue2).trim())))), isFirst ? (isFirst = !1, target.push(styleAttributeStart, nameChunk, styleAssign, valueChunk)) : target.push(styleSeparator, nameChunk, styleAssign, valueChunk);
             }
           }
         isFirst || target.push(attributeEnd);
@@ -11238,9 +11238,9 @@ var require_react_dom_server_browser_development = __commonJS({
         }
       }
       var endOfStartTag = stringToPrecomputedChunk(">"), endOfStartTagSelfClosing = stringToPrecomputedChunk("/>");
-      function pushInnerHTML(target, innerHTML, children) {
+      function pushInnerHTML(target, innerHTML, children2) {
         if (innerHTML != null) {
-          if (children != null)
+          if (children2 != null)
             throw new Error("Can only set one of `children` or `props.dangerouslySetInnerHTML`.");
           if (typeof innerHTML != "object" || !("__html" in innerHTML))
             throw new Error("`props.dangerouslySetInnerHTML` must be in the form `{__html: ...}`. Please visit https://reactjs.org/link/dangerously-set-inner-html for more information.");
@@ -11260,7 +11260,7 @@ var require_react_dom_server_browser_development = __commonJS({
       }
       function pushStartSelect(target, props, responseState) {
         checkControlledValueProps("select", props), checkSelectProp(props, "value"), checkSelectProp(props, "defaultValue"), props.value !== void 0 && props.defaultValue !== void 0 && !didWarnDefaultSelectValue && (error("Select elements must be either controlled or uncontrolled (specify either the value prop, or the defaultValue prop, but not both). Decide between using a controlled or uncontrolled select element and remove one of these props. More info: https://reactjs.org/link/controlled-components"), didWarnDefaultSelectValue = !0), target.push(startChunkForTag("select"));
-        var children = null, innerHTML = null;
+        var children2 = null, innerHTML = null;
         for (var propKey in props)
           if (hasOwnProperty.call(props, propKey)) {
             var propValue = props[propKey];
@@ -11268,7 +11268,7 @@ var require_react_dom_server_browser_development = __commonJS({
               continue;
             switch (propKey) {
               case "children":
-                children = propValue;
+                children2 = propValue;
                 break;
               case "dangerouslySetInnerHTML":
                 innerHTML = propValue;
@@ -11281,11 +11281,11 @@ var require_react_dom_server_browser_development = __commonJS({
                 break;
             }
           }
-        return target.push(endOfStartTag), pushInnerHTML(target, innerHTML, children), children;
+        return target.push(endOfStartTag), pushInnerHTML(target, innerHTML, children2), children2;
       }
-      function flattenOptionChildren(children) {
+      function flattenOptionChildren(children2) {
         var content = "";
-        return React7.Children.forEach(children, function(child) {
+        return React7.Children.forEach(children2, function(child) {
           child != null && (content += child, !didWarnInvalidOptionChildren && typeof child != "string" && typeof child != "number" && (didWarnInvalidOptionChildren = !0, error("Cannot infer the option value of complex children. Pass a `value` prop or use a plain string as children to <option>.")));
         }), content;
       }
@@ -11293,7 +11293,7 @@ var require_react_dom_server_browser_development = __commonJS({
       function pushStartOption(target, props, responseState, formatContext) {
         var selectedValue = formatContext.selectedValue;
         target.push(startChunkForTag("option"));
-        var children = null, value = null, selected = null, innerHTML = null;
+        var children2 = null, value = null, selected = null, innerHTML = null;
         for (var propKey in props)
           if (hasOwnProperty.call(props, propKey)) {
             var propValue = props[propKey];
@@ -11301,7 +11301,7 @@ var require_react_dom_server_browser_development = __commonJS({
               continue;
             switch (propKey) {
               case "children":
-                children = propValue;
+                children2 = propValue;
                 break;
               case "selected":
                 selected = propValue, didWarnSelectedSetOnOption || (error("Use the `defaultValue` or `value` props on <select> instead of setting `selected` on <option>."), didWarnSelectedSetOnOption = !0);
@@ -11318,7 +11318,7 @@ var require_react_dom_server_browser_development = __commonJS({
           }
         if (selectedValue != null) {
           var stringValue;
-          if (value !== null ? (checkAttributeStringCoercion(value, "value"), stringValue = "" + value) : (innerHTML !== null && (didWarnInvalidOptionInnerHTML || (didWarnInvalidOptionInnerHTML = !0, error("Pass a `value` prop if you set dangerouslyInnerHTML so React knows which value should be selected."))), stringValue = flattenOptionChildren(children)), isArray(selectedValue))
+          if (value !== null ? (checkAttributeStringCoercion(value, "value"), stringValue = "" + value) : (innerHTML !== null && (didWarnInvalidOptionInnerHTML || (didWarnInvalidOptionInnerHTML = !0, error("Pass a `value` prop if you set dangerouslyInnerHTML so React knows which value should be selected."))), stringValue = flattenOptionChildren(children2)), isArray(selectedValue))
             for (var i = 0; i < selectedValue.length; i++) {
               checkAttributeStringCoercion(selectedValue[i], "value");
               var v = "" + selectedValue[i];
@@ -11331,7 +11331,7 @@ var require_react_dom_server_browser_development = __commonJS({
             checkAttributeStringCoercion(selectedValue, "select.value"), "" + selectedValue === stringValue && target.push(selectedMarkerAttribute);
         } else
           selected && target.push(selectedMarkerAttribute);
-        return target.push(endOfStartTag), pushInnerHTML(target, innerHTML, children), children;
+        return target.push(endOfStartTag), pushInnerHTML(target, innerHTML, children2), children2;
       }
       function pushInput(target, props, responseState) {
         checkControlledValueProps("input", props), props.checked !== void 0 && props.defaultChecked !== void 0 && !didWarnDefaultChecked && (error("%s contains an input of type %s with both checked and defaultChecked props. Input elements must be either controlled or uncontrolled (specify either the checked prop, or the defaultChecked prop, but not both). Decide between using a controlled or uncontrolled input element and remove one of these props. More info: https://reactjs.org/link/controlled-components", "A component", props.type), didWarnDefaultChecked = !0), props.value !== void 0 && props.defaultValue !== void 0 && !didWarnDefaultInputValue && (error("%s contains an input of type %s with both value and defaultValue props. Input elements must be either controlled or uncontrolled (specify either the value prop, or the defaultValue prop, but not both). Decide between using a controlled or uncontrolled input element and remove one of these props. More info: https://reactjs.org/link/controlled-components", "A component", props.type), didWarnDefaultInputValue = !0), target.push(startChunkForTag("input"));
@@ -11366,7 +11366,7 @@ var require_react_dom_server_browser_development = __commonJS({
       }
       function pushStartTextArea(target, props, responseState) {
         checkControlledValueProps("textarea", props), props.value !== void 0 && props.defaultValue !== void 0 && !didWarnDefaultTextareaValue && (error("Textarea elements must be either controlled or uncontrolled (specify either the value prop, or the defaultValue prop, but not both). Decide between using a controlled or uncontrolled textarea and remove one of these props. More info: https://reactjs.org/link/controlled-components"), didWarnDefaultTextareaValue = !0), target.push(startChunkForTag("textarea"));
-        var value = null, defaultValue = null, children = null;
+        var value = null, defaultValue = null, children2 = null;
         for (var propKey in props)
           if (hasOwnProperty.call(props, propKey)) {
             var propValue = props[propKey];
@@ -11374,7 +11374,7 @@ var require_react_dom_server_browser_development = __commonJS({
               continue;
             switch (propKey) {
               case "children":
-                children = propValue;
+                children2 = propValue;
                 break;
               case "value":
                 value = propValue;
@@ -11389,15 +11389,15 @@ var require_react_dom_server_browser_development = __commonJS({
                 break;
             }
           }
-        if (value === null && defaultValue !== null && (value = defaultValue), target.push(endOfStartTag), children != null) {
+        if (value === null && defaultValue !== null && (value = defaultValue), target.push(endOfStartTag), children2 != null) {
           if (error("Use the `defaultValue` or `value` props instead of setting children on <textarea>."), value != null)
             throw new Error("If you supply `defaultValue` on a <textarea>, do not pass children.");
-          if (isArray(children)) {
-            if (children.length > 1)
+          if (isArray(children2)) {
+            if (children2.length > 1)
               throw new Error("<textarea> can only have at most one child.");
-            checkHtmlStringCoercion(children[0]), value = "" + children[0];
+            checkHtmlStringCoercion(children2[0]), value = "" + children2[0];
           }
-          checkHtmlStringCoercion(children), value = "" + children;
+          checkHtmlStringCoercion(children2), value = "" + children2;
         }
         return typeof value == "string" && value[0] === `
 ` && target.push(leadingNewline), value !== null && (checkAttributeStringCoercion(value, "value"), target.push(stringToChunk(encodeHTMLTextNode("" + value)))), null;
@@ -11440,7 +11440,7 @@ var require_react_dom_server_browser_development = __commonJS({
       }
       function pushStartTitle(target, props, responseState) {
         target.push(startChunkForTag("title"));
-        var children = null;
+        var children2 = null;
         for (var propKey in props)
           if (hasOwnProperty.call(props, propKey)) {
             var propValue = props[propKey];
@@ -11448,7 +11448,7 @@ var require_react_dom_server_browser_development = __commonJS({
               continue;
             switch (propKey) {
               case "children":
-                children = propValue;
+                children2 = propValue;
                 break;
               case "dangerouslySetInnerHTML":
                 throw new Error("`dangerouslySetInnerHTML` does not make sense on <title>.");
@@ -11459,14 +11459,14 @@ var require_react_dom_server_browser_development = __commonJS({
           }
         target.push(endOfStartTag);
         {
-          var child = Array.isArray(children) && children.length < 2 ? children[0] || null : children;
-          Array.isArray(children) && children.length > 1 ? error("A title element received an array with more than 1 element as children. In browsers title Elements can only have Text Nodes as children. If the children being rendered output more than a single text node in aggregate the browser will display markup and comments as text in the title and hydration will likely fail and fall back to client rendering") : child != null && child.$$typeof != null ? error("A title element received a React element for children. In the browser title Elements can only have Text Nodes as children. If the children being rendered output more than a single text node in aggregate the browser will display markup and comments as text in the title and hydration will likely fail and fall back to client rendering") : child != null && typeof child != "string" && typeof child != "number" && error("A title element received a value that was not a string or number for children. In the browser title Elements can only have Text Nodes as children. If the children being rendered output more than a single text node in aggregate the browser will display markup and comments as text in the title and hydration will likely fail and fall back to client rendering");
+          var child = Array.isArray(children2) && children2.length < 2 ? children2[0] || null : children2;
+          Array.isArray(children2) && children2.length > 1 ? error("A title element received an array with more than 1 element as children. In browsers title Elements can only have Text Nodes as children. If the children being rendered output more than a single text node in aggregate the browser will display markup and comments as text in the title and hydration will likely fail and fall back to client rendering") : child != null && child.$$typeof != null ? error("A title element received a React element for children. In the browser title Elements can only have Text Nodes as children. If the children being rendered output more than a single text node in aggregate the browser will display markup and comments as text in the title and hydration will likely fail and fall back to client rendering") : child != null && typeof child != "string" && typeof child != "number" && error("A title element received a value that was not a string or number for children. In the browser title Elements can only have Text Nodes as children. If the children being rendered output more than a single text node in aggregate the browser will display markup and comments as text in the title and hydration will likely fail and fall back to client rendering");
         }
-        return children;
+        return children2;
       }
       function pushStartGenericElement(target, props, tag, responseState) {
         target.push(startChunkForTag(tag));
-        var children = null, innerHTML = null;
+        var children2 = null, innerHTML = null;
         for (var propKey in props)
           if (hasOwnProperty.call(props, propKey)) {
             var propValue = props[propKey];
@@ -11474,7 +11474,7 @@ var require_react_dom_server_browser_development = __commonJS({
               continue;
             switch (propKey) {
               case "children":
-                children = propValue;
+                children2 = propValue;
                 break;
               case "dangerouslySetInnerHTML":
                 innerHTML = propValue;
@@ -11484,11 +11484,11 @@ var require_react_dom_server_browser_development = __commonJS({
                 break;
             }
           }
-        return target.push(endOfStartTag), pushInnerHTML(target, innerHTML, children), typeof children == "string" ? (target.push(stringToChunk(encodeHTMLTextNode(children))), null) : children;
+        return target.push(endOfStartTag), pushInnerHTML(target, innerHTML, children2), typeof children2 == "string" ? (target.push(stringToChunk(encodeHTMLTextNode(children2))), null) : children2;
       }
       function pushStartCustomElement(target, props, tag, responseState) {
         target.push(startChunkForTag(tag));
-        var children = null, innerHTML = null;
+        var children2 = null, innerHTML = null;
         for (var propKey in props)
           if (hasOwnProperty.call(props, propKey)) {
             var propValue = props[propKey];
@@ -11496,7 +11496,7 @@ var require_react_dom_server_browser_development = __commonJS({
               continue;
             switch (propKey) {
               case "children":
-                children = propValue;
+                children2 = propValue;
                 break;
               case "dangerouslySetInnerHTML":
                 innerHTML = propValue;
@@ -11512,13 +11512,13 @@ var require_react_dom_server_browser_development = __commonJS({
                 break;
             }
           }
-        return target.push(endOfStartTag), pushInnerHTML(target, innerHTML, children), children;
+        return target.push(endOfStartTag), pushInnerHTML(target, innerHTML, children2), children2;
       }
       var leadingNewline = stringToPrecomputedChunk(`
 `);
       function pushStartPreformattedElement(target, props, tag, responseState) {
         target.push(startChunkForTag(tag));
-        var children = null, innerHTML = null;
+        var children2 = null, innerHTML = null;
         for (var propKey in props)
           if (hasOwnProperty.call(props, propKey)) {
             var propValue = props[propKey];
@@ -11526,7 +11526,7 @@ var require_react_dom_server_browser_development = __commonJS({
               continue;
             switch (propKey) {
               case "children":
-                children = propValue;
+                children2 = propValue;
                 break;
               case "dangerouslySetInnerHTML":
                 innerHTML = propValue;
@@ -11537,7 +11537,7 @@ var require_react_dom_server_browser_development = __commonJS({
             }
           }
         if (target.push(endOfStartTag), innerHTML != null) {
-          if (children != null)
+          if (children2 != null)
             throw new Error("Can only set one of `children` or `props.dangerouslySetInnerHTML`.");
           if (typeof innerHTML != "object" || !("__html" in innerHTML))
             throw new Error("`props.dangerouslySetInnerHTML` must be in the form `{__html: ...}`. Please visit https://reactjs.org/link/dangerously-set-inner-html for more information.");
@@ -11545,8 +11545,8 @@ var require_react_dom_server_browser_development = __commonJS({
           html != null && (typeof html == "string" && html.length > 0 && html[0] === `
 ` ? target.push(leadingNewline, stringToChunk(html)) : (checkHtmlStringCoercion(html), target.push(stringToChunk("" + html))));
         }
-        return typeof children == "string" && children[0] === `
-` && target.push(leadingNewline), children;
+        return typeof children2 == "string" && children2[0] === `
+` && target.push(leadingNewline), children2;
       }
       var VALID_TAG_REGEX = /^[a-zA-Z][a-zA-Z:_\.\-\d]*$/, validatedTagCache = /* @__PURE__ */ new Map();
       function startChunkForTag(tag) {
@@ -11635,19 +11635,19 @@ var require_react_dom_server_browser_development = __commonJS({
         return i < bootstrapChunks.length ? writeChunkAndReturn(destination, bootstrapChunks[i]) : !0;
       }
       var placeholder1 = stringToPrecomputedChunk('<template id="'), placeholder2 = stringToPrecomputedChunk('"></template>');
-      function writePlaceholder(destination, responseState, id) {
+      function writePlaceholder(destination, responseState, id2) {
         writeChunk(destination, placeholder1), writeChunk(destination, responseState.placeholderPrefix);
-        var formattedID = stringToChunk(id.toString(16));
+        var formattedID = stringToChunk(id2.toString(16));
         return writeChunk(destination, formattedID), writeChunkAndReturn(destination, placeholder2);
       }
       var startCompletedSuspenseBoundary = stringToPrecomputedChunk("<!--$-->"), startPendingSuspenseBoundary1 = stringToPrecomputedChunk('<!--$?--><template id="'), startPendingSuspenseBoundary2 = stringToPrecomputedChunk('"></template>'), startClientRenderedSuspenseBoundary = stringToPrecomputedChunk("<!--$!-->"), endSuspenseBoundary = stringToPrecomputedChunk("<!--/$-->"), clientRenderedSuspenseBoundaryError1 = stringToPrecomputedChunk("<template"), clientRenderedSuspenseBoundaryErrorAttrInterstitial = stringToPrecomputedChunk('"'), clientRenderedSuspenseBoundaryError1A = stringToPrecomputedChunk(' data-dgst="'), clientRenderedSuspenseBoundaryError1B = stringToPrecomputedChunk(' data-msg="'), clientRenderedSuspenseBoundaryError1C = stringToPrecomputedChunk(' data-stck="'), clientRenderedSuspenseBoundaryError2 = stringToPrecomputedChunk("></template>");
       function writeStartCompletedSuspenseBoundary(destination, responseState) {
         return writeChunkAndReturn(destination, startCompletedSuspenseBoundary);
       }
-      function writeStartPendingSuspenseBoundary(destination, responseState, id) {
-        if (writeChunk(destination, startPendingSuspenseBoundary1), id === null)
+      function writeStartPendingSuspenseBoundary(destination, responseState, id2) {
+        if (writeChunk(destination, startPendingSuspenseBoundary1), id2 === null)
           throw new Error("An ID must have been assigned before we can complete the boundary.");
-        return writeChunk(destination, id), writeChunkAndReturn(destination, startPendingSuspenseBoundary2);
+        return writeChunk(destination, id2), writeChunkAndReturn(destination, startPendingSuspenseBoundary2);
       }
       function writeStartClientRenderedSuspenseBoundary(destination, responseState, errorDigest, errorMesssage, errorComponentStack) {
         var result;
@@ -11663,23 +11663,23 @@ var require_react_dom_server_browser_development = __commonJS({
         return writeChunkAndReturn(destination, endSuspenseBoundary);
       }
       var startSegmentHTML = stringToPrecomputedChunk('<div hidden id="'), startSegmentHTML2 = stringToPrecomputedChunk('">'), endSegmentHTML = stringToPrecomputedChunk("</div>"), startSegmentSVG = stringToPrecomputedChunk('<svg aria-hidden="true" style="display:none" id="'), startSegmentSVG2 = stringToPrecomputedChunk('">'), endSegmentSVG = stringToPrecomputedChunk("</svg>"), startSegmentMathML = stringToPrecomputedChunk('<math aria-hidden="true" style="display:none" id="'), startSegmentMathML2 = stringToPrecomputedChunk('">'), endSegmentMathML = stringToPrecomputedChunk("</math>"), startSegmentTable = stringToPrecomputedChunk('<table hidden id="'), startSegmentTable2 = stringToPrecomputedChunk('">'), endSegmentTable = stringToPrecomputedChunk("</table>"), startSegmentTableBody = stringToPrecomputedChunk('<table hidden><tbody id="'), startSegmentTableBody2 = stringToPrecomputedChunk('">'), endSegmentTableBody = stringToPrecomputedChunk("</tbody></table>"), startSegmentTableRow = stringToPrecomputedChunk('<table hidden><tr id="'), startSegmentTableRow2 = stringToPrecomputedChunk('">'), endSegmentTableRow = stringToPrecomputedChunk("</tr></table>"), startSegmentColGroup = stringToPrecomputedChunk('<table hidden><colgroup id="'), startSegmentColGroup2 = stringToPrecomputedChunk('">'), endSegmentColGroup = stringToPrecomputedChunk("</colgroup></table>");
-      function writeStartSegment(destination, responseState, formatContext, id) {
+      function writeStartSegment(destination, responseState, formatContext, id2) {
         switch (formatContext.insertionMode) {
           case ROOT_HTML_MODE:
           case HTML_MODE:
-            return writeChunk(destination, startSegmentHTML), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, stringToChunk(id.toString(16))), writeChunkAndReturn(destination, startSegmentHTML2);
+            return writeChunk(destination, startSegmentHTML), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, stringToChunk(id2.toString(16))), writeChunkAndReturn(destination, startSegmentHTML2);
           case SVG_MODE:
-            return writeChunk(destination, startSegmentSVG), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, stringToChunk(id.toString(16))), writeChunkAndReturn(destination, startSegmentSVG2);
+            return writeChunk(destination, startSegmentSVG), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, stringToChunk(id2.toString(16))), writeChunkAndReturn(destination, startSegmentSVG2);
           case MATHML_MODE:
-            return writeChunk(destination, startSegmentMathML), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, stringToChunk(id.toString(16))), writeChunkAndReturn(destination, startSegmentMathML2);
+            return writeChunk(destination, startSegmentMathML), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, stringToChunk(id2.toString(16))), writeChunkAndReturn(destination, startSegmentMathML2);
           case HTML_TABLE_MODE:
-            return writeChunk(destination, startSegmentTable), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, stringToChunk(id.toString(16))), writeChunkAndReturn(destination, startSegmentTable2);
+            return writeChunk(destination, startSegmentTable), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, stringToChunk(id2.toString(16))), writeChunkAndReturn(destination, startSegmentTable2);
           case HTML_TABLE_BODY_MODE:
-            return writeChunk(destination, startSegmentTableBody), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, stringToChunk(id.toString(16))), writeChunkAndReturn(destination, startSegmentTableBody2);
+            return writeChunk(destination, startSegmentTableBody), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, stringToChunk(id2.toString(16))), writeChunkAndReturn(destination, startSegmentTableBody2);
           case HTML_TABLE_ROW_MODE:
-            return writeChunk(destination, startSegmentTableRow), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, stringToChunk(id.toString(16))), writeChunkAndReturn(destination, startSegmentTableRow2);
+            return writeChunk(destination, startSegmentTableRow), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, stringToChunk(id2.toString(16))), writeChunkAndReturn(destination, startSegmentTableRow2);
           case HTML_COLGROUP_MODE:
-            return writeChunk(destination, startSegmentColGroup), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, stringToChunk(id.toString(16))), writeChunkAndReturn(destination, startSegmentColGroup2);
+            return writeChunk(destination, startSegmentColGroup), writeChunk(destination, responseState.segmentPrefix), writeChunk(destination, stringToChunk(id2.toString(16))), writeChunkAndReturn(destination, startSegmentColGroup2);
           default:
             throw new Error("Unknown insertion mode. This is a bug in React.");
         }
@@ -11792,9 +11792,9 @@ var require_react_dom_server_browser_development = __commonJS({
               var outerName = type.displayName || null;
               return outerName !== null ? outerName : getComponentNameFromType(type.type) || "Memo";
             case REACT_LAZY_TYPE: {
-              var lazyComponent = type, payload = lazyComponent._payload, init = lazyComponent._init;
+              var lazyComponent = type, payload = lazyComponent._payload, init2 = lazyComponent._init;
               try {
-                return getComponentNameFromType(init(payload));
+                return getComponentNameFromType(init2(payload));
               } catch {
                 return null;
               }
@@ -11887,9 +11887,9 @@ var require_react_dom_server_browser_development = __commonJS({
         if (!fn || reentry)
           return "";
         {
-          var frame = componentFrameCache.get(fn);
-          if (frame !== void 0)
-            return frame;
+          var frame2 = componentFrameCache.get(fn);
+          if (frame2 !== void 0)
+            return frame2;
         }
         var control;
         reentry = !0;
@@ -11984,9 +11984,9 @@ var require_react_dom_server_browser_development = __commonJS({
             case REACT_MEMO_TYPE:
               return describeUnknownElementTypeFrameInDEV(type.type, source, ownerFn);
             case REACT_LAZY_TYPE: {
-              var lazyComponent = type, payload = lazyComponent._payload, init = lazyComponent._init;
+              var lazyComponent = type, payload = lazyComponent._payload, init2 = lazyComponent._init;
               try {
-                return describeUnknownElementTypeFrameInDEV(init(payload), source, ownerFn);
+                return describeUnknownElementTypeFrameInDEV(init2(payload), source, ownerFn);
               } catch {
               }
             }
@@ -12139,10 +12139,10 @@ var require_react_dom_server_browser_development = __commonJS({
         var value = context._currentValue;
         return value;
       }
-      function get(key) {
+      function get3(key) {
         return key._reactInternals;
       }
-      function set(key, value) {
+      function set3(key, value) {
         key._reactInternals = value;
       }
       var didWarnAboutNoopUpdateForComponent = {}, didWarnAboutDeprecatedWillMount = {}, didWarnAboutUninitializedState, didWarnAboutGetSnapshotBeforeUpdateWithoutDidUpdate, didWarnAboutLegacyLifecyclesAndDerivedState, didWarnAboutUndefinedDerivedState, warnOnUndefinedDerivedState, warnOnInvalidCallback, didWarnAboutDirectlyAssigningPropsToState, didWarnAboutContextTypeAndContextTypes, didWarnAboutInvalidateContextType;
@@ -12176,15 +12176,15 @@ Please check the code for the %s component.`, callerName, callerName, componentN
           return !1;
         },
         enqueueSetState: function(inst, payload, callback) {
-          var internals = get(inst);
+          var internals = get3(inst);
           internals.queue === null ? warnNoop(inst, "setState") : (internals.queue.push(payload), callback != null && warnOnInvalidCallback(callback, "setState"));
         },
         enqueueReplaceState: function(inst, payload, callback) {
-          var internals = get(inst);
+          var internals = get3(inst);
           internals.replace = !0, internals.queue = [payload], callback != null && warnOnInvalidCallback(callback, "setState");
         },
         enqueueForceUpdate: function(inst, callback) {
-          var internals = get(inst);
+          var internals = get3(inst);
           internals.queue === null ? warnNoop(inst, "forceUpdate") : callback != null && warnOnInvalidCallback(callback, "setState");
         }
       };
@@ -12280,7 +12280,7 @@ Please update the following components: %s`,
           queue: [],
           replace: !1
         };
-        set(instance, internalInstance);
+        set3(instance, internalInstance);
         var contextType = ctor.contextType;
         if (typeof contextType == "object" && contextType !== null ? instance.context = readContext(contextType) : instance.context = maskedLegacyContext, instance.state === newProps) {
           var componentName = getComponentNameFromType(ctor) || "Component";
@@ -12294,15 +12294,15 @@ Please update the following components: %s`,
         overflow: ""
       };
       function getTreeId(context) {
-        var overflow = context.overflow, idWithLeadingBit = context.id, id = idWithLeadingBit & ~getLeadingBit(idWithLeadingBit);
-        return id.toString(32) + overflow;
+        var overflow = context.overflow, idWithLeadingBit = context.id, id2 = idWithLeadingBit & ~getLeadingBit(idWithLeadingBit);
+        return id2.toString(32) + overflow;
       }
       function pushTreeContext(baseContext, totalChildren, index) {
         var baseIdWithLeadingBit = baseContext.id, baseOverflow = baseContext.overflow, baseLength = getBitLength(baseIdWithLeadingBit) - 1, baseId = baseIdWithLeadingBit & ~(1 << baseLength), slot = index + 1, length = getBitLength(totalChildren) + baseLength;
         if (length > 30) {
-          var numberOfOverflowBits = baseLength - baseLength % 5, newOverflowBits = (1 << numberOfOverflowBits) - 1, newOverflow = (baseId & newOverflowBits).toString(32), restOfBaseId = baseId >> numberOfOverflowBits, restOfBaseLength = baseLength - numberOfOverflowBits, restOfLength = getBitLength(totalChildren) + restOfBaseLength, restOfNewBits = slot << restOfBaseLength, id = restOfNewBits | restOfBaseId, overflow = newOverflow + baseOverflow;
+          var numberOfOverflowBits = baseLength - baseLength % 5, newOverflowBits = (1 << numberOfOverflowBits) - 1, newOverflow = (baseId & newOverflowBits).toString(32), restOfBaseId = baseId >> numberOfOverflowBits, restOfBaseLength = baseLength - numberOfOverflowBits, restOfLength = getBitLength(totalChildren) + restOfBaseLength, restOfNewBits = slot << restOfBaseLength, id2 = restOfNewBits | restOfBaseId, overflow = newOverflow + baseOverflow;
           return {
-            id: 1 << restOfLength | id,
+            id: 1 << restOfLength | id2,
             overflow
           };
         } else {
@@ -12316,13 +12316,13 @@ Please update the following components: %s`,
       function getBitLength(number) {
         return 32 - clz32(number);
       }
-      function getLeadingBit(id) {
-        return 1 << getBitLength(id) - 1;
+      function getLeadingBit(id2) {
+        return 1 << getBitLength(id2) - 1;
       }
-      var clz32 = Math.clz32 ? Math.clz32 : clz32Fallback, log = Math.log, LN2 = Math.LN2;
+      var clz32 = Math.clz32 ? Math.clz32 : clz32Fallback, log2 = Math.log, LN2 = Math.LN2;
       function clz32Fallback(x) {
         var asUint = x >>> 0;
-        return asUint === 0 ? 32 : 31 - (log(asUint) / LN2 | 0) | 0;
+        return asUint === 0 ? 32 : 31 - (log2(asUint) / LN2 | 0) | 0;
       }
       function is2(x, y) {
         return x === y && (x !== 0 || 1 / x === 1 / y) || x !== x && y !== y;
@@ -12364,10 +12364,10 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
       function prepareToUseHooks(task, componentIdentity) {
         currentlyRenderingComponent = componentIdentity, currentlyRenderingTask = task, isInHookUserCodeInDev = !1, localIdCounter = 0;
       }
-      function finishHooks(Component2, props, children, refOrContext) {
+      function finishHooks(Component2, props, children2, refOrContext) {
         for (; didScheduleRenderPhaseUpdate; )
-          didScheduleRenderPhaseUpdate = !1, localIdCounter = 0, numberOfReRenders += 1, workInProgressHook = null, children = Component2(props, refOrContext);
-        return resetHooksState(), children;
+          didScheduleRenderPhaseUpdate = !1, localIdCounter = 0, numberOfReRenders += 1, workInProgressHook = null, children2 = Component2(props, refOrContext);
+        return resetHooksState(), children2;
       }
       function checkDidRenderIdHook() {
         var didRenderIdHook = localIdCounter !== 0;
@@ -12385,15 +12385,15 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
       function basicStateReducer(state, action) {
         return typeof action == "function" ? action(state) : action;
       }
-      function useState5(initialState) {
+      function useState6(initialState) {
         return currentHookNameInDev = "useState", useReducer(
           basicStateReducer,
           initialState
         );
       }
-      function useReducer(reducer, initialArg, init) {
+      function useReducer(reducer, initialArg, init2) {
         if (reducer !== basicStateReducer && (currentHookNameInDev = "useReducer"), currentlyRenderingComponent = resolveCurrentlyRenderingComponent(), workInProgressHook = createWorkInProgressHook(), isReRender) {
-          var queue = workInProgressHook.queue, dispatch = queue.dispatch;
+          var queue = workInProgressHook.queue, dispatch2 = queue.dispatch;
           if (renderPhaseUpdates !== null) {
             var firstRenderPhaseUpdate = renderPhaseUpdates.get(queue);
             if (firstRenderPhaseUpdate !== void 0) {
@@ -12403,14 +12403,14 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
                 var action = update.action;
                 isInHookUserCodeInDev = !0, newState = reducer(newState, action), isInHookUserCodeInDev = !1, update = update.next;
               } while (update !== null);
-              return workInProgressHook.memoizedState = newState, [newState, dispatch];
+              return workInProgressHook.memoizedState = newState, [newState, dispatch2];
             }
           }
-          return [workInProgressHook.memoizedState, dispatch];
+          return [workInProgressHook.memoizedState, dispatch2];
         } else {
           isInHookUserCodeInDev = !0;
           var initialState;
-          reducer === basicStateReducer ? initialState = typeof initialArg == "function" ? initialArg() : initialArg : initialState = init !== void 0 ? init(initialArg) : initialArg, isInHookUserCodeInDev = !1, workInProgressHook.memoizedState = initialState;
+          reducer === basicStateReducer ? initialState = typeof initialArg == "function" ? initialArg() : initialArg : initialState = init2 !== void 0 ? init2(initialArg) : initialArg, isInHookUserCodeInDev = !1, workInProgressHook.memoizedState = initialState;
           var _queue = workInProgressHook.queue = {
             last: null,
             dispatch: null
@@ -12444,7 +12444,7 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
         } else
           return previousRef;
       }
-      function useLayoutEffect4(create, inputs) {
+      function useLayoutEffect4(create2, inputs) {
         currentHookNameInDev = "useLayoutEffect", error("useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.");
       }
       function dispatchAction(componentIdentity, queue, action) {
@@ -12496,7 +12496,7 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
         var localId = localIdCounter++;
         return makeId(responseState, treeId, localId);
       }
-      function noop() {
+      function noop3() {
       }
       var Dispatcher = {
         readContext: readContext$1,
@@ -12504,13 +12504,13 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
         useMemo: useMemo5,
         useReducer,
         useRef: useRef3,
-        useState: useState5,
-        useInsertionEffect: noop,
+        useState: useState6,
+        useInsertionEffect: noop3,
         useLayoutEffect: useLayoutEffect4,
         useCallback: useCallback3,
-        useImperativeHandle: noop,
-        useEffect: noop,
-        useDebugValue: noop,
+        useImperativeHandle: noop3,
+        useEffect: noop3,
+        useDebugValue: noop3,
         useDeferredValue,
         useTransition: useTransition2,
         useId,
@@ -12550,7 +12550,7 @@ Error generating stack: ` + x.message + `
       }
       function noop$1() {
       }
-      function createRequest(children, responseState, rootFormatContext, progressiveChunkSize, onError, onAllReady, onShellReady, onShellError, onFatalError) {
+      function createRequest(children2, responseState, rootFormatContext, progressiveChunkSize, onError, onAllReady, onShellReady, onShellError, onFatalError) {
         var pingedTasks = [], abortSet = /* @__PURE__ */ new Set(), request = {
           destination: null,
           responseState,
@@ -12580,7 +12580,7 @@ Error generating stack: ` + x.message + `
           !1
         );
         rootSegment.parentFlushed = !0;
-        var rootTask = createTask(request, children, null, rootSegment, abortSet, emptyContextObject, rootContextSnapshot, emptyTreeContext);
+        var rootTask = createTask(request, children2, null, rootSegment, abortSet, emptyContextObject, rootContextSnapshot, emptyTreeContext);
         return pingedTasks.push(rootTask), request;
       }
       function pingTask(request, task) {
@@ -12716,10 +12716,10 @@ Error generating stack: ` + x.message + `
       }
       function renderHostElement(request, task, type, props) {
         pushBuiltInComponentStackInDEV(task, type);
-        var segment = task.blockedSegment, children = pushStartInstance(segment.chunks, type, props, request.responseState, segment.formatContext);
+        var segment = task.blockedSegment, children2 = pushStartInstance(segment.chunks, type, props, request.responseState, segment.formatContext);
         segment.lastPushedText = !1;
         var prevContext = segment.formatContext;
-        segment.formatContext = getChildFormatContext(prevContext, type, props), renderNode(request, task, children), segment.formatContext = prevContext, pushEndInstance(segment.chunks, type), segment.lastPushedText = !1, popComponentStackInDEV(task);
+        segment.formatContext = getChildFormatContext(prevContext, type, props), renderNode(request, task, children2), segment.formatContext = prevContext, pushEndInstance(segment.chunks, type), segment.lastPushedText = !1, popComponentStackInDEV(task);
       }
       function shouldConstruct$1(Component2) {
         return Component2.prototype && Component2.prototype.isReactComponent;
@@ -12801,17 +12801,17 @@ Error generating stack: ` + x.message + `
       }
       function renderForwardRef(request, task, type, props, ref) {
         pushFunctionComponentStackInDEV(task, type.render);
-        var children = renderWithHooks(request, task, type.render, props, ref), hasId = checkDidRenderIdHook();
+        var children2 = renderWithHooks(request, task, type.render, props, ref), hasId = checkDidRenderIdHook();
         if (hasId) {
           var prevTreeContext = task.treeContext, totalChildren = 1, index = 0;
           task.treeContext = pushTreeContext(prevTreeContext, totalChildren, index);
           try {
-            renderNodeDestructive(request, task, children);
+            renderNodeDestructive(request, task, children2);
           } finally {
             task.treeContext = prevTreeContext;
           }
         } else
-          renderNodeDestructive(request, task, children);
+          renderNodeDestructive(request, task, children2);
         popComponentStackInDEV(task);
       }
       function renderMemo(request, task, type, props, ref) {
@@ -12826,12 +12826,12 @@ Error generating stack: ` + x.message + `
         renderNodeDestructive(request, task, newChildren);
       }
       function renderContextProvider(request, task, type, props) {
-        var context = type._context, value = props.value, children = props.children, prevSnapshot;
-        prevSnapshot = task.context, task.context = pushProvider(context, value), renderNodeDestructive(request, task, children), task.context = popProvider(context), prevSnapshot !== task.context && error("Popping the context provider did not return back to the original snapshot. This is a bug in React.");
+        var context = type._context, value = props.value, children2 = props.children, prevSnapshot;
+        prevSnapshot = task.context, task.context = pushProvider(context, value), renderNodeDestructive(request, task, children2), task.context = popProvider(context), prevSnapshot !== task.context && error("Popping the context provider did not return back to the original snapshot. This is a bug in React.");
       }
       function renderLazyComponent(request, task, lazyComponent, props, ref) {
         pushBuiltInComponentStackInDEV(task, "Lazy");
-        var payload = lazyComponent._payload, init = lazyComponent._init, Component2 = init(payload), resolvedProps = resolveDefaultProps(Component2, props);
+        var payload = lazyComponent._payload, init2 = lazyComponent._init, Component2 = init2(payload), resolvedProps = resolveDefaultProps(Component2, props);
         renderElement(request, task, Component2, resolvedProps, ref), popComponentStackInDEV(task);
       }
       function renderElement(request, task, type, props, ref) {
@@ -12914,9 +12914,9 @@ Error generating stack: ` + x.message + `
             case REACT_PORTAL_TYPE:
               throw new Error("Portals are not currently supported by the server renderer. Render them conditionally so that they only appear on the client render.");
             case REACT_LAZY_TYPE: {
-              var lazyNode = node, payload = lazyNode._payload, init = lazyNode._init, resolvedNode;
+              var lazyNode = node, payload = lazyNode._payload, init2 = lazyNode._init, resolvedNode;
               try {
-                resolvedNode = init(payload);
+                resolvedNode = init2(payload);
               } catch (x) {
                 throw typeof x == "object" && x !== null && typeof x.then == "function" && pushBuiltInComponentStackInDEV(task, "Lazy"), x;
               }
@@ -12935,11 +12935,11 @@ Error generating stack: ` + x.message + `
             if (iterator) {
               var step = iterator.next();
               if (!step.done) {
-                var children = [];
+                var children2 = [];
                 do
-                  children.push(step.value), step = iterator.next();
+                  children2.push(step.value), step = iterator.next();
                 while (!step.done);
-                renderChildrenArray(request, task, children);
+                renderChildrenArray(request, task, children2);
                 return;
               }
               return;
@@ -12960,12 +12960,12 @@ Error generating stack: ` + x.message + `
         }
         typeof node == "function" && error("Functions are not valid as a React child. This may happen if you return a Component instead of <Component /> from render. Or maybe you meant to call this function rather than return it.");
       }
-      function renderChildrenArray(request, task, children) {
-        for (var totalChildren = children.length, i = 0; i < totalChildren; i++) {
+      function renderChildrenArray(request, task, children2) {
+        for (var totalChildren = children2.length, i = 0; i < totalChildren; i++) {
           var prevTreeContext = task.treeContext;
           task.treeContext = pushTreeContext(prevTreeContext, totalChildren, i);
           try {
-            renderNode(request, task, children[i]);
+            renderNode(request, task, children2[i]);
           } finally {
             task.treeContext = prevTreeContext;
           }
@@ -13124,8 +13124,8 @@ Error generating stack: ` + x.message + `
           }
           case COMPLETED: {
             segment.status = FLUSHED;
-            for (var r = !0, chunks = segment.chunks, chunkIdx = 0, children = segment.children, childIdx = 0; childIdx < children.length; childIdx++) {
-              for (var nextChild = children[childIdx]; chunkIdx < nextChild.index; chunkIdx++)
+            for (var r = !0, chunks = segment.chunks, chunkIdx = 0, children2 = segment.children, childIdx = 0; childIdx < children2.length; childIdx++) {
+              for (var nextChild = children2[childIdx]; chunkIdx < nextChild.index; chunkIdx++)
                 writeChunk(destination, chunks[chunkIdx]);
               r = flushSegment(request, destination, nextChild);
             }
@@ -13145,8 +13145,8 @@ Error generating stack: ` + x.message + `
           return writeStartClientRenderedSuspenseBoundary(destination, request.responseState, boundary.errorDigest, boundary.errorMessage, boundary.errorComponentStack), flushSubtree(request, destination, segment), writeEndClientRenderedSuspenseBoundary(destination, request.responseState);
         if (boundary.pendingTasks > 0) {
           boundary.rootSegmentID = request.nextSegmentId++, boundary.completedSegments.length > 0 && request.partialBoundaries.push(boundary);
-          var id = boundary.id = assignSuspenseBoundaryID(request.responseState);
-          return writeStartPendingSuspenseBoundary(destination, request.responseState, id), flushSubtree(request, destination, segment), writeEndPendingSuspenseBoundary(destination, request.responseState);
+          var id2 = boundary.id = assignSuspenseBoundaryID(request.responseState);
+          return writeStartPendingSuspenseBoundary(destination, request.responseState, id2), flushSubtree(request, destination, segment), writeEndPendingSuspenseBoundary(destination, request.responseState);
         } else {
           if (boundary.byteSize > request.progressiveChunkSize)
             return boundary.rootSegmentID = request.nextSegmentId++, request.completedBoundaries.push(boundary), writeStartPendingSuspenseBoundary(destination, request.responseState, boundary.id), flushSubtree(request, destination, segment), writeEndPendingSuspenseBoundary(destination, request.responseState);
@@ -13265,7 +13265,7 @@ Error generating stack: ` + x.message + `
           logRecoverableError(request, error2), fatalError(request, error2);
         }
       }
-      function renderToReadableStream2(children, options) {
+      function renderToReadableStream2(children2, options) {
         return new Promise(function(resolve, reject) {
           var onFatalError, onAllReady, allReady = new Promise(function(res, rej) {
             onAllReady = res, onFatalError = rej;
@@ -13291,7 +13291,7 @@ Error generating stack: ` + x.message + `
             allReady.catch(function() {
             }), reject(error2);
           }
-          var request = createRequest(children, createResponseState(options ? options.identifierPrefix : void 0, options ? options.nonce : void 0, options ? options.bootstrapScriptContent : void 0, options ? options.bootstrapScripts : void 0, options ? options.bootstrapModules : void 0), createRootFormatContext(options ? options.namespaceURI : void 0), options ? options.progressiveChunkSize : void 0, options ? options.onError : void 0, onAllReady, onShellReady, onShellError, onFatalError);
+          var request = createRequest(children2, createResponseState(options ? options.identifierPrefix : void 0, options ? options.nonce : void 0, options ? options.bootstrapScriptContent : void 0, options ? options.bootstrapScripts : void 0, options ? options.bootstrapModules : void 0), createRootFormatContext(options ? options.namespaceURI : void 0), options ? options.progressiveChunkSize : void 0, options ? options.onError : void 0, onAllReady, onShellReady, onShellError, onFatalError);
           if (options && options.signal) {
             var signal = options.signal, listener = function() {
               abort(request, signal.reason), signal.removeEventListener("abort", listener);
@@ -13402,9 +13402,9 @@ var require_react_jsx_dev_runtime_development = __commonJS({
               var outerName = type.displayName || null;
               return outerName !== null ? outerName : getComponentNameFromType(type.type) || "Memo";
             case REACT_LAZY_TYPE: {
-              var lazyComponent = type, payload = lazyComponent._payload, init = lazyComponent._init;
+              var lazyComponent = type, payload = lazyComponent._payload, init2 = lazyComponent._init;
               try {
-                return getComponentNameFromType(init(payload));
+                return getComponentNameFromType(init2(payload));
               } catch {
                 return null;
               }
@@ -13497,9 +13497,9 @@ var require_react_jsx_dev_runtime_development = __commonJS({
         if (!fn || reentry)
           return "";
         {
-          var frame = componentFrameCache.get(fn);
-          if (frame !== void 0)
-            return frame;
+          var frame2 = componentFrameCache.get(fn);
+          if (frame2 !== void 0)
+            return frame2;
         }
         var control;
         reentry = !0;
@@ -13591,9 +13591,9 @@ var require_react_jsx_dev_runtime_development = __commonJS({
             case REACT_MEMO_TYPE:
               return describeUnknownElementTypeFrameInDEV(type.type, source, ownerFn);
             case REACT_LAZY_TYPE: {
-              var lazyComponent = type, payload = lazyComponent._payload, init = lazyComponent._init;
+              var lazyComponent = type, payload = lazyComponent._payload, init2 = lazyComponent._init;
               try {
-                return describeUnknownElementTypeFrameInDEV(init(payload), source, ownerFn);
+                return describeUnknownElementTypeFrameInDEV(init2(payload), source, ownerFn);
               } catch {
               }
             }
@@ -13674,8 +13674,8 @@ var require_react_jsx_dev_runtime_development = __commonJS({
         }
         return config.key !== void 0;
       }
-      function warnIfStringRefCannotBeAutoConverted(config, self) {
-        if (typeof config.ref == "string" && ReactCurrentOwner.current && self && ReactCurrentOwner.current.stateNode !== self) {
+      function warnIfStringRefCannotBeAutoConverted(config, self2) {
+        if (typeof config.ref == "string" && ReactCurrentOwner.current && self2 && ReactCurrentOwner.current.stateNode !== self2) {
           var componentName = getComponentNameFromType(ReactCurrentOwner.current.type);
           didWarnAboutStringRefs[componentName] || (error('Component "%s" contains the string ref "%s". Support for string refs will be removed in a future major release. This case cannot be automatically converted to an arrow function. We ask you to manually fix this case by using useRef() or createRef() instead. Learn more about using refs safely here: https://reactjs.org/link/strict-mode-string-ref', getComponentNameFromType(ReactCurrentOwner.current.type), config.ref), didWarnAboutStringRefs[componentName] = !0);
         }
@@ -13702,7 +13702,7 @@ var require_react_jsx_dev_runtime_development = __commonJS({
           });
         }
       }
-      var ReactElement = function(type, key, ref, self, source, owner, props) {
+      var ReactElement = function(type, key, ref, self2, source, owner, props) {
         var element = {
           $$typeof: REACT_ELEMENT_TYPE,
           type,
@@ -13720,7 +13720,7 @@ var require_react_jsx_dev_runtime_development = __commonJS({
           configurable: !1,
           enumerable: !1,
           writable: !1,
-          value: self
+          value: self2
         }), Object.defineProperty(element, "_source", {
           configurable: !1,
           enumerable: !1,
@@ -13728,10 +13728,10 @@ var require_react_jsx_dev_runtime_development = __commonJS({
           value: source
         }), Object.freeze && (Object.freeze(element.props), Object.freeze(element)), element;
       };
-      function jsxDEV7(type, config, maybeKey, source, self) {
+      function jsxDEV7(type, config, maybeKey, source, self2) {
         {
           var propName, props = {}, key = null, ref = null;
-          maybeKey !== void 0 && (checkKeyStringCoercion(maybeKey), key = "" + maybeKey), hasValidKey(config) && (checkKeyStringCoercion(config.key), key = "" + config.key), hasValidRef(config) && (ref = config.ref, warnIfStringRefCannotBeAutoConverted(config, self));
+          maybeKey !== void 0 && (checkKeyStringCoercion(maybeKey), key = "" + maybeKey), hasValidKey(config) && (checkKeyStringCoercion(config.key), key = "" + config.key), hasValidRef(config) && (ref = config.ref, warnIfStringRefCannotBeAutoConverted(config, self2));
           for (propName in config)
             hasOwnProperty.call(config, propName) && !RESERVED_PROPS.hasOwnProperty(propName) && (props[propName] = config[propName]);
           if (type && type.defaultProps) {
@@ -13743,7 +13743,7 @@ var require_react_jsx_dev_runtime_development = __commonJS({
             var displayName = typeof type == "function" ? type.displayName || type.name || "Unknown" : type;
             key && defineKeyPropWarningGetter(props, displayName), ref && defineRefPropWarningGetter(props, displayName);
           }
-          return ReactElement(type, key, ref, self, source, ReactCurrentOwner.current, props);
+          return ReactElement(type, key, ref, self2, source, ReactCurrentOwner.current, props);
         }
       }
       var ReactCurrentOwner$1 = ReactSharedInternals.ReactCurrentOwner, ReactDebugCurrentFrame$1 = ReactSharedInternals.ReactDebugCurrentFrame;
@@ -13756,8 +13756,8 @@ var require_react_jsx_dev_runtime_development = __commonJS({
       }
       var propTypesMisspellWarningShown;
       propTypesMisspellWarningShown = !1;
-      function isValidElement2(object) {
-        return typeof object == "object" && object !== null && object.$$typeof === REACT_ELEMENT_TYPE;
+      function isValidElement2(object3) {
+        return typeof object3 == "object" && object3 !== null && object3.$$typeof === REACT_ELEMENT_TYPE;
       }
       function getDeclarationErrorAddendum() {
         {
@@ -13862,7 +13862,7 @@ Check the top-level render call using <` + parentName + ">.");
           fragment.ref !== null && (setCurrentlyValidatingElement$1(fragment), error("Invalid attribute `ref` supplied to `React.Fragment`."), setCurrentlyValidatingElement$1(null));
         }
       }
-      function jsxWithValidation(type, props, key, isStaticChildren, source, self) {
+      function jsxWithValidation(type, props, key, isStaticChildren, source, self2) {
         {
           var validType = isValidElementType(type);
           if (!validType) {
@@ -13873,21 +13873,21 @@ Check the top-level render call using <` + parentName + ">.");
             var typeString;
             type === null ? typeString = "null" : isArray(type) ? typeString = "array" : type !== void 0 && type.$$typeof === REACT_ELEMENT_TYPE ? (typeString = "<" + (getComponentNameFromType(type.type) || "Unknown") + " />", info = " Did you accidentally export a JSX literal instead of a component?") : typeString = typeof type, error("React.jsx: type is invalid -- expected a string (for built-in components) or a class/function (for composite components) but got: %s.%s", typeString, info);
           }
-          var element = jsxDEV7(type, props, key, source, self);
+          var element = jsxDEV7(type, props, key, source, self2);
           if (element == null)
             return element;
           if (validType) {
-            var children = props.children;
-            if (children !== void 0)
+            var children2 = props.children;
+            if (children2 !== void 0)
               if (isStaticChildren)
-                if (isArray(children)) {
-                  for (var i = 0; i < children.length; i++)
-                    validateChildKeys(children[i], type);
-                  Object.freeze && Object.freeze(children);
+                if (isArray(children2)) {
+                  for (var i = 0; i < children2.length; i++)
+                    validateChildKeys(children2[i], type);
+                  Object.freeze && Object.freeze(children2);
                 } else
                   error("React.jsx: Static children should always be an array. You are likely explicitly calling React.jsxs or React.jsxDEV. Use the Babel transform instead.");
               else
-                validateChildKeys(children, type);
+                validateChildKeys(children2, type);
           }
           return type === REACT_FRAGMENT_TYPE ? validateFragmentProps(element) : validatePropTypes(element), element;
         }
@@ -13903,6 +13903,6603 @@ var require_jsx_dev_runtime = __commonJS({
   "node_modules/react/jsx-dev-runtime.js"(exports, module) {
     "use strict";
     module.exports = require_react_jsx_dev_runtime_development();
+  }
+});
+
+// node_modules/prop-types/node_modules/react-is/cjs/react-is.development.js
+var require_react_is_development = __commonJS({
+  "node_modules/prop-types/node_modules/react-is/cjs/react-is.development.js"(exports) {
+    "use strict";
+    (function() {
+      "use strict";
+      var hasSymbol = typeof Symbol == "function" && Symbol.for, REACT_ELEMENT_TYPE = hasSymbol ? Symbol.for("react.element") : 60103, REACT_PORTAL_TYPE = hasSymbol ? Symbol.for("react.portal") : 60106, REACT_FRAGMENT_TYPE = hasSymbol ? Symbol.for("react.fragment") : 60107, REACT_STRICT_MODE_TYPE = hasSymbol ? Symbol.for("react.strict_mode") : 60108, REACT_PROFILER_TYPE = hasSymbol ? Symbol.for("react.profiler") : 60114, REACT_PROVIDER_TYPE = hasSymbol ? Symbol.for("react.provider") : 60109, REACT_CONTEXT_TYPE = hasSymbol ? Symbol.for("react.context") : 60110, REACT_ASYNC_MODE_TYPE = hasSymbol ? Symbol.for("react.async_mode") : 60111, REACT_CONCURRENT_MODE_TYPE = hasSymbol ? Symbol.for("react.concurrent_mode") : 60111, REACT_FORWARD_REF_TYPE = hasSymbol ? Symbol.for("react.forward_ref") : 60112, REACT_SUSPENSE_TYPE = hasSymbol ? Symbol.for("react.suspense") : 60113, REACT_SUSPENSE_LIST_TYPE = hasSymbol ? Symbol.for("react.suspense_list") : 60120, REACT_MEMO_TYPE = hasSymbol ? Symbol.for("react.memo") : 60115, REACT_LAZY_TYPE = hasSymbol ? Symbol.for("react.lazy") : 60116, REACT_BLOCK_TYPE = hasSymbol ? Symbol.for("react.block") : 60121, REACT_FUNDAMENTAL_TYPE = hasSymbol ? Symbol.for("react.fundamental") : 60117, REACT_RESPONDER_TYPE = hasSymbol ? Symbol.for("react.responder") : 60118, REACT_SCOPE_TYPE = hasSymbol ? Symbol.for("react.scope") : 60119;
+      function isValidElementType(type) {
+        return typeof type == "string" || typeof type == "function" || type === REACT_FRAGMENT_TYPE || type === REACT_CONCURRENT_MODE_TYPE || type === REACT_PROFILER_TYPE || type === REACT_STRICT_MODE_TYPE || type === REACT_SUSPENSE_TYPE || type === REACT_SUSPENSE_LIST_TYPE || typeof type == "object" && type !== null && (type.$$typeof === REACT_LAZY_TYPE || type.$$typeof === REACT_MEMO_TYPE || type.$$typeof === REACT_PROVIDER_TYPE || type.$$typeof === REACT_CONTEXT_TYPE || type.$$typeof === REACT_FORWARD_REF_TYPE || type.$$typeof === REACT_FUNDAMENTAL_TYPE || type.$$typeof === REACT_RESPONDER_TYPE || type.$$typeof === REACT_SCOPE_TYPE || type.$$typeof === REACT_BLOCK_TYPE);
+      }
+      function typeOf(object3) {
+        if (typeof object3 == "object" && object3 !== null) {
+          var $$typeof = object3.$$typeof;
+          switch ($$typeof) {
+            case REACT_ELEMENT_TYPE:
+              var type = object3.type;
+              switch (type) {
+                case REACT_ASYNC_MODE_TYPE:
+                case REACT_CONCURRENT_MODE_TYPE:
+                case REACT_FRAGMENT_TYPE:
+                case REACT_PROFILER_TYPE:
+                case REACT_STRICT_MODE_TYPE:
+                case REACT_SUSPENSE_TYPE:
+                  return type;
+                default:
+                  var $$typeofType = type && type.$$typeof;
+                  switch ($$typeofType) {
+                    case REACT_CONTEXT_TYPE:
+                    case REACT_FORWARD_REF_TYPE:
+                    case REACT_LAZY_TYPE:
+                    case REACT_MEMO_TYPE:
+                    case REACT_PROVIDER_TYPE:
+                      return $$typeofType;
+                    default:
+                      return $$typeof;
+                  }
+              }
+            case REACT_PORTAL_TYPE:
+              return $$typeof;
+          }
+        }
+      }
+      var AsyncMode = REACT_ASYNC_MODE_TYPE, ConcurrentMode = REACT_CONCURRENT_MODE_TYPE, ContextConsumer = REACT_CONTEXT_TYPE, ContextProvider = REACT_PROVIDER_TYPE, Element = REACT_ELEMENT_TYPE, ForwardRef = REACT_FORWARD_REF_TYPE, Fragment3 = REACT_FRAGMENT_TYPE, Lazy = REACT_LAZY_TYPE, Memo = REACT_MEMO_TYPE, Portal = REACT_PORTAL_TYPE, Profiler = REACT_PROFILER_TYPE, StrictMode = REACT_STRICT_MODE_TYPE, Suspense2 = REACT_SUSPENSE_TYPE, hasWarnedAboutDeprecatedIsAsyncMode = !1;
+      function isAsyncMode(object3) {
+        return hasWarnedAboutDeprecatedIsAsyncMode || (hasWarnedAboutDeprecatedIsAsyncMode = !0, console.warn("The ReactIs.isAsyncMode() alias has been deprecated, and will be removed in React 17+. Update your code to use ReactIs.isConcurrentMode() instead. It has the exact same API.")), isConcurrentMode(object3) || typeOf(object3) === REACT_ASYNC_MODE_TYPE;
+      }
+      function isConcurrentMode(object3) {
+        return typeOf(object3) === REACT_CONCURRENT_MODE_TYPE;
+      }
+      function isContextConsumer(object3) {
+        return typeOf(object3) === REACT_CONTEXT_TYPE;
+      }
+      function isContextProvider(object3) {
+        return typeOf(object3) === REACT_PROVIDER_TYPE;
+      }
+      function isElement(object3) {
+        return typeof object3 == "object" && object3 !== null && object3.$$typeof === REACT_ELEMENT_TYPE;
+      }
+      function isForwardRef(object3) {
+        return typeOf(object3) === REACT_FORWARD_REF_TYPE;
+      }
+      function isFragment(object3) {
+        return typeOf(object3) === REACT_FRAGMENT_TYPE;
+      }
+      function isLazy(object3) {
+        return typeOf(object3) === REACT_LAZY_TYPE;
+      }
+      function isMemo(object3) {
+        return typeOf(object3) === REACT_MEMO_TYPE;
+      }
+      function isPortal(object3) {
+        return typeOf(object3) === REACT_PORTAL_TYPE;
+      }
+      function isProfiler(object3) {
+        return typeOf(object3) === REACT_PROFILER_TYPE;
+      }
+      function isStrictMode(object3) {
+        return typeOf(object3) === REACT_STRICT_MODE_TYPE;
+      }
+      function isSuspense(object3) {
+        return typeOf(object3) === REACT_SUSPENSE_TYPE;
+      }
+      exports.AsyncMode = AsyncMode, exports.ConcurrentMode = ConcurrentMode, exports.ContextConsumer = ContextConsumer, exports.ContextProvider = ContextProvider, exports.Element = Element, exports.ForwardRef = ForwardRef, exports.Fragment = Fragment3, exports.Lazy = Lazy, exports.Memo = Memo, exports.Portal = Portal, exports.Profiler = Profiler, exports.StrictMode = StrictMode, exports.Suspense = Suspense2, exports.isAsyncMode = isAsyncMode, exports.isConcurrentMode = isConcurrentMode, exports.isContextConsumer = isContextConsumer, exports.isContextProvider = isContextProvider, exports.isElement = isElement, exports.isForwardRef = isForwardRef, exports.isFragment = isFragment, exports.isLazy = isLazy, exports.isMemo = isMemo, exports.isPortal = isPortal, exports.isProfiler = isProfiler, exports.isStrictMode = isStrictMode, exports.isSuspense = isSuspense, exports.isValidElementType = isValidElementType, exports.typeOf = typeOf;
+    })();
+  }
+});
+
+// node_modules/prop-types/node_modules/react-is/index.js
+var require_react_is = __commonJS({
+  "node_modules/prop-types/node_modules/react-is/index.js"(exports, module) {
+    "use strict";
+    module.exports = require_react_is_development();
+  }
+});
+
+// node_modules/object-assign/index.js
+var require_object_assign = __commonJS({
+  "node_modules/object-assign/index.js"(exports, module) {
+    "use strict";
+    var getOwnPropertySymbols = Object.getOwnPropertySymbols, hasOwnProperty = Object.prototype.hasOwnProperty, propIsEnumerable = Object.prototype.propertyIsEnumerable;
+    function toObject(val) {
+      if (val == null)
+        throw new TypeError("Object.assign cannot be called with null or undefined");
+      return Object(val);
+    }
+    function shouldUseNative() {
+      try {
+        if (!Object.assign)
+          return !1;
+        var test1 = new String("abc");
+        if (test1[5] = "de", Object.getOwnPropertyNames(test1)[0] === "5")
+          return !1;
+        for (var test2 = {}, i = 0; i < 10; i++)
+          test2["_" + String.fromCharCode(i)] = i;
+        var order2 = Object.getOwnPropertyNames(test2).map(function(n) {
+          return test2[n];
+        });
+        if (order2.join("") !== "0123456789")
+          return !1;
+        var test3 = {};
+        return "abcdefghijklmnopqrst".split("").forEach(function(letter) {
+          test3[letter] = letter;
+        }), Object.keys(Object.assign({}, test3)).join("") === "abcdefghijklmnopqrst";
+      } catch {
+        return !1;
+      }
+    }
+    module.exports = shouldUseNative() ? Object.assign : function(target, source) {
+      for (var from, to = toObject(target), symbols, s = 1; s < arguments.length; s++) {
+        from = Object(arguments[s]);
+        for (var key in from)
+          hasOwnProperty.call(from, key) && (to[key] = from[key]);
+        if (getOwnPropertySymbols) {
+          symbols = getOwnPropertySymbols(from);
+          for (var i = 0; i < symbols.length; i++)
+            propIsEnumerable.call(from, symbols[i]) && (to[symbols[i]] = from[symbols[i]]);
+        }
+      }
+      return to;
+    };
+  }
+});
+
+// node_modules/prop-types/lib/ReactPropTypesSecret.js
+var require_ReactPropTypesSecret = __commonJS({
+  "node_modules/prop-types/lib/ReactPropTypesSecret.js"(exports, module) {
+    "use strict";
+    var ReactPropTypesSecret = "SECRET_DO_NOT_PASS_THIS_OR_YOU_WILL_BE_FIRED";
+    module.exports = ReactPropTypesSecret;
+  }
+});
+
+// node_modules/prop-types/lib/has.js
+var require_has = __commonJS({
+  "node_modules/prop-types/lib/has.js"(exports, module) {
+    module.exports = Function.call.bind(Object.prototype.hasOwnProperty);
+  }
+});
+
+// node_modules/prop-types/checkPropTypes.js
+var require_checkPropTypes = __commonJS({
+  "node_modules/prop-types/checkPropTypes.js"(exports, module) {
+    "use strict";
+    var printWarning = function() {
+    };
+    ReactPropTypesSecret = require_ReactPropTypesSecret(), loggedTypeFailures = {}, has = require_has(), printWarning = function(text) {
+      var message = "Warning: " + text;
+      typeof console < "u" && console.error(message);
+      try {
+        throw new Error(message);
+      } catch {
+      }
+    };
+    var ReactPropTypesSecret, loggedTypeFailures, has;
+    function checkPropTypes(typeSpecs, values, location, componentName, getStack) {
+      for (var typeSpecName in typeSpecs)
+        if (has(typeSpecs, typeSpecName)) {
+          var error;
+          try {
+            if (typeof typeSpecs[typeSpecName] != "function") {
+              var err = Error(
+                (componentName || "React class") + ": " + location + " type `" + typeSpecName + "` is invalid; it must be a function, usually from the `prop-types` package, but received `" + typeof typeSpecs[typeSpecName] + "`.This often happens because of typos such as `PropTypes.function` instead of `PropTypes.func`."
+              );
+              throw err.name = "Invariant Violation", err;
+            }
+            error = typeSpecs[typeSpecName](values, typeSpecName, componentName, location, null, ReactPropTypesSecret);
+          } catch (ex) {
+            error = ex;
+          }
+          if (error && !(error instanceof Error) && printWarning(
+            (componentName || "React class") + ": type specification of " + location + " `" + typeSpecName + "` is invalid; the type checker function must return `null` or an `Error` but returned a " + typeof error + ". You may have forgotten to pass an argument to the type checker creator (arrayOf, instanceOf, objectOf, oneOf, oneOfType, and shape all require an argument)."
+          ), error instanceof Error && !(error.message in loggedTypeFailures)) {
+            loggedTypeFailures[error.message] = !0;
+            var stack = getStack ? getStack() : "";
+            printWarning(
+              "Failed " + location + " type: " + error.message + (stack ?? "")
+            );
+          }
+        }
+    }
+    checkPropTypes.resetWarningCache = function() {
+      loggedTypeFailures = {};
+    };
+    module.exports = checkPropTypes;
+  }
+});
+
+// node_modules/prop-types/factoryWithTypeCheckers.js
+var require_factoryWithTypeCheckers = __commonJS({
+  "node_modules/prop-types/factoryWithTypeCheckers.js"(exports, module) {
+    "use strict";
+    var ReactIs = require_react_is(), assign = require_object_assign(), ReactPropTypesSecret = require_ReactPropTypesSecret(), has = require_has(), checkPropTypes = require_checkPropTypes(), printWarning = function() {
+    };
+    printWarning = function(text) {
+      var message = "Warning: " + text;
+      typeof console < "u" && console.error(message);
+      try {
+        throw new Error(message);
+      } catch {
+      }
+    };
+    function emptyFunctionThatReturnsNull() {
+      return null;
+    }
+    module.exports = function(isValidElement2, throwOnDirectAccess) {
+      var ITERATOR_SYMBOL = typeof Symbol == "function" && Symbol.iterator, FAUX_ITERATOR_SYMBOL = "@@iterator";
+      function getIteratorFn(maybeIterable) {
+        var iteratorFn = maybeIterable && (ITERATOR_SYMBOL && maybeIterable[ITERATOR_SYMBOL] || maybeIterable[FAUX_ITERATOR_SYMBOL]);
+        if (typeof iteratorFn == "function")
+          return iteratorFn;
+      }
+      var ANONYMOUS = "<<anonymous>>", ReactPropTypes = {
+        array: createPrimitiveTypeChecker("array"),
+        bigint: createPrimitiveTypeChecker("bigint"),
+        bool: createPrimitiveTypeChecker("boolean"),
+        func: createPrimitiveTypeChecker("function"),
+        number: createPrimitiveTypeChecker("number"),
+        object: createPrimitiveTypeChecker("object"),
+        string: createPrimitiveTypeChecker("string"),
+        symbol: createPrimitiveTypeChecker("symbol"),
+        any: createAnyTypeChecker(),
+        arrayOf: createArrayOfTypeChecker,
+        element: createElementTypeChecker(),
+        elementType: createElementTypeTypeChecker(),
+        instanceOf: createInstanceTypeChecker,
+        node: createNodeChecker(),
+        objectOf: createObjectOfTypeChecker,
+        oneOf: createEnumTypeChecker,
+        oneOfType: createUnionTypeChecker,
+        shape: createShapeTypeChecker,
+        exact: createStrictShapeTypeChecker
+      };
+      function is2(x, y) {
+        return x === y ? x !== 0 || 1 / x === 1 / y : x !== x && y !== y;
+      }
+      function PropTypeError(message, data) {
+        this.message = message, this.data = data && typeof data == "object" ? data : {}, this.stack = "";
+      }
+      PropTypeError.prototype = Error.prototype;
+      function createChainableTypeChecker(validate) {
+        var manualPropTypeCallCache = {}, manualPropTypeWarningCount = 0;
+        function checkType(isRequired, props, propName, componentName, location, propFullName, secret) {
+          if (componentName = componentName || ANONYMOUS, propFullName = propFullName || propName, secret !== ReactPropTypesSecret) {
+            if (throwOnDirectAccess) {
+              var err = new Error(
+                "Calling PropTypes validators directly is not supported by the `prop-types` package. Use `PropTypes.checkPropTypes()` to call them. Read more at http://fb.me/use-check-prop-types"
+              );
+              throw err.name = "Invariant Violation", err;
+            } else if (typeof console < "u") {
+              var cacheKey = componentName + ":" + propName;
+              !manualPropTypeCallCache[cacheKey] && manualPropTypeWarningCount < 3 && (printWarning(
+                "You are manually calling a React.PropTypes validation function for the `" + propFullName + "` prop on `" + componentName + "`. This is deprecated and will throw in the standalone `prop-types` package. You may be seeing this warning due to a third-party PropTypes library. See https://fb.me/react-warning-dont-call-proptypes for details."
+              ), manualPropTypeCallCache[cacheKey] = !0, manualPropTypeWarningCount++);
+            }
+          }
+          return props[propName] == null ? isRequired ? props[propName] === null ? new PropTypeError("The " + location + " `" + propFullName + "` is marked as required " + ("in `" + componentName + "`, but its value is `null`.")) : new PropTypeError("The " + location + " `" + propFullName + "` is marked as required in " + ("`" + componentName + "`, but its value is `undefined`.")) : null : validate(props, propName, componentName, location, propFullName);
+        }
+        var chainedCheckType = checkType.bind(null, !1);
+        return chainedCheckType.isRequired = checkType.bind(null, !0), chainedCheckType;
+      }
+      function createPrimitiveTypeChecker(expectedType) {
+        function validate(props, propName, componentName, location, propFullName, secret) {
+          var propValue = props[propName], propType = getPropType(propValue);
+          if (propType !== expectedType) {
+            var preciseType = getPreciseType(propValue);
+            return new PropTypeError(
+              "Invalid " + location + " `" + propFullName + "` of type " + ("`" + preciseType + "` supplied to `" + componentName + "`, expected ") + ("`" + expectedType + "`."),
+              { expectedType }
+            );
+          }
+          return null;
+        }
+        return createChainableTypeChecker(validate);
+      }
+      function createAnyTypeChecker() {
+        return createChainableTypeChecker(emptyFunctionThatReturnsNull);
+      }
+      function createArrayOfTypeChecker(typeChecker) {
+        function validate(props, propName, componentName, location, propFullName) {
+          if (typeof typeChecker != "function")
+            return new PropTypeError("Property `" + propFullName + "` of component `" + componentName + "` has invalid PropType notation inside arrayOf.");
+          var propValue = props[propName];
+          if (!Array.isArray(propValue)) {
+            var propType = getPropType(propValue);
+            return new PropTypeError("Invalid " + location + " `" + propFullName + "` of type " + ("`" + propType + "` supplied to `" + componentName + "`, expected an array."));
+          }
+          for (var i = 0; i < propValue.length; i++) {
+            var error = typeChecker(propValue, i, componentName, location, propFullName + "[" + i + "]", ReactPropTypesSecret);
+            if (error instanceof Error)
+              return error;
+          }
+          return null;
+        }
+        return createChainableTypeChecker(validate);
+      }
+      function createElementTypeChecker() {
+        function validate(props, propName, componentName, location, propFullName) {
+          var propValue = props[propName];
+          if (!isValidElement2(propValue)) {
+            var propType = getPropType(propValue);
+            return new PropTypeError("Invalid " + location + " `" + propFullName + "` of type " + ("`" + propType + "` supplied to `" + componentName + "`, expected a single ReactElement."));
+          }
+          return null;
+        }
+        return createChainableTypeChecker(validate);
+      }
+      function createElementTypeTypeChecker() {
+        function validate(props, propName, componentName, location, propFullName) {
+          var propValue = props[propName];
+          if (!ReactIs.isValidElementType(propValue)) {
+            var propType = getPropType(propValue);
+            return new PropTypeError("Invalid " + location + " `" + propFullName + "` of type " + ("`" + propType + "` supplied to `" + componentName + "`, expected a single ReactElement type."));
+          }
+          return null;
+        }
+        return createChainableTypeChecker(validate);
+      }
+      function createInstanceTypeChecker(expectedClass) {
+        function validate(props, propName, componentName, location, propFullName) {
+          if (!(props[propName] instanceof expectedClass)) {
+            var expectedClassName = expectedClass.name || ANONYMOUS, actualClassName = getClassName(props[propName]);
+            return new PropTypeError("Invalid " + location + " `" + propFullName + "` of type " + ("`" + actualClassName + "` supplied to `" + componentName + "`, expected ") + ("instance of `" + expectedClassName + "`."));
+          }
+          return null;
+        }
+        return createChainableTypeChecker(validate);
+      }
+      function createEnumTypeChecker(expectedValues) {
+        if (!Array.isArray(expectedValues))
+          return arguments.length > 1 ? printWarning(
+            "Invalid arguments supplied to oneOf, expected an array, got " + arguments.length + " arguments. A common mistake is to write oneOf(x, y, z) instead of oneOf([x, y, z])."
+          ) : printWarning("Invalid argument supplied to oneOf, expected an array."), emptyFunctionThatReturnsNull;
+        function validate(props, propName, componentName, location, propFullName) {
+          for (var propValue = props[propName], i = 0; i < expectedValues.length; i++)
+            if (is2(propValue, expectedValues[i]))
+              return null;
+          var valuesString = JSON.stringify(expectedValues, function(key, value) {
+            var type = getPreciseType(value);
+            return type === "symbol" ? String(value) : value;
+          });
+          return new PropTypeError("Invalid " + location + " `" + propFullName + "` of value `" + String(propValue) + "` " + ("supplied to `" + componentName + "`, expected one of " + valuesString + "."));
+        }
+        return createChainableTypeChecker(validate);
+      }
+      function createObjectOfTypeChecker(typeChecker) {
+        function validate(props, propName, componentName, location, propFullName) {
+          if (typeof typeChecker != "function")
+            return new PropTypeError("Property `" + propFullName + "` of component `" + componentName + "` has invalid PropType notation inside objectOf.");
+          var propValue = props[propName], propType = getPropType(propValue);
+          if (propType !== "object")
+            return new PropTypeError("Invalid " + location + " `" + propFullName + "` of type " + ("`" + propType + "` supplied to `" + componentName + "`, expected an object."));
+          for (var key in propValue)
+            if (has(propValue, key)) {
+              var error = typeChecker(propValue, key, componentName, location, propFullName + "." + key, ReactPropTypesSecret);
+              if (error instanceof Error)
+                return error;
+            }
+          return null;
+        }
+        return createChainableTypeChecker(validate);
+      }
+      function createUnionTypeChecker(arrayOfTypeCheckers) {
+        if (!Array.isArray(arrayOfTypeCheckers))
+          return printWarning("Invalid argument supplied to oneOfType, expected an instance of array."), emptyFunctionThatReturnsNull;
+        for (var i = 0; i < arrayOfTypeCheckers.length; i++) {
+          var checker = arrayOfTypeCheckers[i];
+          if (typeof checker != "function")
+            return printWarning(
+              "Invalid argument supplied to oneOfType. Expected an array of check functions, but received " + getPostfixForTypeWarning(checker) + " at index " + i + "."
+            ), emptyFunctionThatReturnsNull;
+        }
+        function validate(props, propName, componentName, location, propFullName) {
+          for (var expectedTypes = [], i2 = 0; i2 < arrayOfTypeCheckers.length; i2++) {
+            var checker2 = arrayOfTypeCheckers[i2], checkerResult = checker2(props, propName, componentName, location, propFullName, ReactPropTypesSecret);
+            if (checkerResult == null)
+              return null;
+            checkerResult.data && has(checkerResult.data, "expectedType") && expectedTypes.push(checkerResult.data.expectedType);
+          }
+          var expectedTypesMessage = expectedTypes.length > 0 ? ", expected one of type [" + expectedTypes.join(", ") + "]" : "";
+          return new PropTypeError("Invalid " + location + " `" + propFullName + "` supplied to " + ("`" + componentName + "`" + expectedTypesMessage + "."));
+        }
+        return createChainableTypeChecker(validate);
+      }
+      function createNodeChecker() {
+        function validate(props, propName, componentName, location, propFullName) {
+          return isNode(props[propName]) ? null : new PropTypeError("Invalid " + location + " `" + propFullName + "` supplied to " + ("`" + componentName + "`, expected a ReactNode."));
+        }
+        return createChainableTypeChecker(validate);
+      }
+      function invalidValidatorError(componentName, location, propFullName, key, type) {
+        return new PropTypeError(
+          (componentName || "React class") + ": " + location + " type `" + propFullName + "." + key + "` is invalid; it must be a function, usually from the `prop-types` package, but received `" + type + "`."
+        );
+      }
+      function createShapeTypeChecker(shapeTypes) {
+        function validate(props, propName, componentName, location, propFullName) {
+          var propValue = props[propName], propType = getPropType(propValue);
+          if (propType !== "object")
+            return new PropTypeError("Invalid " + location + " `" + propFullName + "` of type `" + propType + "` " + ("supplied to `" + componentName + "`, expected `object`."));
+          for (var key in shapeTypes) {
+            var checker = shapeTypes[key];
+            if (typeof checker != "function")
+              return invalidValidatorError(componentName, location, propFullName, key, getPreciseType(checker));
+            var error = checker(propValue, key, componentName, location, propFullName + "." + key, ReactPropTypesSecret);
+            if (error)
+              return error;
+          }
+          return null;
+        }
+        return createChainableTypeChecker(validate);
+      }
+      function createStrictShapeTypeChecker(shapeTypes) {
+        function validate(props, propName, componentName, location, propFullName) {
+          var propValue = props[propName], propType = getPropType(propValue);
+          if (propType !== "object")
+            return new PropTypeError("Invalid " + location + " `" + propFullName + "` of type `" + propType + "` " + ("supplied to `" + componentName + "`, expected `object`."));
+          var allKeys = assign({}, props[propName], shapeTypes);
+          for (var key in allKeys) {
+            var checker = shapeTypes[key];
+            if (has(shapeTypes, key) && typeof checker != "function")
+              return invalidValidatorError(componentName, location, propFullName, key, getPreciseType(checker));
+            if (!checker)
+              return new PropTypeError(
+                "Invalid " + location + " `" + propFullName + "` key `" + key + "` supplied to `" + componentName + "`.\nBad object: " + JSON.stringify(props[propName], null, "  ") + `
+Valid keys: ` + JSON.stringify(Object.keys(shapeTypes), null, "  ")
+              );
+            var error = checker(propValue, key, componentName, location, propFullName + "." + key, ReactPropTypesSecret);
+            if (error)
+              return error;
+          }
+          return null;
+        }
+        return createChainableTypeChecker(validate);
+      }
+      function isNode(propValue) {
+        switch (typeof propValue) {
+          case "number":
+          case "string":
+          case "undefined":
+            return !0;
+          case "boolean":
+            return !propValue;
+          case "object":
+            if (Array.isArray(propValue))
+              return propValue.every(isNode);
+            if (propValue === null || isValidElement2(propValue))
+              return !0;
+            var iteratorFn = getIteratorFn(propValue);
+            if (iteratorFn) {
+              var iterator = iteratorFn.call(propValue), step;
+              if (iteratorFn !== propValue.entries) {
+                for (; !(step = iterator.next()).done; )
+                  if (!isNode(step.value))
+                    return !1;
+              } else
+                for (; !(step = iterator.next()).done; ) {
+                  var entry2 = step.value;
+                  if (entry2 && !isNode(entry2[1]))
+                    return !1;
+                }
+            } else
+              return !1;
+            return !0;
+          default:
+            return !1;
+        }
+      }
+      function isSymbol(propType, propValue) {
+        return propType === "symbol" ? !0 : propValue ? propValue["@@toStringTag"] === "Symbol" || typeof Symbol == "function" && propValue instanceof Symbol : !1;
+      }
+      function getPropType(propValue) {
+        var propType = typeof propValue;
+        return Array.isArray(propValue) ? "array" : propValue instanceof RegExp ? "object" : isSymbol(propType, propValue) ? "symbol" : propType;
+      }
+      function getPreciseType(propValue) {
+        if (typeof propValue > "u" || propValue === null)
+          return "" + propValue;
+        var propType = getPropType(propValue);
+        if (propType === "object") {
+          if (propValue instanceof Date)
+            return "date";
+          if (propValue instanceof RegExp)
+            return "regexp";
+        }
+        return propType;
+      }
+      function getPostfixForTypeWarning(value) {
+        var type = getPreciseType(value);
+        switch (type) {
+          case "array":
+          case "object":
+            return "an " + type;
+          case "boolean":
+          case "date":
+          case "regexp":
+            return "a " + type;
+          default:
+            return type;
+        }
+      }
+      function getClassName(propValue) {
+        return !propValue.constructor || !propValue.constructor.name ? ANONYMOUS : propValue.constructor.name;
+      }
+      return ReactPropTypes.checkPropTypes = checkPropTypes, ReactPropTypes.resetWarningCache = checkPropTypes.resetWarningCache, ReactPropTypes.PropTypes = ReactPropTypes, ReactPropTypes;
+    };
+  }
+});
+
+// node_modules/prop-types/index.js
+var require_prop_types = __commonJS({
+  "node_modules/prop-types/index.js"(exports, module) {
+    ReactIs = require_react_is(), throwOnDirectAccess = !0, module.exports = require_factoryWithTypeCheckers()(ReactIs.isElement, throwOnDirectAccess);
+    var ReactIs, throwOnDirectAccess;
+  }
+});
+
+// node_modules/d3-array/src/fsum.js
+var Adder, init_fsum = __esm({
+  "node_modules/d3-array/src/fsum.js"() {
+    Adder = class {
+      constructor() {
+        this._partials = new Float64Array(32), this._n = 0;
+      }
+      add(x) {
+        let p = this._partials, i = 0;
+        for (let j = 0; j < this._n && j < 32; j++) {
+          let y = p[j], hi = x + y, lo = Math.abs(x) < Math.abs(y) ? x - (hi - y) : y - (hi - x);
+          lo && (p[i++] = lo), x = hi;
+        }
+        return p[i] = x, this._n = i + 1, this;
+      }
+      valueOf() {
+        let p = this._partials, n = this._n, x, y, lo, hi = 0;
+        if (n > 0) {
+          for (hi = p[--n]; n > 0 && (x = hi, y = p[--n], hi = x + y, lo = y - (hi - x), !lo); )
+            ;
+          n > 0 && (lo < 0 && p[n - 1] < 0 || lo > 0 && p[n - 1] > 0) && (y = lo * 2, x = hi + y, y == x - hi && (hi = x));
+        }
+        return hi;
+      }
+    };
+  }
+});
+
+// node_modules/d3-array/src/merge.js
+function* flatten(arrays) {
+  for (let array of arrays)
+    yield* array;
+}
+function merge(arrays) {
+  return Array.from(flatten(arrays));
+}
+var init_merge = __esm({
+  "node_modules/d3-array/src/merge.js"() {
+  }
+});
+
+// node_modules/d3-array/src/range.js
+function range_default(start2, stop, step) {
+  start2 = +start2, stop = +stop, step = (n = arguments.length) < 2 ? (stop = start2, start2 = 0, 1) : n < 3 ? 1 : +step;
+  for (var i = -1, n = Math.max(0, Math.ceil((stop - start2) / step)) | 0, range2 = new Array(n); ++i < n; )
+    range2[i] = start2 + i * step;
+  return range2;
+}
+var init_range = __esm({
+  "node_modules/d3-array/src/range.js"() {
+  }
+});
+
+// node_modules/d3-array/src/index.js
+var init_src2 = __esm({
+  "node_modules/d3-array/src/index.js"() {
+    init_fsum();
+    init_merge();
+    init_range();
+  }
+});
+
+// node_modules/d3-geo/src/math.js
+function acos(x) {
+  return x > 1 ? 0 : x < -1 ? pi : Math.acos(x);
+}
+function asin(x) {
+  return x > 1 ? halfPi : x < -1 ? -halfPi : Math.asin(x);
+}
+function haversin(x) {
+  return (x = sin(x / 2)) * x;
+}
+var epsilon, epsilon2, pi, halfPi, quarterPi, tau, degrees, radians, abs, atan, atan2, cos, ceil, exp, hypot, log, pow, sin, sign, sqrt, tan, init_math = __esm({
+  "node_modules/d3-geo/src/math.js"() {
+    epsilon = 1e-6, epsilon2 = 1e-12, pi = Math.PI, halfPi = pi / 2, quarterPi = pi / 4, tau = pi * 2, degrees = 180 / pi, radians = pi / 180, abs = Math.abs, atan = Math.atan, atan2 = Math.atan2, cos = Math.cos, ceil = Math.ceil, exp = Math.exp, hypot = Math.hypot, log = Math.log, pow = Math.pow, sin = Math.sin, sign = Math.sign || function(x) {
+      return x > 0 ? 1 : x < 0 ? -1 : 0;
+    }, sqrt = Math.sqrt, tan = Math.tan;
+  }
+});
+
+// node_modules/d3-geo/src/noop.js
+function noop() {
+}
+var init_noop = __esm({
+  "node_modules/d3-geo/src/noop.js"() {
+  }
+});
+
+// node_modules/d3-geo/src/stream.js
+function streamGeometry(geometry, stream) {
+  geometry && streamGeometryType.hasOwnProperty(geometry.type) && streamGeometryType[geometry.type](geometry, stream);
+}
+function streamLine(coordinates2, stream, closed) {
+  var i = -1, n = coordinates2.length - closed, coordinate;
+  for (stream.lineStart(); ++i < n; )
+    coordinate = coordinates2[i], stream.point(coordinate[0], coordinate[1], coordinate[2]);
+  stream.lineEnd();
+}
+function streamPolygon(coordinates2, stream) {
+  var i = -1, n = coordinates2.length;
+  for (stream.polygonStart(); ++i < n; )
+    streamLine(coordinates2[i], stream, 1);
+  stream.polygonEnd();
+}
+function stream_default(object3, stream) {
+  object3 && streamObjectType.hasOwnProperty(object3.type) ? streamObjectType[object3.type](object3, stream) : streamGeometry(object3, stream);
+}
+var streamObjectType, streamGeometryType, init_stream = __esm({
+  "node_modules/d3-geo/src/stream.js"() {
+    streamObjectType = {
+      Feature: function(object3, stream) {
+        streamGeometry(object3.geometry, stream);
+      },
+      FeatureCollection: function(object3, stream) {
+        for (var features = object3.features, i = -1, n = features.length; ++i < n; )
+          streamGeometry(features[i].geometry, stream);
+      }
+    }, streamGeometryType = {
+      Sphere: function(object3, stream) {
+        stream.sphere();
+      },
+      Point: function(object3, stream) {
+        object3 = object3.coordinates, stream.point(object3[0], object3[1], object3[2]);
+      },
+      MultiPoint: function(object3, stream) {
+        for (var coordinates2 = object3.coordinates, i = -1, n = coordinates2.length; ++i < n; )
+          object3 = coordinates2[i], stream.point(object3[0], object3[1], object3[2]);
+      },
+      LineString: function(object3, stream) {
+        streamLine(object3.coordinates, stream, 0);
+      },
+      MultiLineString: function(object3, stream) {
+        for (var coordinates2 = object3.coordinates, i = -1, n = coordinates2.length; ++i < n; )
+          streamLine(coordinates2[i], stream, 0);
+      },
+      Polygon: function(object3, stream) {
+        streamPolygon(object3.coordinates, stream);
+      },
+      MultiPolygon: function(object3, stream) {
+        for (var coordinates2 = object3.coordinates, i = -1, n = coordinates2.length; ++i < n; )
+          streamPolygon(coordinates2[i], stream);
+      },
+      GeometryCollection: function(object3, stream) {
+        for (var geometries = object3.geometries, i = -1, n = geometries.length; ++i < n; )
+          streamGeometry(geometries[i], stream);
+      }
+    };
+  }
+});
+
+// node_modules/d3-geo/src/area.js
+function areaRingStart() {
+  areaStream.point = areaPointFirst;
+}
+function areaRingEnd() {
+  areaPoint(lambda00, phi00);
+}
+function areaPointFirst(lambda, phi) {
+  areaStream.point = areaPoint, lambda00 = lambda, phi00 = phi, lambda *= radians, phi *= radians, lambda0 = lambda, cosPhi0 = cos(phi = phi / 2 + quarterPi), sinPhi0 = sin(phi);
+}
+function areaPoint(lambda, phi) {
+  lambda *= radians, phi *= radians, phi = phi / 2 + quarterPi;
+  var dLambda = lambda - lambda0, sdLambda = dLambda >= 0 ? 1 : -1, adLambda = sdLambda * dLambda, cosPhi = cos(phi), sinPhi = sin(phi), k = sinPhi0 * sinPhi, u = cosPhi0 * cosPhi + k * cos(adLambda), v = k * sdLambda * sin(adLambda);
+  areaRingSum.add(atan2(v, u)), lambda0 = lambda, cosPhi0 = cosPhi, sinPhi0 = sinPhi;
+}
+function area_default(object3) {
+  return areaSum = new Adder(), stream_default(object3, areaStream), areaSum * 2;
+}
+var areaRingSum, areaSum, lambda00, phi00, lambda0, cosPhi0, sinPhi0, areaStream, init_area = __esm({
+  "node_modules/d3-geo/src/area.js"() {
+    init_src2();
+    init_math();
+    init_noop();
+    init_stream();
+    areaRingSum = new Adder(), areaSum = new Adder(), areaStream = {
+      point: noop,
+      lineStart: noop,
+      lineEnd: noop,
+      polygonStart: function() {
+        areaRingSum = new Adder(), areaStream.lineStart = areaRingStart, areaStream.lineEnd = areaRingEnd;
+      },
+      polygonEnd: function() {
+        var areaRing = +areaRingSum;
+        areaSum.add(areaRing < 0 ? tau + areaRing : areaRing), this.lineStart = this.lineEnd = this.point = noop;
+      },
+      sphere: function() {
+        areaSum.add(tau);
+      }
+    };
+  }
+});
+
+// node_modules/d3-geo/src/cartesian.js
+function spherical(cartesian2) {
+  return [atan2(cartesian2[1], cartesian2[0]), asin(cartesian2[2])];
+}
+function cartesian(spherical2) {
+  var lambda = spherical2[0], phi = spherical2[1], cosPhi = cos(phi);
+  return [cosPhi * cos(lambda), cosPhi * sin(lambda), sin(phi)];
+}
+function cartesianDot(a, b) {
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+function cartesianCross(a, b) {
+  return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+}
+function cartesianAddInPlace(a, b) {
+  a[0] += b[0], a[1] += b[1], a[2] += b[2];
+}
+function cartesianScale(vector, k) {
+  return [vector[0] * k, vector[1] * k, vector[2] * k];
+}
+function cartesianNormalizeInPlace(d) {
+  var l = sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
+  d[0] /= l, d[1] /= l, d[2] /= l;
+}
+var init_cartesian = __esm({
+  "node_modules/d3-geo/src/cartesian.js"() {
+    init_math();
+  }
+});
+
+// node_modules/d3-geo/src/bounds.js
+function boundsPoint(lambda, phi) {
+  ranges.push(range = [lambda02 = lambda, lambda1 = lambda]), phi < phi0 && (phi0 = phi), phi > phi1 && (phi1 = phi);
+}
+function linePoint(lambda, phi) {
+  var p = cartesian([lambda * radians, phi * radians]);
+  if (p0) {
+    var normal = cartesianCross(p0, p), equatorial = [normal[1], -normal[0], 0], inflection = cartesianCross(equatorial, normal);
+    cartesianNormalizeInPlace(inflection), inflection = spherical(inflection);
+    var delta = lambda - lambda2, sign2 = delta > 0 ? 1 : -1, lambdai = inflection[0] * degrees * sign2, phii, antimeridian = abs(delta) > 180;
+    antimeridian ^ (sign2 * lambda2 < lambdai && lambdai < sign2 * lambda) ? (phii = inflection[1] * degrees, phii > phi1 && (phi1 = phii)) : (lambdai = (lambdai + 360) % 360 - 180, antimeridian ^ (sign2 * lambda2 < lambdai && lambdai < sign2 * lambda) ? (phii = -inflection[1] * degrees, phii < phi0 && (phi0 = phii)) : (phi < phi0 && (phi0 = phi), phi > phi1 && (phi1 = phi))), antimeridian ? lambda < lambda2 ? angle(lambda02, lambda) > angle(lambda02, lambda1) && (lambda1 = lambda) : angle(lambda, lambda1) > angle(lambda02, lambda1) && (lambda02 = lambda) : lambda1 >= lambda02 ? (lambda < lambda02 && (lambda02 = lambda), lambda > lambda1 && (lambda1 = lambda)) : lambda > lambda2 ? angle(lambda02, lambda) > angle(lambda02, lambda1) && (lambda1 = lambda) : angle(lambda, lambda1) > angle(lambda02, lambda1) && (lambda02 = lambda);
+  } else
+    ranges.push(range = [lambda02 = lambda, lambda1 = lambda]);
+  phi < phi0 && (phi0 = phi), phi > phi1 && (phi1 = phi), p0 = p, lambda2 = lambda;
+}
+function boundsLineStart() {
+  boundsStream.point = linePoint;
+}
+function boundsLineEnd() {
+  range[0] = lambda02, range[1] = lambda1, boundsStream.point = boundsPoint, p0 = null;
+}
+function boundsRingPoint(lambda, phi) {
+  if (p0) {
+    var delta = lambda - lambda2;
+    deltaSum.add(abs(delta) > 180 ? delta + (delta > 0 ? 360 : -360) : delta);
+  } else
+    lambda002 = lambda, phi002 = phi;
+  areaStream.point(lambda, phi), linePoint(lambda, phi);
+}
+function boundsRingStart() {
+  areaStream.lineStart();
+}
+function boundsRingEnd() {
+  boundsRingPoint(lambda002, phi002), areaStream.lineEnd(), abs(deltaSum) > epsilon && (lambda02 = -(lambda1 = 180)), range[0] = lambda02, range[1] = lambda1, p0 = null;
+}
+function angle(lambda04, lambda12) {
+  return (lambda12 -= lambda04) < 0 ? lambda12 + 360 : lambda12;
+}
+function rangeCompare(a, b) {
+  return a[0] - b[0];
+}
+function rangeContains(range2, x) {
+  return range2[0] <= range2[1] ? range2[0] <= x && x <= range2[1] : x < range2[0] || range2[1] < x;
+}
+function bounds_default(feature2) {
+  var i, n, a, b, merged, deltaMax, delta;
+  if (phi1 = lambda1 = -(lambda02 = phi0 = 1 / 0), ranges = [], stream_default(feature2, boundsStream), n = ranges.length) {
+    for (ranges.sort(rangeCompare), i = 1, a = ranges[0], merged = [a]; i < n; ++i)
+      b = ranges[i], rangeContains(a, b[0]) || rangeContains(a, b[1]) ? (angle(a[0], b[1]) > angle(a[0], a[1]) && (a[1] = b[1]), angle(b[0], a[1]) > angle(a[0], a[1]) && (a[0] = b[0])) : merged.push(a = b);
+    for (deltaMax = -1 / 0, n = merged.length - 1, i = 0, a = merged[n]; i <= n; a = b, ++i)
+      b = merged[i], (delta = angle(a[1], b[0])) > deltaMax && (deltaMax = delta, lambda02 = b[0], lambda1 = a[1]);
+  }
+  return ranges = range = null, lambda02 === 1 / 0 || phi0 === 1 / 0 ? [[NaN, NaN], [NaN, NaN]] : [[lambda02, phi0], [lambda1, phi1]];
+}
+var lambda02, phi0, lambda1, phi1, lambda2, lambda002, phi002, p0, deltaSum, ranges, range, boundsStream, init_bounds = __esm({
+  "node_modules/d3-geo/src/bounds.js"() {
+    init_src2();
+    init_area();
+    init_cartesian();
+    init_math();
+    init_stream();
+    boundsStream = {
+      point: boundsPoint,
+      lineStart: boundsLineStart,
+      lineEnd: boundsLineEnd,
+      polygonStart: function() {
+        boundsStream.point = boundsRingPoint, boundsStream.lineStart = boundsRingStart, boundsStream.lineEnd = boundsRingEnd, deltaSum = new Adder(), areaStream.polygonStart();
+      },
+      polygonEnd: function() {
+        areaStream.polygonEnd(), boundsStream.point = boundsPoint, boundsStream.lineStart = boundsLineStart, boundsStream.lineEnd = boundsLineEnd, areaRingSum < 0 ? (lambda02 = -(lambda1 = 180), phi0 = -(phi1 = 90)) : deltaSum > epsilon ? phi1 = 90 : deltaSum < -epsilon && (phi0 = -90), range[0] = lambda02, range[1] = lambda1;
+      },
+      sphere: function() {
+        lambda02 = -(lambda1 = 180), phi0 = -(phi1 = 90);
+      }
+    };
+  }
+});
+
+// node_modules/d3-geo/src/centroid.js
+function centroidPoint(lambda, phi) {
+  lambda *= radians, phi *= radians;
+  var cosPhi = cos(phi);
+  centroidPointCartesian(cosPhi * cos(lambda), cosPhi * sin(lambda), sin(phi));
+}
+function centroidPointCartesian(x, y, z) {
+  ++W0, X0 += (x - X0) / W0, Y0 += (y - Y0) / W0, Z0 += (z - Z0) / W0;
+}
+function centroidLineStart() {
+  centroidStream.point = centroidLinePointFirst;
+}
+function centroidLinePointFirst(lambda, phi) {
+  lambda *= radians, phi *= radians;
+  var cosPhi = cos(phi);
+  x0 = cosPhi * cos(lambda), y0 = cosPhi * sin(lambda), z0 = sin(phi), centroidStream.point = centroidLinePoint, centroidPointCartesian(x0, y0, z0);
+}
+function centroidLinePoint(lambda, phi) {
+  lambda *= radians, phi *= radians;
+  var cosPhi = cos(phi), x = cosPhi * cos(lambda), y = cosPhi * sin(lambda), z = sin(phi), w = atan2(sqrt((w = y0 * z - z0 * y) * w + (w = z0 * x - x0 * z) * w + (w = x0 * y - y0 * x) * w), x0 * x + y0 * y + z0 * z);
+  W1 += w, X1 += w * (x0 + (x0 = x)), Y1 += w * (y0 + (y0 = y)), Z1 += w * (z0 + (z0 = z)), centroidPointCartesian(x0, y0, z0);
+}
+function centroidLineEnd() {
+  centroidStream.point = centroidPoint;
+}
+function centroidRingStart() {
+  centroidStream.point = centroidRingPointFirst;
+}
+function centroidRingEnd() {
+  centroidRingPoint(lambda003, phi003), centroidStream.point = centroidPoint;
+}
+function centroidRingPointFirst(lambda, phi) {
+  lambda003 = lambda, phi003 = phi, lambda *= radians, phi *= radians, centroidStream.point = centroidRingPoint;
+  var cosPhi = cos(phi);
+  x0 = cosPhi * cos(lambda), y0 = cosPhi * sin(lambda), z0 = sin(phi), centroidPointCartesian(x0, y0, z0);
+}
+function centroidRingPoint(lambda, phi) {
+  lambda *= radians, phi *= radians;
+  var cosPhi = cos(phi), x = cosPhi * cos(lambda), y = cosPhi * sin(lambda), z = sin(phi), cx = y0 * z - z0 * y, cy = z0 * x - x0 * z, cz = x0 * y - y0 * x, m = hypot(cx, cy, cz), w = asin(m), v = m && -w / m;
+  X2.add(v * cx), Y2.add(v * cy), Z2.add(v * cz), W1 += w, X1 += w * (x0 + (x0 = x)), Y1 += w * (y0 + (y0 = y)), Z1 += w * (z0 + (z0 = z)), centroidPointCartesian(x0, y0, z0);
+}
+function centroid_default(object3) {
+  W0 = W1 = X0 = Y0 = Z0 = X1 = Y1 = Z1 = 0, X2 = new Adder(), Y2 = new Adder(), Z2 = new Adder(), stream_default(object3, centroidStream);
+  var x = +X2, y = +Y2, z = +Z2, m = hypot(x, y, z);
+  return m < epsilon2 && (x = X1, y = Y1, z = Z1, W1 < epsilon && (x = X0, y = Y0, z = Z0), m = hypot(x, y, z), m < epsilon2) ? [NaN, NaN] : [atan2(y, x) * degrees, asin(z / m) * degrees];
+}
+var W0, W1, X0, Y0, Z0, X1, Y1, Z1, X2, Y2, Z2, lambda003, phi003, x0, y0, z0, centroidStream, init_centroid = __esm({
+  "node_modules/d3-geo/src/centroid.js"() {
+    init_src2();
+    init_math();
+    init_noop();
+    init_stream();
+    centroidStream = {
+      sphere: noop,
+      point: centroidPoint,
+      lineStart: centroidLineStart,
+      lineEnd: centroidLineEnd,
+      polygonStart: function() {
+        centroidStream.lineStart = centroidRingStart, centroidStream.lineEnd = centroidRingEnd;
+      },
+      polygonEnd: function() {
+        centroidStream.lineStart = centroidLineStart, centroidStream.lineEnd = centroidLineEnd;
+      }
+    };
+  }
+});
+
+// node_modules/d3-geo/src/constant.js
+function constant_default(x) {
+  return function() {
+    return x;
+  };
+}
+var init_constant = __esm({
+  "node_modules/d3-geo/src/constant.js"() {
+  }
+});
+
+// node_modules/d3-geo/src/compose.js
+function compose_default(a, b) {
+  function compose(x, y) {
+    return x = a(x, y), b(x[0], x[1]);
+  }
+  return a.invert && b.invert && (compose.invert = function(x, y) {
+    return x = b.invert(x, y), x && a.invert(x[0], x[1]);
+  }), compose;
+}
+var init_compose = __esm({
+  "node_modules/d3-geo/src/compose.js"() {
+  }
+});
+
+// node_modules/d3-geo/src/rotation.js
+function rotationIdentity(lambda, phi) {
+  return [abs(lambda) > pi ? lambda + Math.round(-lambda / tau) * tau : lambda, phi];
+}
+function rotateRadians(deltaLambda, deltaPhi, deltaGamma) {
+  return (deltaLambda %= tau) ? deltaPhi || deltaGamma ? compose_default(rotationLambda(deltaLambda), rotationPhiGamma(deltaPhi, deltaGamma)) : rotationLambda(deltaLambda) : deltaPhi || deltaGamma ? rotationPhiGamma(deltaPhi, deltaGamma) : rotationIdentity;
+}
+function forwardRotationLambda(deltaLambda) {
+  return function(lambda, phi) {
+    return lambda += deltaLambda, [lambda > pi ? lambda - tau : lambda < -pi ? lambda + tau : lambda, phi];
+  };
+}
+function rotationLambda(deltaLambda) {
+  var rotation = forwardRotationLambda(deltaLambda);
+  return rotation.invert = forwardRotationLambda(-deltaLambda), rotation;
+}
+function rotationPhiGamma(deltaPhi, deltaGamma) {
+  var cosDeltaPhi = cos(deltaPhi), sinDeltaPhi = sin(deltaPhi), cosDeltaGamma = cos(deltaGamma), sinDeltaGamma = sin(deltaGamma);
+  function rotation(lambda, phi) {
+    var cosPhi = cos(phi), x = cos(lambda) * cosPhi, y = sin(lambda) * cosPhi, z = sin(phi), k = z * cosDeltaPhi + x * sinDeltaPhi;
+    return [
+      atan2(y * cosDeltaGamma - k * sinDeltaGamma, x * cosDeltaPhi - z * sinDeltaPhi),
+      asin(k * cosDeltaGamma + y * sinDeltaGamma)
+    ];
+  }
+  return rotation.invert = function(lambda, phi) {
+    var cosPhi = cos(phi), x = cos(lambda) * cosPhi, y = sin(lambda) * cosPhi, z = sin(phi), k = z * cosDeltaGamma - y * sinDeltaGamma;
+    return [
+      atan2(y * cosDeltaGamma + z * sinDeltaGamma, x * cosDeltaPhi + k * sinDeltaPhi),
+      asin(k * cosDeltaPhi - x * sinDeltaPhi)
+    ];
+  }, rotation;
+}
+function rotation_default(rotate) {
+  rotate = rotateRadians(rotate[0] * radians, rotate[1] * radians, rotate.length > 2 ? rotate[2] * radians : 0);
+  function forward(coordinates2) {
+    return coordinates2 = rotate(coordinates2[0] * radians, coordinates2[1] * radians), coordinates2[0] *= degrees, coordinates2[1] *= degrees, coordinates2;
+  }
+  return forward.invert = function(coordinates2) {
+    return coordinates2 = rotate.invert(coordinates2[0] * radians, coordinates2[1] * radians), coordinates2[0] *= degrees, coordinates2[1] *= degrees, coordinates2;
+  }, forward;
+}
+var init_rotation = __esm({
+  "node_modules/d3-geo/src/rotation.js"() {
+    init_compose();
+    init_math();
+    rotationIdentity.invert = rotationIdentity;
+  }
+});
+
+// node_modules/d3-geo/src/circle.js
+function circleStream(stream, radius, delta, direction, t0, t1) {
+  if (!!delta) {
+    var cosRadius = cos(radius), sinRadius = sin(radius), step = direction * delta;
+    t0 == null ? (t0 = radius + direction * tau, t1 = radius - step / 2) : (t0 = circleRadius(cosRadius, t0), t1 = circleRadius(cosRadius, t1), (direction > 0 ? t0 < t1 : t0 > t1) && (t0 += direction * tau));
+    for (var point, t = t0; direction > 0 ? t > t1 : t < t1; t -= step)
+      point = spherical([cosRadius, -sinRadius * cos(t), -sinRadius * sin(t)]), stream.point(point[0], point[1]);
+  }
+}
+function circleRadius(cosRadius, point) {
+  point = cartesian(point), point[0] -= cosRadius, cartesianNormalizeInPlace(point);
+  var radius = acos(-point[1]);
+  return ((-point[2] < 0 ? -radius : radius) + tau - epsilon) % tau;
+}
+function circle_default() {
+  var center = constant_default([0, 0]), radius = constant_default(90), precision = constant_default(6), ring, rotate, stream = { point };
+  function point(x, y) {
+    ring.push(x = rotate(x, y)), x[0] *= degrees, x[1] *= degrees;
+  }
+  function circle2() {
+    var c = center.apply(this, arguments), r = radius.apply(this, arguments) * radians, p = precision.apply(this, arguments) * radians;
+    return ring = [], rotate = rotateRadians(-c[0] * radians, -c[1] * radians, 0).invert, circleStream(stream, r, p, 1), c = { type: "Polygon", coordinates: [ring] }, ring = rotate = null, c;
+  }
+  return circle2.center = function(_) {
+    return arguments.length ? (center = typeof _ == "function" ? _ : constant_default([+_[0], +_[1]]), circle2) : center;
+  }, circle2.radius = function(_) {
+    return arguments.length ? (radius = typeof _ == "function" ? _ : constant_default(+_), circle2) : radius;
+  }, circle2.precision = function(_) {
+    return arguments.length ? (precision = typeof _ == "function" ? _ : constant_default(+_), circle2) : precision;
+  }, circle2;
+}
+var init_circle = __esm({
+  "node_modules/d3-geo/src/circle.js"() {
+    init_cartesian();
+    init_constant();
+    init_math();
+    init_rotation();
+  }
+});
+
+// node_modules/d3-geo/src/clip/buffer.js
+function buffer_default() {
+  var lines = [], line;
+  return {
+    point: function(x, y, m) {
+      line.push([x, y, m]);
+    },
+    lineStart: function() {
+      lines.push(line = []);
+    },
+    lineEnd: noop,
+    rejoin: function() {
+      lines.length > 1 && lines.push(lines.pop().concat(lines.shift()));
+    },
+    result: function() {
+      var result = lines;
+      return lines = [], line = null, result;
+    }
+  };
+}
+var init_buffer = __esm({
+  "node_modules/d3-geo/src/clip/buffer.js"() {
+    init_noop();
+  }
+});
+
+// node_modules/d3-geo/src/pointEqual.js
+function pointEqual_default(a, b) {
+  return abs(a[0] - b[0]) < epsilon && abs(a[1] - b[1]) < epsilon;
+}
+var init_pointEqual = __esm({
+  "node_modules/d3-geo/src/pointEqual.js"() {
+    init_math();
+  }
+});
+
+// node_modules/d3-geo/src/clip/rejoin.js
+function Intersection(point, points, other, entry2) {
+  this.x = point, this.z = points, this.o = other, this.e = entry2, this.v = !1, this.n = this.p = null;
+}
+function rejoin_default(segments, compareIntersection2, startInside, interpolate, stream) {
+  var subject = [], clip = [], i, n;
+  if (segments.forEach(function(segment) {
+    if (!((n2 = segment.length - 1) <= 0)) {
+      var n2, p02 = segment[0], p1 = segment[n2], x;
+      if (pointEqual_default(p02, p1)) {
+        if (!p02[2] && !p1[2]) {
+          for (stream.lineStart(), i = 0; i < n2; ++i)
+            stream.point((p02 = segment[i])[0], p02[1]);
+          stream.lineEnd();
+          return;
+        }
+        p1[0] += 2 * epsilon;
+      }
+      subject.push(x = new Intersection(p02, segment, null, !0)), clip.push(x.o = new Intersection(p02, null, x, !1)), subject.push(x = new Intersection(p1, segment, null, !1)), clip.push(x.o = new Intersection(p1, null, x, !0));
+    }
+  }), !!subject.length) {
+    for (clip.sort(compareIntersection2), link(subject), link(clip), i = 0, n = clip.length; i < n; ++i)
+      clip[i].e = startInside = !startInside;
+    for (var start2 = subject[0], points, point; ; ) {
+      for (var current = start2, isSubject = !0; current.v; )
+        if ((current = current.n) === start2)
+          return;
+      points = current.z, stream.lineStart();
+      do {
+        if (current.v = current.o.v = !0, current.e) {
+          if (isSubject)
+            for (i = 0, n = points.length; i < n; ++i)
+              stream.point((point = points[i])[0], point[1]);
+          else
+            interpolate(current.x, current.n.x, 1, stream);
+          current = current.n;
+        } else {
+          if (isSubject)
+            for (points = current.p.z, i = points.length - 1; i >= 0; --i)
+              stream.point((point = points[i])[0], point[1]);
+          else
+            interpolate(current.x, current.p.x, -1, stream);
+          current = current.p;
+        }
+        current = current.o, points = current.z, isSubject = !isSubject;
+      } while (!current.v);
+      stream.lineEnd();
+    }
+  }
+}
+function link(array) {
+  if (!!(n = array.length)) {
+    for (var n, i = 0, a = array[0], b; ++i < n; )
+      a.n = b = array[i], b.p = a, a = b;
+    a.n = b = array[0], b.p = a;
+  }
+}
+var init_rejoin = __esm({
+  "node_modules/d3-geo/src/clip/rejoin.js"() {
+    init_pointEqual();
+    init_math();
+  }
+});
+
+// node_modules/d3-geo/src/polygonContains.js
+function longitude(point) {
+  return abs(point[0]) <= pi ? point[0] : sign(point[0]) * ((abs(point[0]) + pi) % tau - pi);
+}
+function polygonContains_default(polygon, point) {
+  var lambda = longitude(point), phi = point[1], sinPhi = sin(phi), normal = [sin(lambda), -cos(lambda), 0], angle2 = 0, winding = 0, sum = new Adder();
+  sinPhi === 1 ? phi = halfPi + epsilon : sinPhi === -1 && (phi = -halfPi - epsilon);
+  for (var i = 0, n = polygon.length; i < n; ++i)
+    if (!!(m = (ring = polygon[i]).length))
+      for (var ring, m, point0 = ring[m - 1], lambda04 = longitude(point0), phi02 = point0[1] / 2 + quarterPi, sinPhi03 = sin(phi02), cosPhi03 = cos(phi02), j = 0; j < m; ++j, lambda04 = lambda12, sinPhi03 = sinPhi1, cosPhi03 = cosPhi1, point0 = point1) {
+        var point1 = ring[j], lambda12 = longitude(point1), phi12 = point1[1] / 2 + quarterPi, sinPhi1 = sin(phi12), cosPhi1 = cos(phi12), delta = lambda12 - lambda04, sign2 = delta >= 0 ? 1 : -1, absDelta = sign2 * delta, antimeridian = absDelta > pi, k = sinPhi03 * sinPhi1;
+        if (sum.add(atan2(k * sign2 * sin(absDelta), cosPhi03 * cosPhi1 + k * cos(absDelta))), angle2 += antimeridian ? delta + sign2 * tau : delta, antimeridian ^ lambda04 >= lambda ^ lambda12 >= lambda) {
+          var arc = cartesianCross(cartesian(point0), cartesian(point1));
+          cartesianNormalizeInPlace(arc);
+          var intersection = cartesianCross(normal, arc);
+          cartesianNormalizeInPlace(intersection);
+          var phiArc = (antimeridian ^ delta >= 0 ? -1 : 1) * asin(intersection[2]);
+          (phi > phiArc || phi === phiArc && (arc[0] || arc[1])) && (winding += antimeridian ^ delta >= 0 ? 1 : -1);
+        }
+      }
+  return (angle2 < -epsilon || angle2 < epsilon && sum < -epsilon2) ^ winding & 1;
+}
+var init_polygonContains = __esm({
+  "node_modules/d3-geo/src/polygonContains.js"() {
+    init_src2();
+    init_cartesian();
+    init_math();
+  }
+});
+
+// node_modules/d3-geo/src/clip/index.js
+function clip_default(pointVisible, clipLine, interpolate, start2) {
+  return function(sink) {
+    var line = clipLine(sink), ringBuffer = buffer_default(), ringSink = clipLine(ringBuffer), polygonStarted = !1, polygon, segments, ring, clip = {
+      point,
+      lineStart,
+      lineEnd,
+      polygonStart: function() {
+        clip.point = pointRing, clip.lineStart = ringStart, clip.lineEnd = ringEnd, segments = [], polygon = [];
+      },
+      polygonEnd: function() {
+        clip.point = point, clip.lineStart = lineStart, clip.lineEnd = lineEnd, segments = merge(segments);
+        var startInside = polygonContains_default(polygon, start2);
+        segments.length ? (polygonStarted || (sink.polygonStart(), polygonStarted = !0), rejoin_default(segments, compareIntersection, startInside, interpolate, sink)) : startInside && (polygonStarted || (sink.polygonStart(), polygonStarted = !0), sink.lineStart(), interpolate(null, null, 1, sink), sink.lineEnd()), polygonStarted && (sink.polygonEnd(), polygonStarted = !1), segments = polygon = null;
+      },
+      sphere: function() {
+        sink.polygonStart(), sink.lineStart(), interpolate(null, null, 1, sink), sink.lineEnd(), sink.polygonEnd();
+      }
+    };
+    function point(lambda, phi) {
+      pointVisible(lambda, phi) && sink.point(lambda, phi);
+    }
+    function pointLine(lambda, phi) {
+      line.point(lambda, phi);
+    }
+    function lineStart() {
+      clip.point = pointLine, line.lineStart();
+    }
+    function lineEnd() {
+      clip.point = point, line.lineEnd();
+    }
+    function pointRing(lambda, phi) {
+      ring.push([lambda, phi]), ringSink.point(lambda, phi);
+    }
+    function ringStart() {
+      ringSink.lineStart(), ring = [];
+    }
+    function ringEnd() {
+      pointRing(ring[0][0], ring[0][1]), ringSink.lineEnd();
+      var clean = ringSink.clean(), ringSegments = ringBuffer.result(), i, n = ringSegments.length, m, segment, point2;
+      if (ring.pop(), polygon.push(ring), ring = null, !!n) {
+        if (clean & 1) {
+          if (segment = ringSegments[0], (m = segment.length - 1) > 0) {
+            for (polygonStarted || (sink.polygonStart(), polygonStarted = !0), sink.lineStart(), i = 0; i < m; ++i)
+              sink.point((point2 = segment[i])[0], point2[1]);
+            sink.lineEnd();
+          }
+          return;
+        }
+        n > 1 && clean & 2 && ringSegments.push(ringSegments.pop().concat(ringSegments.shift())), segments.push(ringSegments.filter(validSegment));
+      }
+    }
+    return clip;
+  };
+}
+function validSegment(segment) {
+  return segment.length > 1;
+}
+function compareIntersection(a, b) {
+  return ((a = a.x)[0] < 0 ? a[1] - halfPi - epsilon : halfPi - a[1]) - ((b = b.x)[0] < 0 ? b[1] - halfPi - epsilon : halfPi - b[1]);
+}
+var init_clip = __esm({
+  "node_modules/d3-geo/src/clip/index.js"() {
+    init_buffer();
+    init_rejoin();
+    init_math();
+    init_polygonContains();
+    init_src2();
+  }
+});
+
+// node_modules/d3-geo/src/clip/antimeridian.js
+function clipAntimeridianLine(stream) {
+  var lambda04 = NaN, phi02 = NaN, sign0 = NaN, clean;
+  return {
+    lineStart: function() {
+      stream.lineStart(), clean = 1;
+    },
+    point: function(lambda12, phi12) {
+      var sign1 = lambda12 > 0 ? pi : -pi, delta = abs(lambda12 - lambda04);
+      abs(delta - pi) < epsilon ? (stream.point(lambda04, phi02 = (phi02 + phi12) / 2 > 0 ? halfPi : -halfPi), stream.point(sign0, phi02), stream.lineEnd(), stream.lineStart(), stream.point(sign1, phi02), stream.point(lambda12, phi02), clean = 0) : sign0 !== sign1 && delta >= pi && (abs(lambda04 - sign0) < epsilon && (lambda04 -= sign0 * epsilon), abs(lambda12 - sign1) < epsilon && (lambda12 -= sign1 * epsilon), phi02 = clipAntimeridianIntersect(lambda04, phi02, lambda12, phi12), stream.point(sign0, phi02), stream.lineEnd(), stream.lineStart(), stream.point(sign1, phi02), clean = 0), stream.point(lambda04 = lambda12, phi02 = phi12), sign0 = sign1;
+    },
+    lineEnd: function() {
+      stream.lineEnd(), lambda04 = phi02 = NaN;
+    },
+    clean: function() {
+      return 2 - clean;
+    }
+  };
+}
+function clipAntimeridianIntersect(lambda04, phi02, lambda12, phi12) {
+  var cosPhi03, cosPhi1, sinLambda0Lambda1 = sin(lambda04 - lambda12);
+  return abs(sinLambda0Lambda1) > epsilon ? atan((sin(phi02) * (cosPhi1 = cos(phi12)) * sin(lambda12) - sin(phi12) * (cosPhi03 = cos(phi02)) * sin(lambda04)) / (cosPhi03 * cosPhi1 * sinLambda0Lambda1)) : (phi02 + phi12) / 2;
+}
+function clipAntimeridianInterpolate(from, to, direction, stream) {
+  var phi;
+  if (from == null)
+    phi = direction * halfPi, stream.point(-pi, phi), stream.point(0, phi), stream.point(pi, phi), stream.point(pi, 0), stream.point(pi, -phi), stream.point(0, -phi), stream.point(-pi, -phi), stream.point(-pi, 0), stream.point(-pi, phi);
+  else if (abs(from[0] - to[0]) > epsilon) {
+    var lambda = from[0] < to[0] ? pi : -pi;
+    phi = direction * lambda / 2, stream.point(-lambda, phi), stream.point(0, phi), stream.point(lambda, phi);
+  } else
+    stream.point(to[0], to[1]);
+}
+var antimeridian_default, init_antimeridian = __esm({
+  "node_modules/d3-geo/src/clip/antimeridian.js"() {
+    init_clip();
+    init_math();
+    antimeridian_default = clip_default(
+      function() {
+        return !0;
+      },
+      clipAntimeridianLine,
+      clipAntimeridianInterpolate,
+      [-pi, -halfPi]
+    );
+  }
+});
+
+// node_modules/d3-geo/src/clip/circle.js
+function circle_default2(radius) {
+  var cr = cos(radius), delta = 6 * radians, smallRadius = cr > 0, notHemisphere = abs(cr) > epsilon;
+  function interpolate(from, to, direction, stream) {
+    circleStream(stream, radius, delta, direction, from, to);
+  }
+  function visible(lambda, phi) {
+    return cos(lambda) * cos(phi) > cr;
+  }
+  function clipLine(stream) {
+    var point0, c0, v0, v00, clean;
+    return {
+      lineStart: function() {
+        v00 = v0 = !1, clean = 1;
+      },
+      point: function(lambda, phi) {
+        var point1 = [lambda, phi], point2, v = visible(lambda, phi), c = smallRadius ? v ? 0 : code(lambda, phi) : v ? code(lambda + (lambda < 0 ? pi : -pi), phi) : 0;
+        if (!point0 && (v00 = v0 = v) && stream.lineStart(), v !== v0 && (point2 = intersect(point0, point1), (!point2 || pointEqual_default(point0, point2) || pointEqual_default(point1, point2)) && (point1[2] = 1)), v !== v0)
+          clean = 0, v ? (stream.lineStart(), point2 = intersect(point1, point0), stream.point(point2[0], point2[1])) : (point2 = intersect(point0, point1), stream.point(point2[0], point2[1], 2), stream.lineEnd()), point0 = point2;
+        else if (notHemisphere && point0 && smallRadius ^ v) {
+          var t;
+          !(c & c0) && (t = intersect(point1, point0, !0)) && (clean = 0, smallRadius ? (stream.lineStart(), stream.point(t[0][0], t[0][1]), stream.point(t[1][0], t[1][1]), stream.lineEnd()) : (stream.point(t[1][0], t[1][1]), stream.lineEnd(), stream.lineStart(), stream.point(t[0][0], t[0][1], 3)));
+        }
+        v && (!point0 || !pointEqual_default(point0, point1)) && stream.point(point1[0], point1[1]), point0 = point1, v0 = v, c0 = c;
+      },
+      lineEnd: function() {
+        v0 && stream.lineEnd(), point0 = null;
+      },
+      clean: function() {
+        return clean | (v00 && v0) << 1;
+      }
+    };
+  }
+  function intersect(a, b, two) {
+    var pa = cartesian(a), pb = cartesian(b), n1 = [1, 0, 0], n2 = cartesianCross(pa, pb), n2n2 = cartesianDot(n2, n2), n1n2 = n2[0], determinant = n2n2 - n1n2 * n1n2;
+    if (!determinant)
+      return !two && a;
+    var c1 = cr * n2n2 / determinant, c2 = -cr * n1n2 / determinant, n1xn2 = cartesianCross(n1, n2), A = cartesianScale(n1, c1), B = cartesianScale(n2, c2);
+    cartesianAddInPlace(A, B);
+    var u = n1xn2, w = cartesianDot(A, u), uu = cartesianDot(u, u), t2 = w * w - uu * (cartesianDot(A, A) - 1);
+    if (!(t2 < 0)) {
+      var t = sqrt(t2), q = cartesianScale(u, (-w - t) / uu);
+      if (cartesianAddInPlace(q, A), q = spherical(q), !two)
+        return q;
+      var lambda04 = a[0], lambda12 = b[0], phi02 = a[1], phi12 = b[1], z;
+      lambda12 < lambda04 && (z = lambda04, lambda04 = lambda12, lambda12 = z);
+      var delta2 = lambda12 - lambda04, polar = abs(delta2 - pi) < epsilon, meridian = polar || delta2 < epsilon;
+      if (!polar && phi12 < phi02 && (z = phi02, phi02 = phi12, phi12 = z), meridian ? polar ? phi02 + phi12 > 0 ^ q[1] < (abs(q[0] - lambda04) < epsilon ? phi02 : phi12) : phi02 <= q[1] && q[1] <= phi12 : delta2 > pi ^ (lambda04 <= q[0] && q[0] <= lambda12)) {
+        var q1 = cartesianScale(u, (-w + t) / uu);
+        return cartesianAddInPlace(q1, A), [q, spherical(q1)];
+      }
+    }
+  }
+  function code(lambda, phi) {
+    var r = smallRadius ? radius : pi - radius, code2 = 0;
+    return lambda < -r ? code2 |= 1 : lambda > r && (code2 |= 2), phi < -r ? code2 |= 4 : phi > r && (code2 |= 8), code2;
+  }
+  return clip_default(visible, clipLine, interpolate, smallRadius ? [0, -radius] : [-pi, radius - pi]);
+}
+var init_circle2 = __esm({
+  "node_modules/d3-geo/src/clip/circle.js"() {
+    init_cartesian();
+    init_circle();
+    init_math();
+    init_pointEqual();
+    init_clip();
+  }
+});
+
+// node_modules/d3-geo/src/clip/line.js
+function line_default(a, b, x06, y06, x12, y12) {
+  var ax = a[0], ay = a[1], bx = b[0], by = b[1], t0 = 0, t1 = 1, dx = bx - ax, dy = by - ay, r;
+  if (r = x06 - ax, !(!dx && r > 0)) {
+    if (r /= dx, dx < 0) {
+      if (r < t0)
+        return;
+      r < t1 && (t1 = r);
+    } else if (dx > 0) {
+      if (r > t1)
+        return;
+      r > t0 && (t0 = r);
+    }
+    if (r = x12 - ax, !(!dx && r < 0)) {
+      if (r /= dx, dx < 0) {
+        if (r > t1)
+          return;
+        r > t0 && (t0 = r);
+      } else if (dx > 0) {
+        if (r < t0)
+          return;
+        r < t1 && (t1 = r);
+      }
+      if (r = y06 - ay, !(!dy && r > 0)) {
+        if (r /= dy, dy < 0) {
+          if (r < t0)
+            return;
+          r < t1 && (t1 = r);
+        } else if (dy > 0) {
+          if (r > t1)
+            return;
+          r > t0 && (t0 = r);
+        }
+        if (r = y12 - ay, !(!dy && r < 0)) {
+          if (r /= dy, dy < 0) {
+            if (r > t1)
+              return;
+            r > t0 && (t0 = r);
+          } else if (dy > 0) {
+            if (r < t0)
+              return;
+            r < t1 && (t1 = r);
+          }
+          return t0 > 0 && (a[0] = ax + t0 * dx, a[1] = ay + t0 * dy), t1 < 1 && (b[0] = ax + t1 * dx, b[1] = ay + t1 * dy), !0;
+        }
+      }
+    }
+  }
+}
+var init_line = __esm({
+  "node_modules/d3-geo/src/clip/line.js"() {
+  }
+});
+
+// node_modules/d3-geo/src/clip/rectangle.js
+function clipRectangle(x06, y06, x12, y12) {
+  function visible(x, y) {
+    return x06 <= x && x <= x12 && y06 <= y && y <= y12;
+  }
+  function interpolate(from, to, direction, stream) {
+    var a = 0, a1 = 0;
+    if (from == null || (a = corner(from, direction)) !== (a1 = corner(to, direction)) || comparePoint(from, to) < 0 ^ direction > 0)
+      do
+        stream.point(a === 0 || a === 3 ? x06 : x12, a > 1 ? y12 : y06);
+      while ((a = (a + direction + 4) % 4) !== a1);
+    else
+      stream.point(to[0], to[1]);
+  }
+  function corner(p, direction) {
+    return abs(p[0] - x06) < epsilon ? direction > 0 ? 0 : 3 : abs(p[0] - x12) < epsilon ? direction > 0 ? 2 : 1 : abs(p[1] - y06) < epsilon ? direction > 0 ? 1 : 0 : direction > 0 ? 3 : 2;
+  }
+  function compareIntersection2(a, b) {
+    return comparePoint(a.x, b.x);
+  }
+  function comparePoint(a, b) {
+    var ca = corner(a, 1), cb = corner(b, 1);
+    return ca !== cb ? ca - cb : ca === 0 ? b[1] - a[1] : ca === 1 ? a[0] - b[0] : ca === 2 ? a[1] - b[1] : b[0] - a[0];
+  }
+  return function(stream) {
+    var activeStream = stream, bufferStream = buffer_default(), segments, polygon, ring, x__, y__, v__, x_, y_, v_, first, clean, clipStream = {
+      point,
+      lineStart,
+      lineEnd,
+      polygonStart,
+      polygonEnd
+    };
+    function point(x, y) {
+      visible(x, y) && activeStream.point(x, y);
+    }
+    function polygonInside() {
+      for (var winding = 0, i = 0, n = polygon.length; i < n; ++i)
+        for (var ring2 = polygon[i], j = 1, m = ring2.length, point2 = ring2[0], a0, a1, b0 = point2[0], b1 = point2[1]; j < m; ++j)
+          a0 = b0, a1 = b1, point2 = ring2[j], b0 = point2[0], b1 = point2[1], a1 <= y12 ? b1 > y12 && (b0 - a0) * (y12 - a1) > (b1 - a1) * (x06 - a0) && ++winding : b1 <= y12 && (b0 - a0) * (y12 - a1) < (b1 - a1) * (x06 - a0) && --winding;
+      return winding;
+    }
+    function polygonStart() {
+      activeStream = bufferStream, segments = [], polygon = [], clean = !0;
+    }
+    function polygonEnd() {
+      var startInside = polygonInside(), cleanInside = clean && startInside, visible2 = (segments = merge(segments)).length;
+      (cleanInside || visible2) && (stream.polygonStart(), cleanInside && (stream.lineStart(), interpolate(null, null, 1, stream), stream.lineEnd()), visible2 && rejoin_default(segments, compareIntersection2, startInside, interpolate, stream), stream.polygonEnd()), activeStream = stream, segments = polygon = ring = null;
+    }
+    function lineStart() {
+      clipStream.point = linePoint2, polygon && polygon.push(ring = []), first = !0, v_ = !1, x_ = y_ = NaN;
+    }
+    function lineEnd() {
+      segments && (linePoint2(x__, y__), v__ && v_ && bufferStream.rejoin(), segments.push(bufferStream.result())), clipStream.point = point, v_ && activeStream.lineEnd();
+    }
+    function linePoint2(x, y) {
+      var v = visible(x, y);
+      if (polygon && ring.push([x, y]), first)
+        x__ = x, y__ = y, v__ = v, first = !1, v && (activeStream.lineStart(), activeStream.point(x, y));
+      else if (v && v_)
+        activeStream.point(x, y);
+      else {
+        var a = [x_ = Math.max(clipMin, Math.min(clipMax, x_)), y_ = Math.max(clipMin, Math.min(clipMax, y_))], b = [x = Math.max(clipMin, Math.min(clipMax, x)), y = Math.max(clipMin, Math.min(clipMax, y))];
+        line_default(a, b, x06, y06, x12, y12) ? (v_ || (activeStream.lineStart(), activeStream.point(a[0], a[1])), activeStream.point(b[0], b[1]), v || activeStream.lineEnd(), clean = !1) : v && (activeStream.lineStart(), activeStream.point(x, y), clean = !1);
+      }
+      x_ = x, y_ = y, v_ = v;
+    }
+    return clipStream;
+  };
+}
+var clipMax, clipMin, init_rectangle = __esm({
+  "node_modules/d3-geo/src/clip/rectangle.js"() {
+    init_math();
+    init_buffer();
+    init_line();
+    init_rejoin();
+    init_src2();
+    clipMax = 1e9, clipMin = -clipMax;
+  }
+});
+
+// node_modules/d3-geo/src/clip/extent.js
+function extent_default() {
+  var x06 = 0, y06 = 0, x12 = 960, y12 = 500, cache, cacheStream, clip;
+  return clip = {
+    stream: function(stream) {
+      return cache && cacheStream === stream ? cache : cache = clipRectangle(x06, y06, x12, y12)(cacheStream = stream);
+    },
+    extent: function(_) {
+      return arguments.length ? (x06 = +_[0][0], y06 = +_[0][1], x12 = +_[1][0], y12 = +_[1][1], cache = cacheStream = null, clip) : [[x06, y06], [x12, y12]];
+    }
+  };
+}
+var init_extent = __esm({
+  "node_modules/d3-geo/src/clip/extent.js"() {
+    init_rectangle();
+  }
+});
+
+// node_modules/d3-geo/src/length.js
+function lengthLineStart() {
+  lengthStream.point = lengthPointFirst, lengthStream.lineEnd = lengthLineEnd;
+}
+function lengthLineEnd() {
+  lengthStream.point = lengthStream.lineEnd = noop;
+}
+function lengthPointFirst(lambda, phi) {
+  lambda *= radians, phi *= radians, lambda03 = lambda, sinPhi02 = sin(phi), cosPhi02 = cos(phi), lengthStream.point = lengthPoint;
+}
+function lengthPoint(lambda, phi) {
+  lambda *= radians, phi *= radians;
+  var sinPhi = sin(phi), cosPhi = cos(phi), delta = abs(lambda - lambda03), cosDelta = cos(delta), sinDelta = sin(delta), x = cosPhi * sinDelta, y = cosPhi02 * sinPhi - sinPhi02 * cosPhi * cosDelta, z = sinPhi02 * sinPhi + cosPhi02 * cosPhi * cosDelta;
+  lengthSum.add(atan2(sqrt(x * x + y * y), z)), lambda03 = lambda, sinPhi02 = sinPhi, cosPhi02 = cosPhi;
+}
+function length_default(object3) {
+  return lengthSum = new Adder(), stream_default(object3, lengthStream), +lengthSum;
+}
+var lengthSum, lambda03, sinPhi02, cosPhi02, lengthStream, init_length = __esm({
+  "node_modules/d3-geo/src/length.js"() {
+    init_src2();
+    init_math();
+    init_noop();
+    init_stream();
+    lengthStream = {
+      sphere: noop,
+      point: noop,
+      lineStart: lengthLineStart,
+      lineEnd: noop,
+      polygonStart: noop,
+      polygonEnd: noop
+    };
+  }
+});
+
+// node_modules/d3-geo/src/distance.js
+function distance_default(a, b) {
+  return coordinates[0] = a, coordinates[1] = b, length_default(object);
+}
+var coordinates, object, init_distance = __esm({
+  "node_modules/d3-geo/src/distance.js"() {
+    init_length();
+    coordinates = [null, null], object = { type: "LineString", coordinates };
+  }
+});
+
+// node_modules/d3-geo/src/contains.js
+function containsGeometry(geometry, point) {
+  return geometry && containsGeometryType.hasOwnProperty(geometry.type) ? containsGeometryType[geometry.type](geometry, point) : !1;
+}
+function containsPoint(coordinates2, point) {
+  return distance_default(coordinates2, point) === 0;
+}
+function containsLine(coordinates2, point) {
+  for (var ao, bo, ab, i = 0, n = coordinates2.length; i < n; i++) {
+    if (bo = distance_default(coordinates2[i], point), bo === 0 || i > 0 && (ab = distance_default(coordinates2[i], coordinates2[i - 1]), ab > 0 && ao <= ab && bo <= ab && (ao + bo - ab) * (1 - Math.pow((ao - bo) / ab, 2)) < epsilon2 * ab))
+      return !0;
+    ao = bo;
+  }
+  return !1;
+}
+function containsPolygon(coordinates2, point) {
+  return !!polygonContains_default(coordinates2.map(ringRadians), pointRadians(point));
+}
+function ringRadians(ring) {
+  return ring = ring.map(pointRadians), ring.pop(), ring;
+}
+function pointRadians(point) {
+  return [point[0] * radians, point[1] * radians];
+}
+function contains_default(object3, point) {
+  return (object3 && containsObjectType.hasOwnProperty(object3.type) ? containsObjectType[object3.type] : containsGeometry)(object3, point);
+}
+var containsObjectType, containsGeometryType, init_contains = __esm({
+  "node_modules/d3-geo/src/contains.js"() {
+    init_polygonContains();
+    init_distance();
+    init_math();
+    containsObjectType = {
+      Feature: function(object3, point) {
+        return containsGeometry(object3.geometry, point);
+      },
+      FeatureCollection: function(object3, point) {
+        for (var features = object3.features, i = -1, n = features.length; ++i < n; )
+          if (containsGeometry(features[i].geometry, point))
+            return !0;
+        return !1;
+      }
+    }, containsGeometryType = {
+      Sphere: function() {
+        return !0;
+      },
+      Point: function(object3, point) {
+        return containsPoint(object3.coordinates, point);
+      },
+      MultiPoint: function(object3, point) {
+        for (var coordinates2 = object3.coordinates, i = -1, n = coordinates2.length; ++i < n; )
+          if (containsPoint(coordinates2[i], point))
+            return !0;
+        return !1;
+      },
+      LineString: function(object3, point) {
+        return containsLine(object3.coordinates, point);
+      },
+      MultiLineString: function(object3, point) {
+        for (var coordinates2 = object3.coordinates, i = -1, n = coordinates2.length; ++i < n; )
+          if (containsLine(coordinates2[i], point))
+            return !0;
+        return !1;
+      },
+      Polygon: function(object3, point) {
+        return containsPolygon(object3.coordinates, point);
+      },
+      MultiPolygon: function(object3, point) {
+        for (var coordinates2 = object3.coordinates, i = -1, n = coordinates2.length; ++i < n; )
+          if (containsPolygon(coordinates2[i], point))
+            return !0;
+        return !1;
+      },
+      GeometryCollection: function(object3, point) {
+        for (var geometries = object3.geometries, i = -1, n = geometries.length; ++i < n; )
+          if (containsGeometry(geometries[i], point))
+            return !0;
+        return !1;
+      }
+    };
+  }
+});
+
+// node_modules/d3-geo/src/graticule.js
+function graticuleX(y06, y12, dy) {
+  var y = range_default(y06, y12 - epsilon, dy).concat(y12);
+  return function(x) {
+    return y.map(function(y2) {
+      return [x, y2];
+    });
+  };
+}
+function graticuleY(x06, x12, dx) {
+  var x = range_default(x06, x12 - epsilon, dx).concat(x12);
+  return function(y) {
+    return x.map(function(x2) {
+      return [x2, y];
+    });
+  };
+}
+function graticule() {
+  var x12, x06, X13, X03, y12, y06, Y13, Y03, dx = 10, dy = dx, DX = 90, DY = 360, x, y, X, Y, precision = 2.5;
+  function graticule2() {
+    return { type: "MultiLineString", coordinates: lines() };
+  }
+  function lines() {
+    return range_default(ceil(X03 / DX) * DX, X13, DX).map(X).concat(range_default(ceil(Y03 / DY) * DY, Y13, DY).map(Y)).concat(range_default(ceil(x06 / dx) * dx, x12, dx).filter(function(x2) {
+      return abs(x2 % DX) > epsilon;
+    }).map(x)).concat(range_default(ceil(y06 / dy) * dy, y12, dy).filter(function(y2) {
+      return abs(y2 % DY) > epsilon;
+    }).map(y));
+  }
+  return graticule2.lines = function() {
+    return lines().map(function(coordinates2) {
+      return { type: "LineString", coordinates: coordinates2 };
+    });
+  }, graticule2.outline = function() {
+    return {
+      type: "Polygon",
+      coordinates: [
+        X(X03).concat(
+          Y(Y13).slice(1),
+          X(X13).reverse().slice(1),
+          Y(Y03).reverse().slice(1)
+        )
+      ]
+    };
+  }, graticule2.extent = function(_) {
+    return arguments.length ? graticule2.extentMajor(_).extentMinor(_) : graticule2.extentMinor();
+  }, graticule2.extentMajor = function(_) {
+    return arguments.length ? (X03 = +_[0][0], X13 = +_[1][0], Y03 = +_[0][1], Y13 = +_[1][1], X03 > X13 && (_ = X03, X03 = X13, X13 = _), Y03 > Y13 && (_ = Y03, Y03 = Y13, Y13 = _), graticule2.precision(precision)) : [[X03, Y03], [X13, Y13]];
+  }, graticule2.extentMinor = function(_) {
+    return arguments.length ? (x06 = +_[0][0], x12 = +_[1][0], y06 = +_[0][1], y12 = +_[1][1], x06 > x12 && (_ = x06, x06 = x12, x12 = _), y06 > y12 && (_ = y06, y06 = y12, y12 = _), graticule2.precision(precision)) : [[x06, y06], [x12, y12]];
+  }, graticule2.step = function(_) {
+    return arguments.length ? graticule2.stepMajor(_).stepMinor(_) : graticule2.stepMinor();
+  }, graticule2.stepMajor = function(_) {
+    return arguments.length ? (DX = +_[0], DY = +_[1], graticule2) : [DX, DY];
+  }, graticule2.stepMinor = function(_) {
+    return arguments.length ? (dx = +_[0], dy = +_[1], graticule2) : [dx, dy];
+  }, graticule2.precision = function(_) {
+    return arguments.length ? (precision = +_, x = graticuleX(y06, y12, 90), y = graticuleY(x06, x12, precision), X = graticuleX(Y03, Y13, 90), Y = graticuleY(X03, X13, precision), graticule2) : precision;
+  }, graticule2.extentMajor([[-180, -90 + epsilon], [180, 90 - epsilon]]).extentMinor([[-180, -80 - epsilon], [180, 80 + epsilon]]);
+}
+function graticule10() {
+  return graticule()();
+}
+var init_graticule = __esm({
+  "node_modules/d3-geo/src/graticule.js"() {
+    init_src2();
+    init_math();
+  }
+});
+
+// node_modules/d3-geo/src/interpolate.js
+function interpolate_default(a, b) {
+  var x06 = a[0] * radians, y06 = a[1] * radians, x12 = b[0] * radians, y12 = b[1] * radians, cy0 = cos(y06), sy0 = sin(y06), cy1 = cos(y12), sy1 = sin(y12), kx0 = cy0 * cos(x06), ky0 = cy0 * sin(x06), kx1 = cy1 * cos(x12), ky1 = cy1 * sin(x12), d = 2 * asin(sqrt(haversin(y12 - y06) + cy0 * cy1 * haversin(x12 - x06))), k = sin(d), interpolate = d ? function(t) {
+    var B = sin(t *= d) / k, A = sin(d - t) / k, x = A * kx0 + B * kx1, y = A * ky0 + B * ky1, z = A * sy0 + B * sy1;
+    return [
+      atan2(y, x) * degrees,
+      atan2(z, sqrt(x * x + y * y)) * degrees
+    ];
+  } : function() {
+    return [x06 * degrees, y06 * degrees];
+  };
+  return interpolate.distance = d, interpolate;
+}
+var init_interpolate = __esm({
+  "node_modules/d3-geo/src/interpolate.js"() {
+    init_math();
+  }
+});
+
+// node_modules/d3-geo/src/identity.js
+var identity_default, init_identity = __esm({
+  "node_modules/d3-geo/src/identity.js"() {
+    identity_default = (x) => x;
+  }
+});
+
+// node_modules/d3-geo/src/path/area.js
+function areaRingStart2() {
+  areaStream2.point = areaPointFirst2;
+}
+function areaPointFirst2(x, y) {
+  areaStream2.point = areaPoint2, x00 = x02 = x, y00 = y02 = y;
+}
+function areaPoint2(x, y) {
+  areaRingSum2.add(y02 * x - x02 * y), x02 = x, y02 = y;
+}
+function areaRingEnd2() {
+  areaPoint2(x00, y00);
+}
+var areaSum2, areaRingSum2, x00, y00, x02, y02, areaStream2, area_default2, init_area2 = __esm({
+  "node_modules/d3-geo/src/path/area.js"() {
+    init_src2();
+    init_math();
+    init_noop();
+    areaSum2 = new Adder(), areaRingSum2 = new Adder(), areaStream2 = {
+      point: noop,
+      lineStart: noop,
+      lineEnd: noop,
+      polygonStart: function() {
+        areaStream2.lineStart = areaRingStart2, areaStream2.lineEnd = areaRingEnd2;
+      },
+      polygonEnd: function() {
+        areaStream2.lineStart = areaStream2.lineEnd = areaStream2.point = noop, areaSum2.add(abs(areaRingSum2)), areaRingSum2 = new Adder();
+      },
+      result: function() {
+        var area = areaSum2 / 2;
+        return areaSum2 = new Adder(), area;
+      }
+    };
+    area_default2 = areaStream2;
+  }
+});
+
+// node_modules/d3-geo/src/path/bounds.js
+function boundsPoint2(x, y) {
+  x < x03 && (x03 = x), x > x1 && (x1 = x), y < y03 && (y03 = y), y > y1 && (y1 = y);
+}
+var x03, y03, x1, y1, boundsStream2, bounds_default2, init_bounds2 = __esm({
+  "node_modules/d3-geo/src/path/bounds.js"() {
+    init_noop();
+    x03 = 1 / 0, y03 = x03, x1 = -x03, y1 = x1, boundsStream2 = {
+      point: boundsPoint2,
+      lineStart: noop,
+      lineEnd: noop,
+      polygonStart: noop,
+      polygonEnd: noop,
+      result: function() {
+        var bounds = [[x03, y03], [x1, y1]];
+        return x1 = y1 = -(y03 = x03 = 1 / 0), bounds;
+      }
+    };
+    bounds_default2 = boundsStream2;
+  }
+});
+
+// node_modules/d3-geo/src/path/centroid.js
+function centroidPoint2(x, y) {
+  X02 += x, Y02 += y, ++Z02;
+}
+function centroidLineStart2() {
+  centroidStream2.point = centroidPointFirstLine;
+}
+function centroidPointFirstLine(x, y) {
+  centroidStream2.point = centroidPointLine, centroidPoint2(x04 = x, y04 = y);
+}
+function centroidPointLine(x, y) {
+  var dx = x - x04, dy = y - y04, z = sqrt(dx * dx + dy * dy);
+  X12 += z * (x04 + x) / 2, Y12 += z * (y04 + y) / 2, Z12 += z, centroidPoint2(x04 = x, y04 = y);
+}
+function centroidLineEnd2() {
+  centroidStream2.point = centroidPoint2;
+}
+function centroidRingStart2() {
+  centroidStream2.point = centroidPointFirstRing;
+}
+function centroidRingEnd2() {
+  centroidPointRing(x002, y002);
+}
+function centroidPointFirstRing(x, y) {
+  centroidStream2.point = centroidPointRing, centroidPoint2(x002 = x04 = x, y002 = y04 = y);
+}
+function centroidPointRing(x, y) {
+  var dx = x - x04, dy = y - y04, z = sqrt(dx * dx + dy * dy);
+  X12 += z * (x04 + x) / 2, Y12 += z * (y04 + y) / 2, Z12 += z, z = y04 * x - x04 * y, X22 += z * (x04 + x), Y22 += z * (y04 + y), Z22 += z * 3, centroidPoint2(x04 = x, y04 = y);
+}
+var X02, Y02, Z02, X12, Y12, Z12, X22, Y22, Z22, x002, y002, x04, y04, centroidStream2, centroid_default2, init_centroid2 = __esm({
+  "node_modules/d3-geo/src/path/centroid.js"() {
+    init_math();
+    X02 = 0, Y02 = 0, Z02 = 0, X12 = 0, Y12 = 0, Z12 = 0, X22 = 0, Y22 = 0, Z22 = 0, centroidStream2 = {
+      point: centroidPoint2,
+      lineStart: centroidLineStart2,
+      lineEnd: centroidLineEnd2,
+      polygonStart: function() {
+        centroidStream2.lineStart = centroidRingStart2, centroidStream2.lineEnd = centroidRingEnd2;
+      },
+      polygonEnd: function() {
+        centroidStream2.point = centroidPoint2, centroidStream2.lineStart = centroidLineStart2, centroidStream2.lineEnd = centroidLineEnd2;
+      },
+      result: function() {
+        var centroid = Z22 ? [X22 / Z22, Y22 / Z22] : Z12 ? [X12 / Z12, Y12 / Z12] : Z02 ? [X02 / Z02, Y02 / Z02] : [NaN, NaN];
+        return X02 = Y02 = Z02 = X12 = Y12 = Z12 = X22 = Y22 = Z22 = 0, centroid;
+      }
+    };
+    centroid_default2 = centroidStream2;
+  }
+});
+
+// node_modules/d3-geo/src/path/context.js
+function PathContext(context) {
+  this._context = context;
+}
+var init_context = __esm({
+  "node_modules/d3-geo/src/path/context.js"() {
+    init_math();
+    init_noop();
+    PathContext.prototype = {
+      _radius: 4.5,
+      pointRadius: function(_) {
+        return this._radius = _, this;
+      },
+      polygonStart: function() {
+        this._line = 0;
+      },
+      polygonEnd: function() {
+        this._line = NaN;
+      },
+      lineStart: function() {
+        this._point = 0;
+      },
+      lineEnd: function() {
+        this._line === 0 && this._context.closePath(), this._point = NaN;
+      },
+      point: function(x, y) {
+        switch (this._point) {
+          case 0: {
+            this._context.moveTo(x, y), this._point = 1;
+            break;
+          }
+          case 1: {
+            this._context.lineTo(x, y);
+            break;
+          }
+          default: {
+            this._context.moveTo(x + this._radius, y), this._context.arc(x, y, this._radius, 0, tau);
+            break;
+          }
+        }
+      },
+      result: noop
+    };
+  }
+});
+
+// node_modules/d3-geo/src/path/measure.js
+function lengthPointFirst2(x, y) {
+  lengthStream2.point = lengthPoint2, x003 = x05 = x, y003 = y05 = y;
+}
+function lengthPoint2(x, y) {
+  x05 -= x, y05 -= y, lengthSum2.add(sqrt(x05 * x05 + y05 * y05)), x05 = x, y05 = y;
+}
+var lengthSum2, lengthRing, x003, y003, x05, y05, lengthStream2, measure_default, init_measure = __esm({
+  "node_modules/d3-geo/src/path/measure.js"() {
+    init_src2();
+    init_math();
+    init_noop();
+    lengthSum2 = new Adder(), lengthStream2 = {
+      point: noop,
+      lineStart: function() {
+        lengthStream2.point = lengthPointFirst2;
+      },
+      lineEnd: function() {
+        lengthRing && lengthPoint2(x003, y003), lengthStream2.point = noop;
+      },
+      polygonStart: function() {
+        lengthRing = !0;
+      },
+      polygonEnd: function() {
+        lengthRing = null;
+      },
+      result: function() {
+        var length = +lengthSum2;
+        return lengthSum2 = new Adder(), length;
+      }
+    };
+    measure_default = lengthStream2;
+  }
+});
+
+// node_modules/d3-geo/src/path/string.js
+function PathString() {
+  this._string = [];
+}
+function circle(radius) {
+  return "m0," + radius + "a" + radius + "," + radius + " 0 1,1 0," + -2 * radius + "a" + radius + "," + radius + " 0 1,1 0," + 2 * radius + "z";
+}
+var init_string = __esm({
+  "node_modules/d3-geo/src/path/string.js"() {
+    PathString.prototype = {
+      _radius: 4.5,
+      _circle: circle(4.5),
+      pointRadius: function(_) {
+        return (_ = +_) !== this._radius && (this._radius = _, this._circle = null), this;
+      },
+      polygonStart: function() {
+        this._line = 0;
+      },
+      polygonEnd: function() {
+        this._line = NaN;
+      },
+      lineStart: function() {
+        this._point = 0;
+      },
+      lineEnd: function() {
+        this._line === 0 && this._string.push("Z"), this._point = NaN;
+      },
+      point: function(x, y) {
+        switch (this._point) {
+          case 0: {
+            this._string.push("M", x, ",", y), this._point = 1;
+            break;
+          }
+          case 1: {
+            this._string.push("L", x, ",", y);
+            break;
+          }
+          default: {
+            this._circle == null && (this._circle = circle(this._radius)), this._string.push("M", x, ",", y, this._circle);
+            break;
+          }
+        }
+      },
+      result: function() {
+        if (this._string.length) {
+          var result = this._string.join("");
+          return this._string = [], result;
+        } else
+          return null;
+      }
+    };
+  }
+});
+
+// node_modules/d3-geo/src/path/index.js
+function path_default(projection2, context) {
+  var pointRadius = 4.5, projectionStream, contextStream;
+  function path(object3) {
+    return object3 && (typeof pointRadius == "function" && contextStream.pointRadius(+pointRadius.apply(this, arguments)), stream_default(object3, projectionStream(contextStream))), contextStream.result();
+  }
+  return path.area = function(object3) {
+    return stream_default(object3, projectionStream(area_default2)), area_default2.result();
+  }, path.measure = function(object3) {
+    return stream_default(object3, projectionStream(measure_default)), measure_default.result();
+  }, path.bounds = function(object3) {
+    return stream_default(object3, projectionStream(bounds_default2)), bounds_default2.result();
+  }, path.centroid = function(object3) {
+    return stream_default(object3, projectionStream(centroid_default2)), centroid_default2.result();
+  }, path.projection = function(_) {
+    return arguments.length ? (projectionStream = _ == null ? (projection2 = null, identity_default) : (projection2 = _).stream, path) : projection2;
+  }, path.context = function(_) {
+    return arguments.length ? (contextStream = _ == null ? (context = null, new PathString()) : new PathContext(context = _), typeof pointRadius != "function" && contextStream.pointRadius(pointRadius), path) : context;
+  }, path.pointRadius = function(_) {
+    return arguments.length ? (pointRadius = typeof _ == "function" ? _ : (contextStream.pointRadius(+_), +_), path) : pointRadius;
+  }, path.projection(projection2).context(context);
+}
+var init_path = __esm({
+  "node_modules/d3-geo/src/path/index.js"() {
+    init_identity();
+    init_stream();
+    init_area2();
+    init_bounds2();
+    init_centroid2();
+    init_context();
+    init_measure();
+    init_string();
+  }
+});
+
+// node_modules/d3-geo/src/transform.js
+function transform_default(methods) {
+  return {
+    stream: transformer(methods)
+  };
+}
+function transformer(methods) {
+  return function(stream) {
+    var s = new TransformStream();
+    for (var key in methods)
+      s[key] = methods[key];
+    return s.stream = stream, s;
+  };
+}
+function TransformStream() {
+}
+var init_transform = __esm({
+  "node_modules/d3-geo/src/transform.js"() {
+    TransformStream.prototype = {
+      constructor: TransformStream,
+      point: function(x, y) {
+        this.stream.point(x, y);
+      },
+      sphere: function() {
+        this.stream.sphere();
+      },
+      lineStart: function() {
+        this.stream.lineStart();
+      },
+      lineEnd: function() {
+        this.stream.lineEnd();
+      },
+      polygonStart: function() {
+        this.stream.polygonStart();
+      },
+      polygonEnd: function() {
+        this.stream.polygonEnd();
+      }
+    };
+  }
+});
+
+// node_modules/d3-geo/src/projection/fit.js
+function fit(projection2, fitBounds, object3) {
+  var clip = projection2.clipExtent && projection2.clipExtent();
+  return projection2.scale(150).translate([0, 0]), clip != null && projection2.clipExtent(null), stream_default(object3, projection2.stream(bounds_default2)), fitBounds(bounds_default2.result()), clip != null && projection2.clipExtent(clip), projection2;
+}
+function fitExtent(projection2, extent, object3) {
+  return fit(projection2, function(b) {
+    var w = extent[1][0] - extent[0][0], h = extent[1][1] - extent[0][1], k = Math.min(w / (b[1][0] - b[0][0]), h / (b[1][1] - b[0][1])), x = +extent[0][0] + (w - k * (b[1][0] + b[0][0])) / 2, y = +extent[0][1] + (h - k * (b[1][1] + b[0][1])) / 2;
+    projection2.scale(150 * k).translate([x, y]);
+  }, object3);
+}
+function fitSize(projection2, size, object3) {
+  return fitExtent(projection2, [[0, 0], size], object3);
+}
+function fitWidth(projection2, width, object3) {
+  return fit(projection2, function(b) {
+    var w = +width, k = w / (b[1][0] - b[0][0]), x = (w - k * (b[1][0] + b[0][0])) / 2, y = -k * b[0][1];
+    projection2.scale(150 * k).translate([x, y]);
+  }, object3);
+}
+function fitHeight(projection2, height, object3) {
+  return fit(projection2, function(b) {
+    var h = +height, k = h / (b[1][1] - b[0][1]), x = -k * b[0][0], y = (h - k * (b[1][1] + b[0][1])) / 2;
+    projection2.scale(150 * k).translate([x, y]);
+  }, object3);
+}
+var init_fit = __esm({
+  "node_modules/d3-geo/src/projection/fit.js"() {
+    init_stream();
+    init_bounds2();
+  }
+});
+
+// node_modules/d3-geo/src/projection/resample.js
+function resample_default(project, delta2) {
+  return +delta2 ? resample(project, delta2) : resampleNone(project);
+}
+function resampleNone(project) {
+  return transformer({
+    point: function(x, y) {
+      x = project(x, y), this.stream.point(x[0], x[1]);
+    }
+  });
+}
+function resample(project, delta2) {
+  function resampleLineTo(x06, y06, lambda04, a0, b0, c0, x12, y12, lambda12, a1, b1, c1, depth, stream) {
+    var dx = x12 - x06, dy = y12 - y06, d2 = dx * dx + dy * dy;
+    if (d2 > 4 * delta2 && depth--) {
+      var a = a0 + a1, b = b0 + b1, c = c0 + c1, m = sqrt(a * a + b * b + c * c), phi2 = asin(c /= m), lambda22 = abs(abs(c) - 1) < epsilon || abs(lambda04 - lambda12) < epsilon ? (lambda04 + lambda12) / 2 : atan2(b, a), p = project(lambda22, phi2), x2 = p[0], y2 = p[1], dx2 = x2 - x06, dy2 = y2 - y06, dz = dy * dx2 - dx * dy2;
+      (dz * dz / d2 > delta2 || abs((dx * dx2 + dy * dy2) / d2 - 0.5) > 0.3 || a0 * a1 + b0 * b1 + c0 * c1 < cosMinDistance) && (resampleLineTo(x06, y06, lambda04, a0, b0, c0, x2, y2, lambda22, a /= m, b /= m, c, depth, stream), stream.point(x2, y2), resampleLineTo(x2, y2, lambda22, a, b, c, x12, y12, lambda12, a1, b1, c1, depth, stream));
+    }
+  }
+  return function(stream) {
+    var lambda004, x004, y004, a00, b00, c00, lambda04, x06, y06, a0, b0, c0, resampleStream = {
+      point,
+      lineStart,
+      lineEnd,
+      polygonStart: function() {
+        stream.polygonStart(), resampleStream.lineStart = ringStart;
+      },
+      polygonEnd: function() {
+        stream.polygonEnd(), resampleStream.lineStart = lineStart;
+      }
+    };
+    function point(x, y) {
+      x = project(x, y), stream.point(x[0], x[1]);
+    }
+    function lineStart() {
+      x06 = NaN, resampleStream.point = linePoint2, stream.lineStart();
+    }
+    function linePoint2(lambda, phi) {
+      var c = cartesian([lambda, phi]), p = project(lambda, phi);
+      resampleLineTo(x06, y06, lambda04, a0, b0, c0, x06 = p[0], y06 = p[1], lambda04 = lambda, a0 = c[0], b0 = c[1], c0 = c[2], maxDepth, stream), stream.point(x06, y06);
+    }
+    function lineEnd() {
+      resampleStream.point = point, stream.lineEnd();
+    }
+    function ringStart() {
+      lineStart(), resampleStream.point = ringPoint, resampleStream.lineEnd = ringEnd;
+    }
+    function ringPoint(lambda, phi) {
+      linePoint2(lambda004 = lambda, phi), x004 = x06, y004 = y06, a00 = a0, b00 = b0, c00 = c0, resampleStream.point = linePoint2;
+    }
+    function ringEnd() {
+      resampleLineTo(x06, y06, lambda04, a0, b0, c0, x004, y004, lambda004, a00, b00, c00, maxDepth, stream), resampleStream.lineEnd = lineEnd, lineEnd();
+    }
+    return resampleStream;
+  };
+}
+var maxDepth, cosMinDistance, init_resample = __esm({
+  "node_modules/d3-geo/src/projection/resample.js"() {
+    init_cartesian();
+    init_math();
+    init_transform();
+    maxDepth = 16, cosMinDistance = cos(30 * radians);
+  }
+});
+
+// node_modules/d3-geo/src/projection/index.js
+function transformRotate(rotate) {
+  return transformer({
+    point: function(x, y) {
+      var r = rotate(x, y);
+      return this.stream.point(r[0], r[1]);
+    }
+  });
+}
+function scaleTranslate(k, dx, dy, sx, sy) {
+  function transform2(x, y) {
+    return x *= sx, y *= sy, [dx + k * x, dy - k * y];
+  }
+  return transform2.invert = function(x, y) {
+    return [(x - dx) / k * sx, (dy - y) / k * sy];
+  }, transform2;
+}
+function scaleTranslateRotate(k, dx, dy, sx, sy, alpha) {
+  if (!alpha)
+    return scaleTranslate(k, dx, dy, sx, sy);
+  var cosAlpha = cos(alpha), sinAlpha = sin(alpha), a = cosAlpha * k, b = sinAlpha * k, ai = cosAlpha / k, bi = sinAlpha / k, ci = (sinAlpha * dy - cosAlpha * dx) / k, fi = (sinAlpha * dx + cosAlpha * dy) / k;
+  function transform2(x, y) {
+    return x *= sx, y *= sy, [a * x - b * y + dx, dy - b * x - a * y];
+  }
+  return transform2.invert = function(x, y) {
+    return [sx * (ai * x - bi * y + ci), sy * (fi - bi * x - ai * y)];
+  }, transform2;
+}
+function projection(project) {
+  return projectionMutator(function() {
+    return project;
+  })();
+}
+function projectionMutator(projectAt) {
+  var project, k = 150, x = 480, y = 250, lambda = 0, phi = 0, deltaLambda = 0, deltaPhi = 0, deltaGamma = 0, rotate, alpha = 0, sx = 1, sy = 1, theta = null, preclip = antimeridian_default, x06 = null, y06, x12, y12, postclip = identity_default, delta2 = 0.5, projectResample, projectTransform, projectRotateTransform, cache, cacheStream;
+  function projection2(point) {
+    return projectRotateTransform(point[0] * radians, point[1] * radians);
+  }
+  function invert(point) {
+    return point = projectRotateTransform.invert(point[0], point[1]), point && [point[0] * degrees, point[1] * degrees];
+  }
+  projection2.stream = function(stream) {
+    return cache && cacheStream === stream ? cache : cache = transformRadians(transformRotate(rotate)(preclip(projectResample(postclip(cacheStream = stream)))));
+  }, projection2.preclip = function(_) {
+    return arguments.length ? (preclip = _, theta = void 0, reset()) : preclip;
+  }, projection2.postclip = function(_) {
+    return arguments.length ? (postclip = _, x06 = y06 = x12 = y12 = null, reset()) : postclip;
+  }, projection2.clipAngle = function(_) {
+    return arguments.length ? (preclip = +_ ? circle_default2(theta = _ * radians) : (theta = null, antimeridian_default), reset()) : theta * degrees;
+  }, projection2.clipExtent = function(_) {
+    return arguments.length ? (postclip = _ == null ? (x06 = y06 = x12 = y12 = null, identity_default) : clipRectangle(x06 = +_[0][0], y06 = +_[0][1], x12 = +_[1][0], y12 = +_[1][1]), reset()) : x06 == null ? null : [[x06, y06], [x12, y12]];
+  }, projection2.scale = function(_) {
+    return arguments.length ? (k = +_, recenter()) : k;
+  }, projection2.translate = function(_) {
+    return arguments.length ? (x = +_[0], y = +_[1], recenter()) : [x, y];
+  }, projection2.center = function(_) {
+    return arguments.length ? (lambda = _[0] % 360 * radians, phi = _[1] % 360 * radians, recenter()) : [lambda * degrees, phi * degrees];
+  }, projection2.rotate = function(_) {
+    return arguments.length ? (deltaLambda = _[0] % 360 * radians, deltaPhi = _[1] % 360 * radians, deltaGamma = _.length > 2 ? _[2] % 360 * radians : 0, recenter()) : [deltaLambda * degrees, deltaPhi * degrees, deltaGamma * degrees];
+  }, projection2.angle = function(_) {
+    return arguments.length ? (alpha = _ % 360 * radians, recenter()) : alpha * degrees;
+  }, projection2.reflectX = function(_) {
+    return arguments.length ? (sx = _ ? -1 : 1, recenter()) : sx < 0;
+  }, projection2.reflectY = function(_) {
+    return arguments.length ? (sy = _ ? -1 : 1, recenter()) : sy < 0;
+  }, projection2.precision = function(_) {
+    return arguments.length ? (projectResample = resample_default(projectTransform, delta2 = _ * _), reset()) : sqrt(delta2);
+  }, projection2.fitExtent = function(extent, object3) {
+    return fitExtent(projection2, extent, object3);
+  }, projection2.fitSize = function(size, object3) {
+    return fitSize(projection2, size, object3);
+  }, projection2.fitWidth = function(width, object3) {
+    return fitWidth(projection2, width, object3);
+  }, projection2.fitHeight = function(height, object3) {
+    return fitHeight(projection2, height, object3);
+  };
+  function recenter() {
+    var center = scaleTranslateRotate(k, 0, 0, sx, sy, alpha).apply(null, project(lambda, phi)), transform2 = scaleTranslateRotate(k, x - center[0], y - center[1], sx, sy, alpha);
+    return rotate = rotateRadians(deltaLambda, deltaPhi, deltaGamma), projectTransform = compose_default(project, transform2), projectRotateTransform = compose_default(rotate, projectTransform), projectResample = resample_default(projectTransform, delta2), reset();
+  }
+  function reset() {
+    return cache = cacheStream = null, projection2;
+  }
+  return function() {
+    return project = projectAt.apply(this, arguments), projection2.invert = project.invert && invert, recenter();
+  };
+}
+var transformRadians, init_projection = __esm({
+  "node_modules/d3-geo/src/projection/index.js"() {
+    init_antimeridian();
+    init_circle2();
+    init_rectangle();
+    init_compose();
+    init_identity();
+    init_math();
+    init_rotation();
+    init_transform();
+    init_fit();
+    init_resample();
+    transformRadians = transformer({
+      point: function(x, y) {
+        this.stream.point(x * radians, y * radians);
+      }
+    });
+  }
+});
+
+// node_modules/d3-geo/src/projection/conic.js
+function conicProjection(projectAt) {
+  var phi02 = 0, phi12 = pi / 3, m = projectionMutator(projectAt), p = m(phi02, phi12);
+  return p.parallels = function(_) {
+    return arguments.length ? m(phi02 = _[0] * radians, phi12 = _[1] * radians) : [phi02 * degrees, phi12 * degrees];
+  }, p;
+}
+var init_conic = __esm({
+  "node_modules/d3-geo/src/projection/conic.js"() {
+    init_math();
+    init_projection();
+  }
+});
+
+// node_modules/d3-geo/src/projection/cylindricalEqualArea.js
+function cylindricalEqualAreaRaw(phi02) {
+  var cosPhi03 = cos(phi02);
+  function forward(lambda, phi) {
+    return [lambda * cosPhi03, sin(phi) / cosPhi03];
+  }
+  return forward.invert = function(x, y) {
+    return [x / cosPhi03, asin(y * cosPhi03)];
+  }, forward;
+}
+var init_cylindricalEqualArea = __esm({
+  "node_modules/d3-geo/src/projection/cylindricalEqualArea.js"() {
+    init_math();
+  }
+});
+
+// node_modules/d3-geo/src/projection/conicEqualArea.js
+function conicEqualAreaRaw(y06, y12) {
+  var sy0 = sin(y06), n = (sy0 + sin(y12)) / 2;
+  if (abs(n) < epsilon)
+    return cylindricalEqualAreaRaw(y06);
+  var c = 1 + sy0 * (2 * n - sy0), r0 = sqrt(c) / n;
+  function project(x, y) {
+    var r = sqrt(c - 2 * n * sin(y)) / n;
+    return [r * sin(x *= n), r0 - r * cos(x)];
+  }
+  return project.invert = function(x, y) {
+    var r0y = r0 - y, l = atan2(x, abs(r0y)) * sign(r0y);
+    return r0y * n < 0 && (l -= pi * sign(x) * sign(r0y)), [l / n, asin((c - (x * x + r0y * r0y) * n * n) / (2 * n))];
+  }, project;
+}
+function conicEqualArea_default() {
+  return conicProjection(conicEqualAreaRaw).scale(155.424).center([0, 33.6442]);
+}
+var init_conicEqualArea = __esm({
+  "node_modules/d3-geo/src/projection/conicEqualArea.js"() {
+    init_math();
+    init_conic();
+    init_cylindricalEqualArea();
+  }
+});
+
+// node_modules/d3-geo/src/projection/albers.js
+function albers_default() {
+  return conicEqualArea_default().parallels([29.5, 45.5]).scale(1070).translate([480, 250]).rotate([96, 0]).center([-0.6, 38.7]);
+}
+var init_albers = __esm({
+  "node_modules/d3-geo/src/projection/albers.js"() {
+    init_conicEqualArea();
+  }
+});
+
+// node_modules/d3-geo/src/projection/albersUsa.js
+function multiplex(streams) {
+  var n = streams.length;
+  return {
+    point: function(x, y) {
+      for (var i = -1; ++i < n; )
+        streams[i].point(x, y);
+    },
+    sphere: function() {
+      for (var i = -1; ++i < n; )
+        streams[i].sphere();
+    },
+    lineStart: function() {
+      for (var i = -1; ++i < n; )
+        streams[i].lineStart();
+    },
+    lineEnd: function() {
+      for (var i = -1; ++i < n; )
+        streams[i].lineEnd();
+    },
+    polygonStart: function() {
+      for (var i = -1; ++i < n; )
+        streams[i].polygonStart();
+    },
+    polygonEnd: function() {
+      for (var i = -1; ++i < n; )
+        streams[i].polygonEnd();
+    }
+  };
+}
+function albersUsa_default() {
+  var cache, cacheStream, lower48 = albers_default(), lower48Point, alaska = conicEqualArea_default().rotate([154, 0]).center([-2, 58.5]).parallels([55, 65]), alaskaPoint, hawaii = conicEqualArea_default().rotate([157, 0]).center([-3, 19.9]).parallels([8, 18]), hawaiiPoint, point, pointStream = { point: function(x, y) {
+    point = [x, y];
+  } };
+  function albersUsa(coordinates2) {
+    var x = coordinates2[0], y = coordinates2[1];
+    return point = null, lower48Point.point(x, y), point || (alaskaPoint.point(x, y), point) || (hawaiiPoint.point(x, y), point);
+  }
+  albersUsa.invert = function(coordinates2) {
+    var k = lower48.scale(), t = lower48.translate(), x = (coordinates2[0] - t[0]) / k, y = (coordinates2[1] - t[1]) / k;
+    return (y >= 0.12 && y < 0.234 && x >= -0.425 && x < -0.214 ? alaska : y >= 0.166 && y < 0.234 && x >= -0.214 && x < -0.115 ? hawaii : lower48).invert(coordinates2);
+  }, albersUsa.stream = function(stream) {
+    return cache && cacheStream === stream ? cache : cache = multiplex([lower48.stream(cacheStream = stream), alaska.stream(stream), hawaii.stream(stream)]);
+  }, albersUsa.precision = function(_) {
+    return arguments.length ? (lower48.precision(_), alaska.precision(_), hawaii.precision(_), reset()) : lower48.precision();
+  }, albersUsa.scale = function(_) {
+    return arguments.length ? (lower48.scale(_), alaska.scale(_ * 0.35), hawaii.scale(_), albersUsa.translate(lower48.translate())) : lower48.scale();
+  }, albersUsa.translate = function(_) {
+    if (!arguments.length)
+      return lower48.translate();
+    var k = lower48.scale(), x = +_[0], y = +_[1];
+    return lower48Point = lower48.translate(_).clipExtent([[x - 0.455 * k, y - 0.238 * k], [x + 0.455 * k, y + 0.238 * k]]).stream(pointStream), alaskaPoint = alaska.translate([x - 0.307 * k, y + 0.201 * k]).clipExtent([[x - 0.425 * k + epsilon, y + 0.12 * k + epsilon], [x - 0.214 * k - epsilon, y + 0.234 * k - epsilon]]).stream(pointStream), hawaiiPoint = hawaii.translate([x - 0.205 * k, y + 0.212 * k]).clipExtent([[x - 0.214 * k + epsilon, y + 0.166 * k + epsilon], [x - 0.115 * k - epsilon, y + 0.234 * k - epsilon]]).stream(pointStream), reset();
+  }, albersUsa.fitExtent = function(extent, object3) {
+    return fitExtent(albersUsa, extent, object3);
+  }, albersUsa.fitSize = function(size, object3) {
+    return fitSize(albersUsa, size, object3);
+  }, albersUsa.fitWidth = function(width, object3) {
+    return fitWidth(albersUsa, width, object3);
+  }, albersUsa.fitHeight = function(height, object3) {
+    return fitHeight(albersUsa, height, object3);
+  };
+  function reset() {
+    return cache = cacheStream = null, albersUsa;
+  }
+  return albersUsa.scale(1070);
+}
+var init_albersUsa = __esm({
+  "node_modules/d3-geo/src/projection/albersUsa.js"() {
+    init_math();
+    init_albers();
+    init_conicEqualArea();
+    init_fit();
+  }
+});
+
+// node_modules/d3-geo/src/projection/azimuthal.js
+function azimuthalRaw(scale) {
+  return function(x, y) {
+    var cx = cos(x), cy = cos(y), k = scale(cx * cy);
+    return k === 1 / 0 ? [2, 0] : [
+      k * cy * sin(x),
+      k * sin(y)
+    ];
+  };
+}
+function azimuthalInvert(angle2) {
+  return function(x, y) {
+    var z = sqrt(x * x + y * y), c = angle2(z), sc = sin(c), cc = cos(c);
+    return [
+      atan2(x * sc, z * cc),
+      asin(z && y * sc / z)
+    ];
+  };
+}
+var init_azimuthal = __esm({
+  "node_modules/d3-geo/src/projection/azimuthal.js"() {
+    init_math();
+  }
+});
+
+// node_modules/d3-geo/src/projection/azimuthalEqualArea.js
+function azimuthalEqualArea_default() {
+  return projection(azimuthalEqualAreaRaw).scale(124.75).clipAngle(180 - 1e-3);
+}
+var azimuthalEqualAreaRaw, init_azimuthalEqualArea = __esm({
+  "node_modules/d3-geo/src/projection/azimuthalEqualArea.js"() {
+    init_math();
+    init_azimuthal();
+    init_projection();
+    azimuthalEqualAreaRaw = azimuthalRaw(function(cxcy) {
+      return sqrt(2 / (1 + cxcy));
+    });
+    azimuthalEqualAreaRaw.invert = azimuthalInvert(function(z) {
+      return 2 * asin(z / 2);
+    });
+  }
+});
+
+// node_modules/d3-geo/src/projection/azimuthalEquidistant.js
+function azimuthalEquidistant_default() {
+  return projection(azimuthalEquidistantRaw).scale(79.4188).clipAngle(180 - 1e-3);
+}
+var azimuthalEquidistantRaw, init_azimuthalEquidistant = __esm({
+  "node_modules/d3-geo/src/projection/azimuthalEquidistant.js"() {
+    init_math();
+    init_azimuthal();
+    init_projection();
+    azimuthalEquidistantRaw = azimuthalRaw(function(c) {
+      return (c = acos(c)) && c / sin(c);
+    });
+    azimuthalEquidistantRaw.invert = azimuthalInvert(function(z) {
+      return z;
+    });
+  }
+});
+
+// node_modules/d3-geo/src/projection/mercator.js
+function mercatorRaw(lambda, phi) {
+  return [lambda, log(tan((halfPi + phi) / 2))];
+}
+function mercator_default() {
+  return mercatorProjection(mercatorRaw).scale(961 / tau);
+}
+function mercatorProjection(project) {
+  var m = projection(project), center = m.center, scale = m.scale, translate = m.translate, clipExtent = m.clipExtent, x06 = null, y06, x12, y12;
+  m.scale = function(_) {
+    return arguments.length ? (scale(_), reclip()) : scale();
+  }, m.translate = function(_) {
+    return arguments.length ? (translate(_), reclip()) : translate();
+  }, m.center = function(_) {
+    return arguments.length ? (center(_), reclip()) : center();
+  }, m.clipExtent = function(_) {
+    return arguments.length ? (_ == null ? x06 = y06 = x12 = y12 = null : (x06 = +_[0][0], y06 = +_[0][1], x12 = +_[1][0], y12 = +_[1][1]), reclip()) : x06 == null ? null : [[x06, y06], [x12, y12]];
+  };
+  function reclip() {
+    var k = pi * scale(), t = m(rotation_default(m.rotate()).invert([0, 0]));
+    return clipExtent(x06 == null ? [[t[0] - k, t[1] - k], [t[0] + k, t[1] + k]] : project === mercatorRaw ? [[Math.max(t[0] - k, x06), y06], [Math.min(t[0] + k, x12), y12]] : [[x06, Math.max(t[1] - k, y06)], [x12, Math.min(t[1] + k, y12)]]);
+  }
+  return reclip();
+}
+var init_mercator = __esm({
+  "node_modules/d3-geo/src/projection/mercator.js"() {
+    init_math();
+    init_rotation();
+    init_projection();
+    mercatorRaw.invert = function(x, y) {
+      return [x, 2 * atan(exp(y)) - halfPi];
+    };
+  }
+});
+
+// node_modules/d3-geo/src/projection/conicConformal.js
+function tany(y) {
+  return tan((halfPi + y) / 2);
+}
+function conicConformalRaw(y06, y12) {
+  var cy0 = cos(y06), n = y06 === y12 ? sin(y06) : log(cy0 / cos(y12)) / log(tany(y12) / tany(y06)), f = cy0 * pow(tany(y06), n) / n;
+  if (!n)
+    return mercatorRaw;
+  function project(x, y) {
+    f > 0 ? y < -halfPi + epsilon && (y = -halfPi + epsilon) : y > halfPi - epsilon && (y = halfPi - epsilon);
+    var r = f / pow(tany(y), n);
+    return [r * sin(n * x), f - r * cos(n * x)];
+  }
+  return project.invert = function(x, y) {
+    var fy = f - y, r = sign(n) * sqrt(x * x + fy * fy), l = atan2(x, abs(fy)) * sign(fy);
+    return fy * n < 0 && (l -= pi * sign(x) * sign(fy)), [l / n, 2 * atan(pow(f / r, 1 / n)) - halfPi];
+  }, project;
+}
+function conicConformal_default() {
+  return conicProjection(conicConformalRaw).scale(109.5).parallels([30, 30]);
+}
+var init_conicConformal = __esm({
+  "node_modules/d3-geo/src/projection/conicConformal.js"() {
+    init_math();
+    init_conic();
+    init_mercator();
+  }
+});
+
+// node_modules/d3-geo/src/projection/equirectangular.js
+function equirectangularRaw(lambda, phi) {
+  return [lambda, phi];
+}
+function equirectangular_default() {
+  return projection(equirectangularRaw).scale(152.63);
+}
+var init_equirectangular = __esm({
+  "node_modules/d3-geo/src/projection/equirectangular.js"() {
+    init_projection();
+    equirectangularRaw.invert = equirectangularRaw;
+  }
+});
+
+// node_modules/d3-geo/src/projection/conicEquidistant.js
+function conicEquidistantRaw(y06, y12) {
+  var cy0 = cos(y06), n = y06 === y12 ? sin(y06) : (cy0 - cos(y12)) / (y12 - y06), g = cy0 / n + y06;
+  if (abs(n) < epsilon)
+    return equirectangularRaw;
+  function project(x, y) {
+    var gy = g - y, nx = n * x;
+    return [gy * sin(nx), g - gy * cos(nx)];
+  }
+  return project.invert = function(x, y) {
+    var gy = g - y, l = atan2(x, abs(gy)) * sign(gy);
+    return gy * n < 0 && (l -= pi * sign(x) * sign(gy)), [l / n, g - sign(n) * sqrt(x * x + gy * gy)];
+  }, project;
+}
+function conicEquidistant_default() {
+  return conicProjection(conicEquidistantRaw).scale(131.154).center([0, 13.9389]);
+}
+var init_conicEquidistant = __esm({
+  "node_modules/d3-geo/src/projection/conicEquidistant.js"() {
+    init_math();
+    init_conic();
+    init_equirectangular();
+  }
+});
+
+// node_modules/d3-geo/src/projection/equalEarth.js
+function equalEarthRaw(lambda, phi) {
+  var l = asin(M * sin(phi)), l2 = l * l, l6 = l2 * l2 * l2;
+  return [
+    lambda * cos(l) / (M * (A1 + 3 * A2 * l2 + l6 * (7 * A3 + 9 * A4 * l2))),
+    l * (A1 + A2 * l2 + l6 * (A3 + A4 * l2))
+  ];
+}
+function equalEarth_default() {
+  return projection(equalEarthRaw).scale(177.158);
+}
+var A1, A2, A3, A4, M, iterations, init_equalEarth = __esm({
+  "node_modules/d3-geo/src/projection/equalEarth.js"() {
+    init_projection();
+    init_math();
+    A1 = 1.340264, A2 = -0.081106, A3 = 893e-6, A4 = 3796e-6, M = sqrt(3) / 2, iterations = 12;
+    equalEarthRaw.invert = function(x, y) {
+      for (var l = y, l2 = l * l, l6 = l2 * l2 * l2, i = 0, delta, fy, fpy; i < iterations && (fy = l * (A1 + A2 * l2 + l6 * (A3 + A4 * l2)) - y, fpy = A1 + 3 * A2 * l2 + l6 * (7 * A3 + 9 * A4 * l2), l -= delta = fy / fpy, l2 = l * l, l6 = l2 * l2 * l2, !(abs(delta) < epsilon2)); ++i)
+        ;
+      return [
+        M * x * (A1 + 3 * A2 * l2 + l6 * (7 * A3 + 9 * A4 * l2)) / cos(l),
+        asin(sin(l) / M)
+      ];
+    };
+  }
+});
+
+// node_modules/d3-geo/src/projection/gnomonic.js
+function gnomonicRaw(x, y) {
+  var cy = cos(y), k = cos(x) * cy;
+  return [cy * sin(x) / k, sin(y) / k];
+}
+function gnomonic_default() {
+  return projection(gnomonicRaw).scale(144.049).clipAngle(60);
+}
+var init_gnomonic = __esm({
+  "node_modules/d3-geo/src/projection/gnomonic.js"() {
+    init_math();
+    init_azimuthal();
+    init_projection();
+    gnomonicRaw.invert = azimuthalInvert(atan);
+  }
+});
+
+// node_modules/d3-geo/src/projection/identity.js
+function identity_default2() {
+  var k = 1, tx = 0, ty = 0, sx = 1, sy = 1, alpha = 0, ca, sa, x06 = null, y06, x12, y12, kx = 1, ky = 1, transform2 = transformer({
+    point: function(x, y) {
+      var p = projection2([x, y]);
+      this.stream.point(p[0], p[1]);
+    }
+  }), postclip = identity_default, cache, cacheStream;
+  function reset() {
+    return kx = k * sx, ky = k * sy, cache = cacheStream = null, projection2;
+  }
+  function projection2(p) {
+    var x = p[0] * kx, y = p[1] * ky;
+    if (alpha) {
+      var t = y * ca - x * sa;
+      x = x * ca + y * sa, y = t;
+    }
+    return [x + tx, y + ty];
+  }
+  return projection2.invert = function(p) {
+    var x = p[0] - tx, y = p[1] - ty;
+    if (alpha) {
+      var t = y * ca + x * sa;
+      x = x * ca - y * sa, y = t;
+    }
+    return [x / kx, y / ky];
+  }, projection2.stream = function(stream) {
+    return cache && cacheStream === stream ? cache : cache = transform2(postclip(cacheStream = stream));
+  }, projection2.postclip = function(_) {
+    return arguments.length ? (postclip = _, x06 = y06 = x12 = y12 = null, reset()) : postclip;
+  }, projection2.clipExtent = function(_) {
+    return arguments.length ? (postclip = _ == null ? (x06 = y06 = x12 = y12 = null, identity_default) : clipRectangle(x06 = +_[0][0], y06 = +_[0][1], x12 = +_[1][0], y12 = +_[1][1]), reset()) : x06 == null ? null : [[x06, y06], [x12, y12]];
+  }, projection2.scale = function(_) {
+    return arguments.length ? (k = +_, reset()) : k;
+  }, projection2.translate = function(_) {
+    return arguments.length ? (tx = +_[0], ty = +_[1], reset()) : [tx, ty];
+  }, projection2.angle = function(_) {
+    return arguments.length ? (alpha = _ % 360 * radians, sa = sin(alpha), ca = cos(alpha), reset()) : alpha * degrees;
+  }, projection2.reflectX = function(_) {
+    return arguments.length ? (sx = _ ? -1 : 1, reset()) : sx < 0;
+  }, projection2.reflectY = function(_) {
+    return arguments.length ? (sy = _ ? -1 : 1, reset()) : sy < 0;
+  }, projection2.fitExtent = function(extent, object3) {
+    return fitExtent(projection2, extent, object3);
+  }, projection2.fitSize = function(size, object3) {
+    return fitSize(projection2, size, object3);
+  }, projection2.fitWidth = function(width, object3) {
+    return fitWidth(projection2, width, object3);
+  }, projection2.fitHeight = function(height, object3) {
+    return fitHeight(projection2, height, object3);
+  }, projection2;
+}
+var init_identity2 = __esm({
+  "node_modules/d3-geo/src/projection/identity.js"() {
+    init_rectangle();
+    init_identity();
+    init_transform();
+    init_fit();
+    init_math();
+  }
+});
+
+// node_modules/d3-geo/src/projection/naturalEarth1.js
+function naturalEarth1Raw(lambda, phi) {
+  var phi2 = phi * phi, phi4 = phi2 * phi2;
+  return [
+    lambda * (0.8707 - 0.131979 * phi2 + phi4 * (-0.013791 + phi4 * (3971e-6 * phi2 - 1529e-6 * phi4))),
+    phi * (1.007226 + phi2 * (0.015085 + phi4 * (-0.044475 + 0.028874 * phi2 - 5916e-6 * phi4)))
+  ];
+}
+function naturalEarth1_default() {
+  return projection(naturalEarth1Raw).scale(175.295);
+}
+var init_naturalEarth1 = __esm({
+  "node_modules/d3-geo/src/projection/naturalEarth1.js"() {
+    init_projection();
+    init_math();
+    naturalEarth1Raw.invert = function(x, y) {
+      var phi = y, i = 25, delta;
+      do {
+        var phi2 = phi * phi, phi4 = phi2 * phi2;
+        phi -= delta = (phi * (1.007226 + phi2 * (0.015085 + phi4 * (-0.044475 + 0.028874 * phi2 - 5916e-6 * phi4))) - y) / (1.007226 + phi2 * (0.015085 * 3 + phi4 * (-0.044475 * 7 + 0.028874 * 9 * phi2 - 5916e-6 * 11 * phi4)));
+      } while (abs(delta) > epsilon && --i > 0);
+      return [
+        x / (0.8707 + (phi2 = phi * phi) * (-0.131979 + phi2 * (-0.013791 + phi2 * phi2 * phi2 * (3971e-6 - 1529e-6 * phi2)))),
+        phi
+      ];
+    };
+  }
+});
+
+// node_modules/d3-geo/src/projection/orthographic.js
+function orthographicRaw(x, y) {
+  return [cos(y) * sin(x), sin(y)];
+}
+function orthographic_default() {
+  return projection(orthographicRaw).scale(249.5).clipAngle(90 + epsilon);
+}
+var init_orthographic = __esm({
+  "node_modules/d3-geo/src/projection/orthographic.js"() {
+    init_math();
+    init_azimuthal();
+    init_projection();
+    orthographicRaw.invert = azimuthalInvert(asin);
+  }
+});
+
+// node_modules/d3-geo/src/projection/stereographic.js
+function stereographicRaw(x, y) {
+  var cy = cos(y), k = 1 + cos(x) * cy;
+  return [cy * sin(x) / k, sin(y) / k];
+}
+function stereographic_default() {
+  return projection(stereographicRaw).scale(250).clipAngle(142);
+}
+var init_stereographic = __esm({
+  "node_modules/d3-geo/src/projection/stereographic.js"() {
+    init_math();
+    init_azimuthal();
+    init_projection();
+    stereographicRaw.invert = azimuthalInvert(function(z) {
+      return 2 * atan(z);
+    });
+  }
+});
+
+// node_modules/d3-geo/src/projection/transverseMercator.js
+function transverseMercatorRaw(lambda, phi) {
+  return [log(tan((halfPi + phi) / 2)), -lambda];
+}
+function transverseMercator_default() {
+  var m = mercatorProjection(transverseMercatorRaw), center = m.center, rotate = m.rotate;
+  return m.center = function(_) {
+    return arguments.length ? center([-_[1], _[0]]) : (_ = center(), [_[1], -_[0]]);
+  }, m.rotate = function(_) {
+    return arguments.length ? rotate([_[0], _[1], _.length > 2 ? _[2] + 90 : 90]) : (_ = rotate(), [_[0], _[1], _[2] - 90]);
+  }, rotate([0, 0, 90]).scale(159.155);
+}
+var init_transverseMercator = __esm({
+  "node_modules/d3-geo/src/projection/transverseMercator.js"() {
+    init_math();
+    init_mercator();
+    transverseMercatorRaw.invert = function(x, y) {
+      return [-y, 2 * atan(exp(x)) - halfPi];
+    };
+  }
+});
+
+// node_modules/d3-geo/src/index.js
+var src_exports = {};
+__export(src_exports, {
+  geoAlbers: () => albers_default,
+  geoAlbersUsa: () => albersUsa_default,
+  geoArea: () => area_default,
+  geoAzimuthalEqualArea: () => azimuthalEqualArea_default,
+  geoAzimuthalEqualAreaRaw: () => azimuthalEqualAreaRaw,
+  geoAzimuthalEquidistant: () => azimuthalEquidistant_default,
+  geoAzimuthalEquidistantRaw: () => azimuthalEquidistantRaw,
+  geoBounds: () => bounds_default,
+  geoCentroid: () => centroid_default,
+  geoCircle: () => circle_default,
+  geoClipAntimeridian: () => antimeridian_default,
+  geoClipCircle: () => circle_default2,
+  geoClipExtent: () => extent_default,
+  geoClipRectangle: () => clipRectangle,
+  geoConicConformal: () => conicConformal_default,
+  geoConicConformalRaw: () => conicConformalRaw,
+  geoConicEqualArea: () => conicEqualArea_default,
+  geoConicEqualAreaRaw: () => conicEqualAreaRaw,
+  geoConicEquidistant: () => conicEquidistant_default,
+  geoConicEquidistantRaw: () => conicEquidistantRaw,
+  geoContains: () => contains_default,
+  geoDistance: () => distance_default,
+  geoEqualEarth: () => equalEarth_default,
+  geoEqualEarthRaw: () => equalEarthRaw,
+  geoEquirectangular: () => equirectangular_default,
+  geoEquirectangularRaw: () => equirectangularRaw,
+  geoGnomonic: () => gnomonic_default,
+  geoGnomonicRaw: () => gnomonicRaw,
+  geoGraticule: () => graticule,
+  geoGraticule10: () => graticule10,
+  geoIdentity: () => identity_default2,
+  geoInterpolate: () => interpolate_default,
+  geoLength: () => length_default,
+  geoMercator: () => mercator_default,
+  geoMercatorRaw: () => mercatorRaw,
+  geoNaturalEarth1: () => naturalEarth1_default,
+  geoNaturalEarth1Raw: () => naturalEarth1Raw,
+  geoOrthographic: () => orthographic_default,
+  geoOrthographicRaw: () => orthographicRaw,
+  geoPath: () => path_default,
+  geoProjection: () => projection,
+  geoProjectionMutator: () => projectionMutator,
+  geoRotation: () => rotation_default,
+  geoStereographic: () => stereographic_default,
+  geoStereographicRaw: () => stereographicRaw,
+  geoStream: () => stream_default,
+  geoTransform: () => transform_default,
+  geoTransverseMercator: () => transverseMercator_default,
+  geoTransverseMercatorRaw: () => transverseMercatorRaw
+});
+var init_src3 = __esm({
+  "node_modules/d3-geo/src/index.js"() {
+    init_area();
+    init_bounds();
+    init_centroid();
+    init_circle();
+    init_antimeridian();
+    init_circle2();
+    init_extent();
+    init_rectangle();
+    init_contains();
+    init_distance();
+    init_graticule();
+    init_interpolate();
+    init_length();
+    init_path();
+    init_albers();
+    init_albersUsa();
+    init_azimuthalEqualArea();
+    init_azimuthalEquidistant();
+    init_conicConformal();
+    init_conicEqualArea();
+    init_conicEquidistant();
+    init_equalEarth();
+    init_equirectangular();
+    init_gnomonic();
+    init_identity2();
+    init_projection();
+    init_mercator();
+    init_naturalEarth1();
+    init_orthographic();
+    init_stereographic();
+    init_transverseMercator();
+    init_rotation();
+    init_stream();
+    init_transform();
+  }
+});
+
+// node_modules/topojson-client/src/identity.js
+function identity_default3(x) {
+  return x;
+}
+var init_identity3 = __esm({
+  "node_modules/topojson-client/src/identity.js"() {
+  }
+});
+
+// node_modules/topojson-client/src/transform.js
+function transform_default2(transform2) {
+  if (transform2 == null)
+    return identity_default3;
+  var x06, y06, kx = transform2.scale[0], ky = transform2.scale[1], dx = transform2.translate[0], dy = transform2.translate[1];
+  return function(input, i) {
+    i || (x06 = y06 = 0);
+    var j = 2, n = input.length, output = new Array(n);
+    for (output[0] = (x06 += input[0]) * kx + dx, output[1] = (y06 += input[1]) * ky + dy; j < n; )
+      output[j] = input[j], ++j;
+    return output;
+  };
+}
+var init_transform2 = __esm({
+  "node_modules/topojson-client/src/transform.js"() {
+    init_identity3();
+  }
+});
+
+// node_modules/topojson-client/src/bbox.js
+function bbox_default(topology) {
+  var t = transform_default2(topology.transform), key, x06 = 1 / 0, y06 = x06, x12 = -x06, y12 = -x06;
+  function bboxPoint(p) {
+    p = t(p), p[0] < x06 && (x06 = p[0]), p[0] > x12 && (x12 = p[0]), p[1] < y06 && (y06 = p[1]), p[1] > y12 && (y12 = p[1]);
+  }
+  function bboxGeometry(o) {
+    switch (o.type) {
+      case "GeometryCollection":
+        o.geometries.forEach(bboxGeometry);
+        break;
+      case "Point":
+        bboxPoint(o.coordinates);
+        break;
+      case "MultiPoint":
+        o.coordinates.forEach(bboxPoint);
+        break;
+    }
+  }
+  topology.arcs.forEach(function(arc) {
+    for (var i = -1, n = arc.length, p; ++i < n; )
+      p = t(arc[i], i), p[0] < x06 && (x06 = p[0]), p[0] > x12 && (x12 = p[0]), p[1] < y06 && (y06 = p[1]), p[1] > y12 && (y12 = p[1]);
+  });
+  for (key in topology.objects)
+    bboxGeometry(topology.objects[key]);
+  return [x06, y06, x12, y12];
+}
+var init_bbox = __esm({
+  "node_modules/topojson-client/src/bbox.js"() {
+    init_transform2();
+  }
+});
+
+// node_modules/topojson-client/src/reverse.js
+function reverse_default(array, n) {
+  for (var t, j = array.length, i = j - n; i < --j; )
+    t = array[i], array[i++] = array[j], array[j] = t;
+}
+var init_reverse = __esm({
+  "node_modules/topojson-client/src/reverse.js"() {
+  }
+});
+
+// node_modules/topojson-client/src/feature.js
+function feature_default(topology, o) {
+  return typeof o == "string" && (o = topology.objects[o]), o.type === "GeometryCollection" ? { type: "FeatureCollection", features: o.geometries.map(function(o2) {
+    return feature(topology, o2);
+  }) } : feature(topology, o);
+}
+function feature(topology, o) {
+  var id2 = o.id, bbox = o.bbox, properties = o.properties == null ? {} : o.properties, geometry = object2(topology, o);
+  return id2 == null && bbox == null ? { type: "Feature", properties, geometry } : bbox == null ? { type: "Feature", id: id2, properties, geometry } : { type: "Feature", id: id2, bbox, properties, geometry };
+}
+function object2(topology, o) {
+  var transformPoint = transform_default2(topology.transform), arcs = topology.arcs;
+  function arc(i, points) {
+    points.length && points.pop();
+    for (var a = arcs[i < 0 ? ~i : i], k = 0, n = a.length; k < n; ++k)
+      points.push(transformPoint(a[k], k));
+    i < 0 && reverse_default(points, n);
+  }
+  function point(p) {
+    return transformPoint(p);
+  }
+  function line(arcs2) {
+    for (var points = [], i = 0, n = arcs2.length; i < n; ++i)
+      arc(arcs2[i], points);
+    return points.length < 2 && points.push(points[0]), points;
+  }
+  function ring(arcs2) {
+    for (var points = line(arcs2); points.length < 4; )
+      points.push(points[0]);
+    return points;
+  }
+  function polygon(arcs2) {
+    return arcs2.map(ring);
+  }
+  function geometry(o2) {
+    var type = o2.type, coordinates2;
+    switch (type) {
+      case "GeometryCollection":
+        return { type, geometries: o2.geometries.map(geometry) };
+      case "Point":
+        coordinates2 = point(o2.coordinates);
+        break;
+      case "MultiPoint":
+        coordinates2 = o2.coordinates.map(point);
+        break;
+      case "LineString":
+        coordinates2 = line(o2.arcs);
+        break;
+      case "MultiLineString":
+        coordinates2 = o2.arcs.map(line);
+        break;
+      case "Polygon":
+        coordinates2 = polygon(o2.arcs);
+        break;
+      case "MultiPolygon":
+        coordinates2 = o2.arcs.map(polygon);
+        break;
+      default:
+        return null;
+    }
+    return { type, coordinates: coordinates2 };
+  }
+  return geometry(o);
+}
+var init_feature = __esm({
+  "node_modules/topojson-client/src/feature.js"() {
+    init_reverse();
+    init_transform2();
+  }
+});
+
+// node_modules/topojson-client/src/stitch.js
+function stitch_default(topology, arcs) {
+  var stitchedArcs = {}, fragmentByStart = {}, fragmentByEnd = {}, fragments = [], emptyIndex = -1;
+  arcs.forEach(function(i, j) {
+    var arc = topology.arcs[i < 0 ? ~i : i], t;
+    arc.length < 3 && !arc[1][0] && !arc[1][1] && (t = arcs[++emptyIndex], arcs[emptyIndex] = i, arcs[j] = t);
+  }), arcs.forEach(function(i) {
+    var e = ends(i), start2 = e[0], end = e[1], f, g;
+    if (f = fragmentByEnd[start2])
+      if (delete fragmentByEnd[f.end], f.push(i), f.end = end, g = fragmentByStart[end]) {
+        delete fragmentByStart[g.start];
+        var fg = g === f ? f : f.concat(g);
+        fragmentByStart[fg.start = f.start] = fragmentByEnd[fg.end = g.end] = fg;
+      } else
+        fragmentByStart[f.start] = fragmentByEnd[f.end] = f;
+    else if (f = fragmentByStart[end])
+      if (delete fragmentByStart[f.start], f.unshift(i), f.start = start2, g = fragmentByEnd[start2]) {
+        delete fragmentByEnd[g.end];
+        var gf = g === f ? f : g.concat(f);
+        fragmentByStart[gf.start = g.start] = fragmentByEnd[gf.end = f.end] = gf;
+      } else
+        fragmentByStart[f.start] = fragmentByEnd[f.end] = f;
+    else
+      f = [i], fragmentByStart[f.start = start2] = fragmentByEnd[f.end = end] = f;
+  });
+  function ends(i) {
+    var arc = topology.arcs[i < 0 ? ~i : i], p02 = arc[0], p1;
+    return topology.transform ? (p1 = [0, 0], arc.forEach(function(dp) {
+      p1[0] += dp[0], p1[1] += dp[1];
+    })) : p1 = arc[arc.length - 1], i < 0 ? [p1, p02] : [p02, p1];
+  }
+  function flush(fragmentByEnd2, fragmentByStart2) {
+    for (var k in fragmentByEnd2) {
+      var f = fragmentByEnd2[k];
+      delete fragmentByStart2[f.start], delete f.start, delete f.end, f.forEach(function(i) {
+        stitchedArcs[i < 0 ? ~i : i] = 1;
+      }), fragments.push(f);
+    }
+  }
+  return flush(fragmentByEnd, fragmentByStart), flush(fragmentByStart, fragmentByEnd), arcs.forEach(function(i) {
+    stitchedArcs[i < 0 ? ~i : i] || fragments.push([i]);
+  }), fragments;
+}
+var init_stitch = __esm({
+  "node_modules/topojson-client/src/stitch.js"() {
+  }
+});
+
+// node_modules/topojson-client/src/mesh.js
+function mesh_default(topology) {
+  return object2(topology, meshArcs.apply(this, arguments));
+}
+function meshArcs(topology, object3, filter2) {
+  var arcs, i, n;
+  if (arguments.length > 1)
+    arcs = extractArcs(topology, object3, filter2);
+  else
+    for (i = 0, arcs = new Array(n = topology.arcs.length); i < n; ++i)
+      arcs[i] = i;
+  return { type: "MultiLineString", arcs: stitch_default(topology, arcs) };
+}
+function extractArcs(topology, object3, filter2) {
+  var arcs = [], geomsByArc = [], geom;
+  function extract0(i) {
+    var j = i < 0 ? ~i : i;
+    (geomsByArc[j] || (geomsByArc[j] = [])).push({ i, g: geom });
+  }
+  function extract1(arcs2) {
+    arcs2.forEach(extract0);
+  }
+  function extract2(arcs2) {
+    arcs2.forEach(extract1);
+  }
+  function extract3(arcs2) {
+    arcs2.forEach(extract2);
+  }
+  function geometry(o) {
+    switch (geom = o, o.type) {
+      case "GeometryCollection":
+        o.geometries.forEach(geometry);
+        break;
+      case "LineString":
+        extract1(o.arcs);
+        break;
+      case "MultiLineString":
+      case "Polygon":
+        extract2(o.arcs);
+        break;
+      case "MultiPolygon":
+        extract3(o.arcs);
+        break;
+    }
+  }
+  return geometry(object3), geomsByArc.forEach(filter2 == null ? function(geoms) {
+    arcs.push(geoms[0].i);
+  } : function(geoms) {
+    filter2(geoms[0].g, geoms[geoms.length - 1].g) && arcs.push(geoms[0].i);
+  }), arcs;
+}
+var init_mesh = __esm({
+  "node_modules/topojson-client/src/mesh.js"() {
+    init_feature();
+    init_stitch();
+  }
+});
+
+// node_modules/topojson-client/src/merge.js
+function planarRingArea(ring) {
+  for (var i = -1, n = ring.length, a, b = ring[n - 1], area = 0; ++i < n; )
+    a = b, b = ring[i], area += a[0] * b[1] - a[1] * b[0];
+  return Math.abs(area);
+}
+function merge_default(topology) {
+  return object2(topology, mergeArcs.apply(this, arguments));
+}
+function mergeArcs(topology, objects) {
+  var polygonsByArc = {}, polygons = [], groups = [];
+  objects.forEach(geometry);
+  function geometry(o) {
+    switch (o.type) {
+      case "GeometryCollection":
+        o.geometries.forEach(geometry);
+        break;
+      case "Polygon":
+        extract(o.arcs);
+        break;
+      case "MultiPolygon":
+        o.arcs.forEach(extract);
+        break;
+    }
+  }
+  function extract(polygon) {
+    polygon.forEach(function(ring) {
+      ring.forEach(function(arc) {
+        (polygonsByArc[arc = arc < 0 ? ~arc : arc] || (polygonsByArc[arc] = [])).push(polygon);
+      });
+    }), polygons.push(polygon);
+  }
+  function area(ring) {
+    return planarRingArea(object2(topology, { type: "Polygon", arcs: [ring] }).coordinates[0]);
+  }
+  return polygons.forEach(function(polygon) {
+    if (!polygon._) {
+      var group = [], neighbors = [polygon];
+      for (polygon._ = 1, groups.push(group); polygon = neighbors.pop(); )
+        group.push(polygon), polygon.forEach(function(ring) {
+          ring.forEach(function(arc) {
+            polygonsByArc[arc < 0 ? ~arc : arc].forEach(function(polygon2) {
+              polygon2._ || (polygon2._ = 1, neighbors.push(polygon2));
+            });
+          });
+        });
+    }
+  }), polygons.forEach(function(polygon) {
+    delete polygon._;
+  }), {
+    type: "MultiPolygon",
+    arcs: groups.map(function(polygons2) {
+      var arcs = [], n;
+      if (polygons2.forEach(function(polygon) {
+        polygon.forEach(function(ring) {
+          ring.forEach(function(arc) {
+            polygonsByArc[arc < 0 ? ~arc : arc].length < 2 && arcs.push(arc);
+          });
+        });
+      }), arcs = stitch_default(topology, arcs), (n = arcs.length) > 1)
+        for (var i = 1, k = area(arcs[0]), ki, t; i < n; ++i)
+          (ki = area(arcs[i])) > k && (t = arcs[0], arcs[0] = arcs[i], arcs[i] = t, k = ki);
+      return arcs;
+    }).filter(function(arcs) {
+      return arcs.length > 0;
+    })
+  };
+}
+var init_merge2 = __esm({
+  "node_modules/topojson-client/src/merge.js"() {
+    init_feature();
+    init_stitch();
+  }
+});
+
+// node_modules/topojson-client/src/bisect.js
+function bisect_default(a, x) {
+  for (var lo = 0, hi = a.length; lo < hi; ) {
+    var mid = lo + hi >>> 1;
+    a[mid] < x ? lo = mid + 1 : hi = mid;
+  }
+  return lo;
+}
+var init_bisect = __esm({
+  "node_modules/topojson-client/src/bisect.js"() {
+  }
+});
+
+// node_modules/topojson-client/src/neighbors.js
+function neighbors_default(objects) {
+  var indexesByArc = {}, neighbors = objects.map(function() {
+    return [];
+  });
+  function line(arcs, i2) {
+    arcs.forEach(function(a) {
+      a < 0 && (a = ~a);
+      var o = indexesByArc[a];
+      o ? o.push(i2) : indexesByArc[a] = [i2];
+    });
+  }
+  function polygon(arcs, i2) {
+    arcs.forEach(function(arc) {
+      line(arc, i2);
+    });
+  }
+  function geometry(o, i2) {
+    o.type === "GeometryCollection" ? o.geometries.forEach(function(o2) {
+      geometry(o2, i2);
+    }) : o.type in geometryType && geometryType[o.type](o.arcs, i2);
+  }
+  var geometryType = {
+    LineString: line,
+    MultiLineString: polygon,
+    Polygon: polygon,
+    MultiPolygon: function(arcs, i2) {
+      arcs.forEach(function(arc) {
+        polygon(arc, i2);
+      });
+    }
+  };
+  objects.forEach(geometry);
+  for (var i in indexesByArc)
+    for (var indexes = indexesByArc[i], m = indexes.length, j = 0; j < m; ++j)
+      for (var k = j + 1; k < m; ++k) {
+        var ij = indexes[j], ik = indexes[k], n;
+        (n = neighbors[ij])[i = bisect_default(n, ik)] !== ik && n.splice(i, 0, ik), (n = neighbors[ik])[i = bisect_default(n, ij)] !== ij && n.splice(i, 0, ij);
+      }
+  return neighbors;
+}
+var init_neighbors = __esm({
+  "node_modules/topojson-client/src/neighbors.js"() {
+    init_bisect();
+  }
+});
+
+// node_modules/topojson-client/src/untransform.js
+function untransform_default(transform2) {
+  if (transform2 == null)
+    return identity_default3;
+  var x06, y06, kx = transform2.scale[0], ky = transform2.scale[1], dx = transform2.translate[0], dy = transform2.translate[1];
+  return function(input, i) {
+    i || (x06 = y06 = 0);
+    var j = 2, n = input.length, output = new Array(n), x12 = Math.round((input[0] - dx) / kx), y12 = Math.round((input[1] - dy) / ky);
+    for (output[0] = x12 - x06, x06 = x12, output[1] = y12 - y06, y06 = y12; j < n; )
+      output[j] = input[j], ++j;
+    return output;
+  };
+}
+var init_untransform = __esm({
+  "node_modules/topojson-client/src/untransform.js"() {
+    init_identity3();
+  }
+});
+
+// node_modules/topojson-client/src/quantize.js
+function quantize_default(topology, transform2) {
+  if (topology.transform)
+    throw new Error("already quantized");
+  if (!transform2 || !transform2.scale) {
+    if (!((n = Math.floor(transform2)) >= 2))
+      throw new Error("n must be \u22652");
+    box = topology.bbox || bbox_default(topology);
+    var x06 = box[0], y06 = box[1], x12 = box[2], y12 = box[3], n;
+    transform2 = { scale: [x12 - x06 ? (x12 - x06) / (n - 1) : 1, y12 - y06 ? (y12 - y06) / (n - 1) : 1], translate: [x06, y06] };
+  } else
+    box = topology.bbox;
+  var t = untransform_default(transform2), box, key, inputs = topology.objects, outputs = {};
+  function quantizePoint(point) {
+    return t(point);
+  }
+  function quantizeGeometry(input) {
+    var output;
+    switch (input.type) {
+      case "GeometryCollection":
+        output = { type: "GeometryCollection", geometries: input.geometries.map(quantizeGeometry) };
+        break;
+      case "Point":
+        output = { type: "Point", coordinates: quantizePoint(input.coordinates) };
+        break;
+      case "MultiPoint":
+        output = { type: "MultiPoint", coordinates: input.coordinates.map(quantizePoint) };
+        break;
+      default:
+        return input;
+    }
+    return input.id != null && (output.id = input.id), input.bbox != null && (output.bbox = input.bbox), input.properties != null && (output.properties = input.properties), output;
+  }
+  function quantizeArc(input) {
+    var i = 0, j = 1, n2 = input.length, p, output = new Array(n2);
+    for (output[0] = t(input[0], 0); ++i < n2; )
+      ((p = t(input[i], i))[0] || p[1]) && (output[j++] = p);
+    return j === 1 && (output[j++] = [0, 0]), output.length = j, output;
+  }
+  for (key in inputs)
+    outputs[key] = quantizeGeometry(inputs[key]);
+  return {
+    type: "Topology",
+    bbox: box,
+    transform: transform2,
+    objects: outputs,
+    arcs: topology.arcs.map(quantizeArc)
+  };
+}
+var init_quantize = __esm({
+  "node_modules/topojson-client/src/quantize.js"() {
+    init_bbox();
+    init_untransform();
+  }
+});
+
+// node_modules/topojson-client/src/index.js
+var src_exports2 = {};
+__export(src_exports2, {
+  bbox: () => bbox_default,
+  feature: () => feature_default,
+  merge: () => merge_default,
+  mergeArcs: () => mergeArcs,
+  mesh: () => mesh_default,
+  meshArcs: () => meshArcs,
+  neighbors: () => neighbors_default,
+  quantize: () => quantize_default,
+  transform: () => transform_default2,
+  untransform: () => untransform_default
+});
+var init_src4 = __esm({
+  "node_modules/topojson-client/src/index.js"() {
+    init_bbox();
+    init_feature();
+    init_mesh();
+    init_merge2();
+    init_neighbors();
+    init_quantize();
+    init_transform2();
+    init_untransform();
+  }
+});
+
+// node_modules/d3-dispatch/src/dispatch.js
+function dispatch() {
+  for (var i = 0, n = arguments.length, _ = {}, t; i < n; ++i) {
+    if (!(t = arguments[i] + "") || t in _ || /[\s.]/.test(t))
+      throw new Error("illegal type: " + t);
+    _[t] = [];
+  }
+  return new Dispatch(_);
+}
+function Dispatch(_) {
+  this._ = _;
+}
+function parseTypenames(typenames, types) {
+  return typenames.trim().split(/^|\s+/).map(function(t) {
+    var name = "", i = t.indexOf(".");
+    if (i >= 0 && (name = t.slice(i + 1), t = t.slice(0, i)), t && !types.hasOwnProperty(t))
+      throw new Error("unknown type: " + t);
+    return { type: t, name };
+  });
+}
+function get(type, name) {
+  for (var i = 0, n = type.length, c; i < n; ++i)
+    if ((c = type[i]).name === name)
+      return c.value;
+}
+function set(type, name, callback) {
+  for (var i = 0, n = type.length; i < n; ++i)
+    if (type[i].name === name) {
+      type[i] = noop2, type = type.slice(0, i).concat(type.slice(i + 1));
+      break;
+    }
+  return callback != null && type.push({ name, value: callback }), type;
+}
+var noop2, dispatch_default, init_dispatch = __esm({
+  "node_modules/d3-dispatch/src/dispatch.js"() {
+    noop2 = { value: () => {
+    } };
+    Dispatch.prototype = dispatch.prototype = {
+      constructor: Dispatch,
+      on: function(typename, callback) {
+        var _ = this._, T = parseTypenames(typename + "", _), t, i = -1, n = T.length;
+        if (arguments.length < 2) {
+          for (; ++i < n; )
+            if ((t = (typename = T[i]).type) && (t = get(_[t], typename.name)))
+              return t;
+          return;
+        }
+        if (callback != null && typeof callback != "function")
+          throw new Error("invalid callback: " + callback);
+        for (; ++i < n; )
+          if (t = (typename = T[i]).type)
+            _[t] = set(_[t], typename.name, callback);
+          else if (callback == null)
+            for (t in _)
+              _[t] = set(_[t], typename.name, null);
+        return this;
+      },
+      copy: function() {
+        var copy = {}, _ = this._;
+        for (var t in _)
+          copy[t] = _[t].slice();
+        return new Dispatch(copy);
+      },
+      call: function(type, that) {
+        if ((n = arguments.length - 2) > 0)
+          for (var args = new Array(n), i = 0, n, t; i < n; ++i)
+            args[i] = arguments[i + 2];
+        if (!this._.hasOwnProperty(type))
+          throw new Error("unknown type: " + type);
+        for (t = this._[type], i = 0, n = t.length; i < n; ++i)
+          t[i].value.apply(that, args);
+      },
+      apply: function(type, that, args) {
+        if (!this._.hasOwnProperty(type))
+          throw new Error("unknown type: " + type);
+        for (var t = this._[type], i = 0, n = t.length; i < n; ++i)
+          t[i].value.apply(that, args);
+      }
+    };
+    dispatch_default = dispatch;
+  }
+});
+
+// node_modules/d3-dispatch/src/index.js
+var init_src5 = __esm({
+  "node_modules/d3-dispatch/src/index.js"() {
+    init_dispatch();
+  }
+});
+
+// node_modules/d3-selection/src/namespaces.js
+var xhtml, namespaces_default, init_namespaces = __esm({
+  "node_modules/d3-selection/src/namespaces.js"() {
+    xhtml = "http://www.w3.org/1999/xhtml", namespaces_default = {
+      svg: "http://www.w3.org/2000/svg",
+      xhtml,
+      xlink: "http://www.w3.org/1999/xlink",
+      xml: "http://www.w3.org/XML/1998/namespace",
+      xmlns: "http://www.w3.org/2000/xmlns/"
+    };
+  }
+});
+
+// node_modules/d3-selection/src/namespace.js
+function namespace_default(name) {
+  var prefix = name += "", i = prefix.indexOf(":");
+  return i >= 0 && (prefix = name.slice(0, i)) !== "xmlns" && (name = name.slice(i + 1)), namespaces_default.hasOwnProperty(prefix) ? { space: namespaces_default[prefix], local: name } : name;
+}
+var init_namespace = __esm({
+  "node_modules/d3-selection/src/namespace.js"() {
+    init_namespaces();
+  }
+});
+
+// node_modules/d3-selection/src/creator.js
+function creatorInherit(name) {
+  return function() {
+    var document2 = this.ownerDocument, uri = this.namespaceURI;
+    return uri === xhtml && document2.documentElement.namespaceURI === xhtml ? document2.createElement(name) : document2.createElementNS(uri, name);
+  };
+}
+function creatorFixed(fullname) {
+  return function() {
+    return this.ownerDocument.createElementNS(fullname.space, fullname.local);
+  };
+}
+function creator_default(name) {
+  var fullname = namespace_default(name);
+  return (fullname.local ? creatorFixed : creatorInherit)(fullname);
+}
+var init_creator = __esm({
+  "node_modules/d3-selection/src/creator.js"() {
+    init_namespace();
+    init_namespaces();
+  }
+});
+
+// node_modules/d3-selection/src/selector.js
+function none() {
+}
+function selector_default(selector) {
+  return selector == null ? none : function() {
+    return this.querySelector(selector);
+  };
+}
+var init_selector = __esm({
+  "node_modules/d3-selection/src/selector.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/select.js
+function select_default(select) {
+  typeof select != "function" && (select = selector_default(select));
+  for (var groups = this._groups, m = groups.length, subgroups = new Array(m), j = 0; j < m; ++j)
+    for (var group = groups[j], n = group.length, subgroup = subgroups[j] = new Array(n), node, subnode, i = 0; i < n; ++i)
+      (node = group[i]) && (subnode = select.call(node, node.__data__, i, group)) && ("__data__" in node && (subnode.__data__ = node.__data__), subgroup[i] = subnode);
+  return new Selection(subgroups, this._parents);
+}
+var init_select = __esm({
+  "node_modules/d3-selection/src/selection/select.js"() {
+    init_selection();
+    init_selector();
+  }
+});
+
+// node_modules/d3-selection/src/array.js
+function array_default(x) {
+  return typeof x == "object" && "length" in x ? x : Array.from(x);
+}
+var init_array = __esm({
+  "node_modules/d3-selection/src/array.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selectorAll.js
+function empty() {
+  return [];
+}
+function selectorAll_default(selector) {
+  return selector == null ? empty : function() {
+    return this.querySelectorAll(selector);
+  };
+}
+var init_selectorAll = __esm({
+  "node_modules/d3-selection/src/selectorAll.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/selectAll.js
+function arrayAll(select) {
+  return function() {
+    var group = select.apply(this, arguments);
+    return group == null ? [] : array_default(group);
+  };
+}
+function selectAll_default(select) {
+  typeof select == "function" ? select = arrayAll(select) : select = selectorAll_default(select);
+  for (var groups = this._groups, m = groups.length, subgroups = [], parents = [], j = 0; j < m; ++j)
+    for (var group = groups[j], n = group.length, node, i = 0; i < n; ++i)
+      (node = group[i]) && (subgroups.push(select.call(node, node.__data__, i, group)), parents.push(node));
+  return new Selection(subgroups, parents);
+}
+var init_selectAll = __esm({
+  "node_modules/d3-selection/src/selection/selectAll.js"() {
+    init_selection();
+    init_array();
+    init_selectorAll();
+  }
+});
+
+// node_modules/d3-selection/src/matcher.js
+function matcher_default(selector) {
+  return function() {
+    return this.matches(selector);
+  };
+}
+function childMatcher(selector) {
+  return function(node) {
+    return node.matches(selector);
+  };
+}
+var init_matcher = __esm({
+  "node_modules/d3-selection/src/matcher.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/selectChild.js
+function childFind(match) {
+  return function() {
+    return find.call(this.children, match);
+  };
+}
+function childFirst() {
+  return this.firstElementChild;
+}
+function selectChild_default(match) {
+  return this.select(match == null ? childFirst : childFind(typeof match == "function" ? match : childMatcher(match)));
+}
+var find, init_selectChild = __esm({
+  "node_modules/d3-selection/src/selection/selectChild.js"() {
+    init_matcher();
+    find = Array.prototype.find;
+  }
+});
+
+// node_modules/d3-selection/src/selection/selectChildren.js
+function children() {
+  return this.children;
+}
+function childrenFilter(match) {
+  return function() {
+    return filter.call(this.children, match);
+  };
+}
+function selectChildren_default(match) {
+  return this.selectAll(match == null ? children : childrenFilter(typeof match == "function" ? match : childMatcher(match)));
+}
+var filter, init_selectChildren = __esm({
+  "node_modules/d3-selection/src/selection/selectChildren.js"() {
+    init_matcher();
+    filter = Array.prototype.filter;
+  }
+});
+
+// node_modules/d3-selection/src/selection/filter.js
+function filter_default(match) {
+  typeof match != "function" && (match = matcher_default(match));
+  for (var groups = this._groups, m = groups.length, subgroups = new Array(m), j = 0; j < m; ++j)
+    for (var group = groups[j], n = group.length, subgroup = subgroups[j] = [], node, i = 0; i < n; ++i)
+      (node = group[i]) && match.call(node, node.__data__, i, group) && subgroup.push(node);
+  return new Selection(subgroups, this._parents);
+}
+var init_filter = __esm({
+  "node_modules/d3-selection/src/selection/filter.js"() {
+    init_selection();
+    init_matcher();
+  }
+});
+
+// node_modules/d3-selection/src/selection/sparse.js
+function sparse_default(update) {
+  return new Array(update.length);
+}
+var init_sparse = __esm({
+  "node_modules/d3-selection/src/selection/sparse.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/enter.js
+function enter_default() {
+  return new Selection(this._enter || this._groups.map(sparse_default), this._parents);
+}
+function EnterNode(parent, datum2) {
+  this.ownerDocument = parent.ownerDocument, this.namespaceURI = parent.namespaceURI, this._next = null, this._parent = parent, this.__data__ = datum2;
+}
+var init_enter = __esm({
+  "node_modules/d3-selection/src/selection/enter.js"() {
+    init_sparse();
+    init_selection();
+    EnterNode.prototype = {
+      constructor: EnterNode,
+      appendChild: function(child) {
+        return this._parent.insertBefore(child, this._next);
+      },
+      insertBefore: function(child, next) {
+        return this._parent.insertBefore(child, next);
+      },
+      querySelector: function(selector) {
+        return this._parent.querySelector(selector);
+      },
+      querySelectorAll: function(selector) {
+        return this._parent.querySelectorAll(selector);
+      }
+    };
+  }
+});
+
+// node_modules/d3-selection/src/constant.js
+function constant_default2(x) {
+  return function() {
+    return x;
+  };
+}
+var init_constant2 = __esm({
+  "node_modules/d3-selection/src/constant.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/data.js
+function bindIndex(parent, group, enter, update, exit, data) {
+  for (var i = 0, node, groupLength = group.length, dataLength = data.length; i < dataLength; ++i)
+    (node = group[i]) ? (node.__data__ = data[i], update[i] = node) : enter[i] = new EnterNode(parent, data[i]);
+  for (; i < groupLength; ++i)
+    (node = group[i]) && (exit[i] = node);
+}
+function bindKey(parent, group, enter, update, exit, data, key) {
+  var i, node, nodeByKeyValue = /* @__PURE__ */ new Map(), groupLength = group.length, dataLength = data.length, keyValues = new Array(groupLength), keyValue;
+  for (i = 0; i < groupLength; ++i)
+    (node = group[i]) && (keyValues[i] = keyValue = key.call(node, node.__data__, i, group) + "", nodeByKeyValue.has(keyValue) ? exit[i] = node : nodeByKeyValue.set(keyValue, node));
+  for (i = 0; i < dataLength; ++i)
+    keyValue = key.call(parent, data[i], i, data) + "", (node = nodeByKeyValue.get(keyValue)) ? (update[i] = node, node.__data__ = data[i], nodeByKeyValue.delete(keyValue)) : enter[i] = new EnterNode(parent, data[i]);
+  for (i = 0; i < groupLength; ++i)
+    (node = group[i]) && nodeByKeyValue.get(keyValues[i]) === node && (exit[i] = node);
+}
+function datum(node) {
+  return node.__data__;
+}
+function data_default(value, key) {
+  if (!arguments.length)
+    return Array.from(this, datum);
+  var bind = key ? bindKey : bindIndex, parents = this._parents, groups = this._groups;
+  typeof value != "function" && (value = constant_default2(value));
+  for (var m = groups.length, update = new Array(m), enter = new Array(m), exit = new Array(m), j = 0; j < m; ++j) {
+    var parent = parents[j], group = groups[j], groupLength = group.length, data = array_default(value.call(parent, parent && parent.__data__, j, parents)), dataLength = data.length, enterGroup = enter[j] = new Array(dataLength), updateGroup = update[j] = new Array(dataLength), exitGroup = exit[j] = new Array(groupLength);
+    bind(parent, group, enterGroup, updateGroup, exitGroup, data, key);
+    for (var i0 = 0, i1 = 0, previous, next; i0 < dataLength; ++i0)
+      if (previous = enterGroup[i0]) {
+        for (i0 >= i1 && (i1 = i0 + 1); !(next = updateGroup[i1]) && ++i1 < dataLength; )
+          ;
+        previous._next = next || null;
+      }
+  }
+  return update = new Selection(update, parents), update._enter = enter, update._exit = exit, update;
+}
+var init_data2 = __esm({
+  "node_modules/d3-selection/src/selection/data.js"() {
+    init_selection();
+    init_enter();
+    init_array();
+    init_constant2();
+  }
+});
+
+// node_modules/d3-selection/src/selection/exit.js
+function exit_default() {
+  return new Selection(this._exit || this._groups.map(sparse_default), this._parents);
+}
+var init_exit = __esm({
+  "node_modules/d3-selection/src/selection/exit.js"() {
+    init_sparse();
+    init_selection();
+  }
+});
+
+// node_modules/d3-selection/src/selection/join.js
+function join_default(onenter, onupdate, onexit) {
+  var enter = this.enter(), update = this, exit = this.exit();
+  return enter = typeof onenter == "function" ? onenter(enter) : enter.append(onenter + ""), onupdate != null && (update = onupdate(update)), onexit == null ? exit.remove() : onexit(exit), enter && update ? enter.merge(update).order() : update;
+}
+var init_join = __esm({
+  "node_modules/d3-selection/src/selection/join.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/merge.js
+function merge_default2(selection2) {
+  if (!(selection2 instanceof Selection))
+    throw new Error("invalid merge");
+  for (var groups0 = this._groups, groups1 = selection2._groups, m0 = groups0.length, m1 = groups1.length, m = Math.min(m0, m1), merges = new Array(m0), j = 0; j < m; ++j)
+    for (var group0 = groups0[j], group1 = groups1[j], n = group0.length, merge2 = merges[j] = new Array(n), node, i = 0; i < n; ++i)
+      (node = group0[i] || group1[i]) && (merge2[i] = node);
+  for (; j < m0; ++j)
+    merges[j] = groups0[j];
+  return new Selection(merges, this._parents);
+}
+var init_merge3 = __esm({
+  "node_modules/d3-selection/src/selection/merge.js"() {
+    init_selection();
+  }
+});
+
+// node_modules/d3-selection/src/selection/order.js
+function order_default() {
+  for (var groups = this._groups, j = -1, m = groups.length; ++j < m; )
+    for (var group = groups[j], i = group.length - 1, next = group[i], node; --i >= 0; )
+      (node = group[i]) && (next && node.compareDocumentPosition(next) ^ 4 && next.parentNode.insertBefore(node, next), next = node);
+  return this;
+}
+var init_order = __esm({
+  "node_modules/d3-selection/src/selection/order.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/sort.js
+function sort_default(compare) {
+  compare || (compare = ascending);
+  function compareNode(a, b) {
+    return a && b ? compare(a.__data__, b.__data__) : !a - !b;
+  }
+  for (var groups = this._groups, m = groups.length, sortgroups = new Array(m), j = 0; j < m; ++j) {
+    for (var group = groups[j], n = group.length, sortgroup = sortgroups[j] = new Array(n), node, i = 0; i < n; ++i)
+      (node = group[i]) && (sortgroup[i] = node);
+    sortgroup.sort(compareNode);
+  }
+  return new Selection(sortgroups, this._parents).order();
+}
+function ascending(a, b) {
+  return a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
+}
+var init_sort = __esm({
+  "node_modules/d3-selection/src/selection/sort.js"() {
+    init_selection();
+  }
+});
+
+// node_modules/d3-selection/src/selection/call.js
+function call_default() {
+  var callback = arguments[0];
+  return arguments[0] = this, callback.apply(null, arguments), this;
+}
+var init_call = __esm({
+  "node_modules/d3-selection/src/selection/call.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/nodes.js
+function nodes_default() {
+  return Array.from(this);
+}
+var init_nodes = __esm({
+  "node_modules/d3-selection/src/selection/nodes.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/node.js
+function node_default() {
+  for (var groups = this._groups, j = 0, m = groups.length; j < m; ++j)
+    for (var group = groups[j], i = 0, n = group.length; i < n; ++i) {
+      var node = group[i];
+      if (node)
+        return node;
+    }
+  return null;
+}
+var init_node = __esm({
+  "node_modules/d3-selection/src/selection/node.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/size.js
+function size_default() {
+  let size = 0;
+  for (let node of this)
+    ++size;
+  return size;
+}
+var init_size = __esm({
+  "node_modules/d3-selection/src/selection/size.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/empty.js
+function empty_default() {
+  return !this.node();
+}
+var init_empty = __esm({
+  "node_modules/d3-selection/src/selection/empty.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/each.js
+function each_default(callback) {
+  for (var groups = this._groups, j = 0, m = groups.length; j < m; ++j)
+    for (var group = groups[j], i = 0, n = group.length, node; i < n; ++i)
+      (node = group[i]) && callback.call(node, node.__data__, i, group);
+  return this;
+}
+var init_each = __esm({
+  "node_modules/d3-selection/src/selection/each.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/attr.js
+function attrRemove(name) {
+  return function() {
+    this.removeAttribute(name);
+  };
+}
+function attrRemoveNS(fullname) {
+  return function() {
+    this.removeAttributeNS(fullname.space, fullname.local);
+  };
+}
+function attrConstant(name, value) {
+  return function() {
+    this.setAttribute(name, value);
+  };
+}
+function attrConstantNS(fullname, value) {
+  return function() {
+    this.setAttributeNS(fullname.space, fullname.local, value);
+  };
+}
+function attrFunction(name, value) {
+  return function() {
+    var v = value.apply(this, arguments);
+    v == null ? this.removeAttribute(name) : this.setAttribute(name, v);
+  };
+}
+function attrFunctionNS(fullname, value) {
+  return function() {
+    var v = value.apply(this, arguments);
+    v == null ? this.removeAttributeNS(fullname.space, fullname.local) : this.setAttributeNS(fullname.space, fullname.local, v);
+  };
+}
+function attr_default(name, value) {
+  var fullname = namespace_default(name);
+  if (arguments.length < 2) {
+    var node = this.node();
+    return fullname.local ? node.getAttributeNS(fullname.space, fullname.local) : node.getAttribute(fullname);
+  }
+  return this.each((value == null ? fullname.local ? attrRemoveNS : attrRemove : typeof value == "function" ? fullname.local ? attrFunctionNS : attrFunction : fullname.local ? attrConstantNS : attrConstant)(fullname, value));
+}
+var init_attr = __esm({
+  "node_modules/d3-selection/src/selection/attr.js"() {
+    init_namespace();
+  }
+});
+
+// node_modules/d3-selection/src/window.js
+function window_default(node) {
+  return node.ownerDocument && node.ownerDocument.defaultView || node.document && node || node.defaultView;
+}
+var init_window = __esm({
+  "node_modules/d3-selection/src/window.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/style.js
+function styleRemove(name) {
+  return function() {
+    this.style.removeProperty(name);
+  };
+}
+function styleConstant(name, value, priority) {
+  return function() {
+    this.style.setProperty(name, value, priority);
+  };
+}
+function styleFunction(name, value, priority) {
+  return function() {
+    var v = value.apply(this, arguments);
+    v == null ? this.style.removeProperty(name) : this.style.setProperty(name, v, priority);
+  };
+}
+function style_default(name, value, priority) {
+  return arguments.length > 1 ? this.each((value == null ? styleRemove : typeof value == "function" ? styleFunction : styleConstant)(name, value, priority ?? "")) : styleValue(this.node(), name);
+}
+function styleValue(node, name) {
+  return node.style.getPropertyValue(name) || window_default(node).getComputedStyle(node, null).getPropertyValue(name);
+}
+var init_style = __esm({
+  "node_modules/d3-selection/src/selection/style.js"() {
+    init_window();
+  }
+});
+
+// node_modules/d3-selection/src/selection/property.js
+function propertyRemove(name) {
+  return function() {
+    delete this[name];
+  };
+}
+function propertyConstant(name, value) {
+  return function() {
+    this[name] = value;
+  };
+}
+function propertyFunction(name, value) {
+  return function() {
+    var v = value.apply(this, arguments);
+    v == null ? delete this[name] : this[name] = v;
+  };
+}
+function property_default(name, value) {
+  return arguments.length > 1 ? this.each((value == null ? propertyRemove : typeof value == "function" ? propertyFunction : propertyConstant)(name, value)) : this.node()[name];
+}
+var init_property = __esm({
+  "node_modules/d3-selection/src/selection/property.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/classed.js
+function classArray(string) {
+  return string.trim().split(/^|\s+/);
+}
+function classList(node) {
+  return node.classList || new ClassList(node);
+}
+function ClassList(node) {
+  this._node = node, this._names = classArray(node.getAttribute("class") || "");
+}
+function classedAdd(node, names) {
+  for (var list2 = classList(node), i = -1, n = names.length; ++i < n; )
+    list2.add(names[i]);
+}
+function classedRemove(node, names) {
+  for (var list2 = classList(node), i = -1, n = names.length; ++i < n; )
+    list2.remove(names[i]);
+}
+function classedTrue(names) {
+  return function() {
+    classedAdd(this, names);
+  };
+}
+function classedFalse(names) {
+  return function() {
+    classedRemove(this, names);
+  };
+}
+function classedFunction(names, value) {
+  return function() {
+    (value.apply(this, arguments) ? classedAdd : classedRemove)(this, names);
+  };
+}
+function classed_default(name, value) {
+  var names = classArray(name + "");
+  if (arguments.length < 2) {
+    for (var list2 = classList(this.node()), i = -1, n = names.length; ++i < n; )
+      if (!list2.contains(names[i]))
+        return !1;
+    return !0;
+  }
+  return this.each((typeof value == "function" ? classedFunction : value ? classedTrue : classedFalse)(names, value));
+}
+var init_classed = __esm({
+  "node_modules/d3-selection/src/selection/classed.js"() {
+    ClassList.prototype = {
+      add: function(name) {
+        var i = this._names.indexOf(name);
+        i < 0 && (this._names.push(name), this._node.setAttribute("class", this._names.join(" ")));
+      },
+      remove: function(name) {
+        var i = this._names.indexOf(name);
+        i >= 0 && (this._names.splice(i, 1), this._node.setAttribute("class", this._names.join(" ")));
+      },
+      contains: function(name) {
+        return this._names.indexOf(name) >= 0;
+      }
+    };
+  }
+});
+
+// node_modules/d3-selection/src/selection/text.js
+function textRemove() {
+  this.textContent = "";
+}
+function textConstant(value) {
+  return function() {
+    this.textContent = value;
+  };
+}
+function textFunction(value) {
+  return function() {
+    var v = value.apply(this, arguments);
+    this.textContent = v ?? "";
+  };
+}
+function text_default(value) {
+  return arguments.length ? this.each(value == null ? textRemove : (typeof value == "function" ? textFunction : textConstant)(value)) : this.node().textContent;
+}
+var init_text = __esm({
+  "node_modules/d3-selection/src/selection/text.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/html.js
+function htmlRemove() {
+  this.innerHTML = "";
+}
+function htmlConstant(value) {
+  return function() {
+    this.innerHTML = value;
+  };
+}
+function htmlFunction(value) {
+  return function() {
+    var v = value.apply(this, arguments);
+    this.innerHTML = v ?? "";
+  };
+}
+function html_default(value) {
+  return arguments.length ? this.each(value == null ? htmlRemove : (typeof value == "function" ? htmlFunction : htmlConstant)(value)) : this.node().innerHTML;
+}
+var init_html = __esm({
+  "node_modules/d3-selection/src/selection/html.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/raise.js
+function raise() {
+  this.nextSibling && this.parentNode.appendChild(this);
+}
+function raise_default() {
+  return this.each(raise);
+}
+var init_raise = __esm({
+  "node_modules/d3-selection/src/selection/raise.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/lower.js
+function lower() {
+  this.previousSibling && this.parentNode.insertBefore(this, this.parentNode.firstChild);
+}
+function lower_default() {
+  return this.each(lower);
+}
+var init_lower = __esm({
+  "node_modules/d3-selection/src/selection/lower.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/append.js
+function append_default(name) {
+  var create2 = typeof name == "function" ? name : creator_default(name);
+  return this.select(function() {
+    return this.appendChild(create2.apply(this, arguments));
+  });
+}
+var init_append = __esm({
+  "node_modules/d3-selection/src/selection/append.js"() {
+    init_creator();
+  }
+});
+
+// node_modules/d3-selection/src/selection/insert.js
+function constantNull() {
+  return null;
+}
+function insert_default(name, before) {
+  var create2 = typeof name == "function" ? name : creator_default(name), select = before == null ? constantNull : typeof before == "function" ? before : selector_default(before);
+  return this.select(function() {
+    return this.insertBefore(create2.apply(this, arguments), select.apply(this, arguments) || null);
+  });
+}
+var init_insert = __esm({
+  "node_modules/d3-selection/src/selection/insert.js"() {
+    init_creator();
+    init_selector();
+  }
+});
+
+// node_modules/d3-selection/src/selection/remove.js
+function remove() {
+  var parent = this.parentNode;
+  parent && parent.removeChild(this);
+}
+function remove_default() {
+  return this.each(remove);
+}
+var init_remove = __esm({
+  "node_modules/d3-selection/src/selection/remove.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/clone.js
+function selection_cloneShallow() {
+  var clone = this.cloneNode(!1), parent = this.parentNode;
+  return parent ? parent.insertBefore(clone, this.nextSibling) : clone;
+}
+function selection_cloneDeep() {
+  var clone = this.cloneNode(!0), parent = this.parentNode;
+  return parent ? parent.insertBefore(clone, this.nextSibling) : clone;
+}
+function clone_default(deep) {
+  return this.select(deep ? selection_cloneDeep : selection_cloneShallow);
+}
+var init_clone = __esm({
+  "node_modules/d3-selection/src/selection/clone.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/datum.js
+function datum_default(value) {
+  return arguments.length ? this.property("__data__", value) : this.node().__data__;
+}
+var init_datum = __esm({
+  "node_modules/d3-selection/src/selection/datum.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/on.js
+function contextListener(listener) {
+  return function(event) {
+    listener.call(this, event, this.__data__);
+  };
+}
+function parseTypenames2(typenames) {
+  return typenames.trim().split(/^|\s+/).map(function(t) {
+    var name = "", i = t.indexOf(".");
+    return i >= 0 && (name = t.slice(i + 1), t = t.slice(0, i)), { type: t, name };
+  });
+}
+function onRemove(typename) {
+  return function() {
+    var on = this.__on;
+    if (!!on) {
+      for (var j = 0, i = -1, m = on.length, o; j < m; ++j)
+        o = on[j], (!typename.type || o.type === typename.type) && o.name === typename.name ? this.removeEventListener(o.type, o.listener, o.options) : on[++i] = o;
+      ++i ? on.length = i : delete this.__on;
+    }
+  };
+}
+function onAdd(typename, value, options) {
+  return function() {
+    var on = this.__on, o, listener = contextListener(value);
+    if (on) {
+      for (var j = 0, m = on.length; j < m; ++j)
+        if ((o = on[j]).type === typename.type && o.name === typename.name) {
+          this.removeEventListener(o.type, o.listener, o.options), this.addEventListener(o.type, o.listener = listener, o.options = options), o.value = value;
+          return;
+        }
+    }
+    this.addEventListener(typename.type, listener, options), o = { type: typename.type, name: typename.name, value, listener, options }, on ? on.push(o) : this.__on = [o];
+  };
+}
+function on_default(typename, value, options) {
+  var typenames = parseTypenames2(typename + ""), i, n = typenames.length, t;
+  if (arguments.length < 2) {
+    var on = this.node().__on;
+    if (on) {
+      for (var j = 0, m = on.length, o; j < m; ++j)
+        for (i = 0, o = on[j]; i < n; ++i)
+          if ((t = typenames[i]).type === o.type && t.name === o.name)
+            return o.value;
+    }
+    return;
+  }
+  for (on = value ? onAdd : onRemove, i = 0; i < n; ++i)
+    this.each(on(typenames[i], value, options));
+  return this;
+}
+var init_on = __esm({
+  "node_modules/d3-selection/src/selection/on.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/dispatch.js
+function dispatchEvent(node, type, params) {
+  var window2 = window_default(node), event = window2.CustomEvent;
+  typeof event == "function" ? event = new event(type, params) : (event = window2.document.createEvent("Event"), params ? (event.initEvent(type, params.bubbles, params.cancelable), event.detail = params.detail) : event.initEvent(type, !1, !1)), node.dispatchEvent(event);
+}
+function dispatchConstant(type, params) {
+  return function() {
+    return dispatchEvent(this, type, params);
+  };
+}
+function dispatchFunction(type, params) {
+  return function() {
+    return dispatchEvent(this, type, params.apply(this, arguments));
+  };
+}
+function dispatch_default2(type, params) {
+  return this.each((typeof params == "function" ? dispatchFunction : dispatchConstant)(type, params));
+}
+var init_dispatch2 = __esm({
+  "node_modules/d3-selection/src/selection/dispatch.js"() {
+    init_window();
+  }
+});
+
+// node_modules/d3-selection/src/selection/iterator.js
+function* iterator_default() {
+  for (var groups = this._groups, j = 0, m = groups.length; j < m; ++j)
+    for (var group = groups[j], i = 0, n = group.length, node; i < n; ++i)
+      (node = group[i]) && (yield node);
+}
+var init_iterator = __esm({
+  "node_modules/d3-selection/src/selection/iterator.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/selection/index.js
+function Selection(groups, parents) {
+  this._groups = groups, this._parents = parents;
+}
+function selection() {
+  return new Selection([[document.documentElement]], root);
+}
+function selection_selection() {
+  return this;
+}
+var root, selection_default, init_selection = __esm({
+  "node_modules/d3-selection/src/selection/index.js"() {
+    init_select();
+    init_selectAll();
+    init_selectChild();
+    init_selectChildren();
+    init_filter();
+    init_data2();
+    init_enter();
+    init_exit();
+    init_join();
+    init_merge3();
+    init_order();
+    init_sort();
+    init_call();
+    init_nodes();
+    init_node();
+    init_size();
+    init_empty();
+    init_each();
+    init_attr();
+    init_style();
+    init_property();
+    init_classed();
+    init_text();
+    init_html();
+    init_raise();
+    init_lower();
+    init_append();
+    init_insert();
+    init_remove();
+    init_clone();
+    init_datum();
+    init_on();
+    init_dispatch2();
+    init_iterator();
+    root = [null];
+    Selection.prototype = selection.prototype = {
+      constructor: Selection,
+      select: select_default,
+      selectAll: selectAll_default,
+      selectChild: selectChild_default,
+      selectChildren: selectChildren_default,
+      filter: filter_default,
+      data: data_default,
+      enter: enter_default,
+      exit: exit_default,
+      join: join_default,
+      merge: merge_default2,
+      selection: selection_selection,
+      order: order_default,
+      sort: sort_default,
+      call: call_default,
+      nodes: nodes_default,
+      node: node_default,
+      size: size_default,
+      empty: empty_default,
+      each: each_default,
+      attr: attr_default,
+      style: style_default,
+      property: property_default,
+      classed: classed_default,
+      text: text_default,
+      html: html_default,
+      raise: raise_default,
+      lower: lower_default,
+      append: append_default,
+      insert: insert_default,
+      remove: remove_default,
+      clone: clone_default,
+      datum: datum_default,
+      on: on_default,
+      dispatch: dispatch_default2,
+      [Symbol.iterator]: iterator_default
+    };
+    selection_default = selection;
+  }
+});
+
+// node_modules/d3-selection/src/select.js
+function select_default2(selector) {
+  return typeof selector == "string" ? new Selection([[document.querySelector(selector)]], [document.documentElement]) : new Selection([[selector]], root);
+}
+var init_select2 = __esm({
+  "node_modules/d3-selection/src/select.js"() {
+    init_selection();
+  }
+});
+
+// node_modules/d3-selection/src/create.js
+function create_default(name) {
+  return select_default2(creator_default(name).call(document.documentElement));
+}
+var init_create = __esm({
+  "node_modules/d3-selection/src/create.js"() {
+    init_creator();
+    init_select2();
+  }
+});
+
+// node_modules/d3-selection/src/local.js
+function local() {
+  return new Local();
+}
+function Local() {
+  this._ = "@" + (++nextId).toString(36);
+}
+var nextId, init_local = __esm({
+  "node_modules/d3-selection/src/local.js"() {
+    nextId = 0;
+    Local.prototype = local.prototype = {
+      constructor: Local,
+      get: function(node) {
+        for (var id2 = this._; !(id2 in node); )
+          if (!(node = node.parentNode))
+            return;
+        return node[id2];
+      },
+      set: function(node, value) {
+        return node[this._] = value;
+      },
+      remove: function(node) {
+        return this._ in node && delete node[this._];
+      },
+      toString: function() {
+        return this._;
+      }
+    };
+  }
+});
+
+// node_modules/d3-selection/src/sourceEvent.js
+function sourceEvent_default(event) {
+  let sourceEvent;
+  for (; sourceEvent = event.sourceEvent; )
+    event = sourceEvent;
+  return event;
+}
+var init_sourceEvent = __esm({
+  "node_modules/d3-selection/src/sourceEvent.js"() {
+  }
+});
+
+// node_modules/d3-selection/src/pointer.js
+function pointer_default(event, node) {
+  if (event = sourceEvent_default(event), node === void 0 && (node = event.currentTarget), node) {
+    var svg = node.ownerSVGElement || node;
+    if (svg.createSVGPoint) {
+      var point = svg.createSVGPoint();
+      return point.x = event.clientX, point.y = event.clientY, point = point.matrixTransform(node.getScreenCTM().inverse()), [point.x, point.y];
+    }
+    if (node.getBoundingClientRect) {
+      var rect = node.getBoundingClientRect();
+      return [event.clientX - rect.left - node.clientLeft, event.clientY - rect.top - node.clientTop];
+    }
+  }
+  return [event.pageX, event.pageY];
+}
+var init_pointer = __esm({
+  "node_modules/d3-selection/src/pointer.js"() {
+    init_sourceEvent();
+  }
+});
+
+// node_modules/d3-selection/src/pointers.js
+function pointers_default(events, node) {
+  return events.target && (events = sourceEvent_default(events), node === void 0 && (node = events.currentTarget), events = events.touches || [events]), Array.from(events, (event) => pointer_default(event, node));
+}
+var init_pointers = __esm({
+  "node_modules/d3-selection/src/pointers.js"() {
+    init_pointer();
+    init_sourceEvent();
+  }
+});
+
+// node_modules/d3-selection/src/selectAll.js
+function selectAll_default2(selector) {
+  return typeof selector == "string" ? new Selection([document.querySelectorAll(selector)], [document.documentElement]) : new Selection([selector == null ? [] : array_default(selector)], root);
+}
+var init_selectAll2 = __esm({
+  "node_modules/d3-selection/src/selectAll.js"() {
+    init_array();
+    init_selection();
+  }
+});
+
+// node_modules/d3-selection/src/index.js
+var src_exports3 = {};
+__export(src_exports3, {
+  create: () => create_default,
+  creator: () => creator_default,
+  local: () => local,
+  matcher: () => matcher_default,
+  namespace: () => namespace_default,
+  namespaces: () => namespaces_default,
+  pointer: () => pointer_default,
+  pointers: () => pointers_default,
+  select: () => select_default2,
+  selectAll: () => selectAll_default2,
+  selection: () => selection_default,
+  selector: () => selector_default,
+  selectorAll: () => selectorAll_default,
+  style: () => styleValue,
+  window: () => window_default
+});
+var init_src6 = __esm({
+  "node_modules/d3-selection/src/index.js"() {
+    init_create();
+    init_creator();
+    init_local();
+    init_matcher();
+    init_namespace();
+    init_namespaces();
+    init_pointer();
+    init_pointers();
+    init_select2();
+    init_selectAll2();
+    init_selection();
+    init_selector();
+    init_selectorAll();
+    init_style();
+    init_window();
+  }
+});
+
+// node_modules/d3-drag/src/noevent.js
+function noevent_default(event) {
+  event.preventDefault(), event.stopImmediatePropagation();
+}
+var init_noevent = __esm({
+  "node_modules/d3-drag/src/noevent.js"() {
+  }
+});
+
+// node_modules/d3-drag/src/nodrag.js
+function nodrag_default(view) {
+  var root2 = view.document.documentElement, selection2 = select_default2(view).on("dragstart.drag", noevent_default, !0);
+  "onselectstart" in root2 ? selection2.on("selectstart.drag", noevent_default, !0) : (root2.__noselect = root2.style.MozUserSelect, root2.style.MozUserSelect = "none");
+}
+function yesdrag(view, noclick) {
+  var root2 = view.document.documentElement, selection2 = select_default2(view).on("dragstart.drag", null);
+  noclick && (selection2.on("click.drag", noevent_default, !0), setTimeout(function() {
+    selection2.on("click.drag", null);
+  }, 0)), "onselectstart" in root2 ? selection2.on("selectstart.drag", null) : (root2.style.MozUserSelect = root2.__noselect, delete root2.__noselect);
+}
+var init_nodrag = __esm({
+  "node_modules/d3-drag/src/nodrag.js"() {
+    init_src6();
+    init_noevent();
+  }
+});
+
+// node_modules/d3-drag/src/index.js
+var init_src7 = __esm({
+  "node_modules/d3-drag/src/index.js"() {
+    init_nodrag();
+  }
+});
+
+// node_modules/d3-color/src/define.js
+function define_default(constructor, factory, prototype) {
+  constructor.prototype = factory.prototype = prototype, prototype.constructor = constructor;
+}
+function extend(parent, definition) {
+  var prototype = Object.create(parent.prototype);
+  for (var key in definition)
+    prototype[key] = definition[key];
+  return prototype;
+}
+var init_define = __esm({
+  "node_modules/d3-color/src/define.js"() {
+  }
+});
+
+// node_modules/d3-color/src/color.js
+function Color() {
+}
+function color_formatHex() {
+  return this.rgb().formatHex();
+}
+function color_formatHsl() {
+  return hslConvert(this).formatHsl();
+}
+function color_formatRgb() {
+  return this.rgb().formatRgb();
+}
+function color(format) {
+  var m, l;
+  return format = (format + "").trim().toLowerCase(), (m = reHex.exec(format)) ? (l = m[1].length, m = parseInt(m[1], 16), l === 6 ? rgbn(m) : l === 3 ? new Rgb(m >> 8 & 15 | m >> 4 & 240, m >> 4 & 15 | m & 240, (m & 15) << 4 | m & 15, 1) : l === 8 ? rgba(m >> 24 & 255, m >> 16 & 255, m >> 8 & 255, (m & 255) / 255) : l === 4 ? rgba(m >> 12 & 15 | m >> 8 & 240, m >> 8 & 15 | m >> 4 & 240, m >> 4 & 15 | m & 240, ((m & 15) << 4 | m & 15) / 255) : null) : (m = reRgbInteger.exec(format)) ? new Rgb(m[1], m[2], m[3], 1) : (m = reRgbPercent.exec(format)) ? new Rgb(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, 1) : (m = reRgbaInteger.exec(format)) ? rgba(m[1], m[2], m[3], m[4]) : (m = reRgbaPercent.exec(format)) ? rgba(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, m[4]) : (m = reHslPercent.exec(format)) ? hsla(m[1], m[2] / 100, m[3] / 100, 1) : (m = reHslaPercent.exec(format)) ? hsla(m[1], m[2] / 100, m[3] / 100, m[4]) : named.hasOwnProperty(format) ? rgbn(named[format]) : format === "transparent" ? new Rgb(NaN, NaN, NaN, 0) : null;
+}
+function rgbn(n) {
+  return new Rgb(n >> 16 & 255, n >> 8 & 255, n & 255, 1);
+}
+function rgba(r, g, b, a) {
+  return a <= 0 && (r = g = b = NaN), new Rgb(r, g, b, a);
+}
+function rgbConvert(o) {
+  return o instanceof Color || (o = color(o)), o ? (o = o.rgb(), new Rgb(o.r, o.g, o.b, o.opacity)) : new Rgb();
+}
+function rgb(r, g, b, opacity) {
+  return arguments.length === 1 ? rgbConvert(r) : new Rgb(r, g, b, opacity ?? 1);
+}
+function Rgb(r, g, b, opacity) {
+  this.r = +r, this.g = +g, this.b = +b, this.opacity = +opacity;
+}
+function rgb_formatHex() {
+  return "#" + hex2(this.r) + hex2(this.g) + hex2(this.b);
+}
+function rgb_formatRgb() {
+  var a = this.opacity;
+  return a = isNaN(a) ? 1 : Math.max(0, Math.min(1, a)), (a === 1 ? "rgb(" : "rgba(") + Math.max(0, Math.min(255, Math.round(this.r) || 0)) + ", " + Math.max(0, Math.min(255, Math.round(this.g) || 0)) + ", " + Math.max(0, Math.min(255, Math.round(this.b) || 0)) + (a === 1 ? ")" : ", " + a + ")");
+}
+function hex2(value) {
+  return value = Math.max(0, Math.min(255, Math.round(value) || 0)), (value < 16 ? "0" : "") + value.toString(16);
+}
+function hsla(h, s, l, a) {
+  return a <= 0 ? h = s = l = NaN : l <= 0 || l >= 1 ? h = s = NaN : s <= 0 && (h = NaN), new Hsl(h, s, l, a);
+}
+function hslConvert(o) {
+  if (o instanceof Hsl)
+    return new Hsl(o.h, o.s, o.l, o.opacity);
+  if (o instanceof Color || (o = color(o)), !o)
+    return new Hsl();
+  if (o instanceof Hsl)
+    return o;
+  o = o.rgb();
+  var r = o.r / 255, g = o.g / 255, b = o.b / 255, min = Math.min(r, g, b), max = Math.max(r, g, b), h = NaN, s = max - min, l = (max + min) / 2;
+  return s ? (r === max ? h = (g - b) / s + (g < b) * 6 : g === max ? h = (b - r) / s + 2 : h = (r - g) / s + 4, s /= l < 0.5 ? max + min : 2 - max - min, h *= 60) : s = l > 0 && l < 1 ? 0 : h, new Hsl(h, s, l, o.opacity);
+}
+function hsl(h, s, l, opacity) {
+  return arguments.length === 1 ? hslConvert(h) : new Hsl(h, s, l, opacity ?? 1);
+}
+function Hsl(h, s, l, opacity) {
+  this.h = +h, this.s = +s, this.l = +l, this.opacity = +opacity;
+}
+function hsl2rgb(h, m1, m2) {
+  return (h < 60 ? m1 + (m2 - m1) * h / 60 : h < 180 ? m2 : h < 240 ? m1 + (m2 - m1) * (240 - h) / 60 : m1) * 255;
+}
+var darker, brighter, reI, reN, reP, reHex, reRgbInteger, reRgbPercent, reRgbaInteger, reRgbaPercent, reHslPercent, reHslaPercent, named, init_color = __esm({
+  "node_modules/d3-color/src/color.js"() {
+    init_define();
+    darker = 0.7, brighter = 1 / darker, reI = "\\s*([+-]?\\d+)\\s*", reN = "\\s*([+-]?\\d*\\.?\\d+(?:[eE][+-]?\\d+)?)\\s*", reP = "\\s*([+-]?\\d*\\.?\\d+(?:[eE][+-]?\\d+)?)%\\s*", reHex = /^#([0-9a-f]{3,8})$/, reRgbInteger = new RegExp("^rgb\\(" + [reI, reI, reI] + "\\)$"), reRgbPercent = new RegExp("^rgb\\(" + [reP, reP, reP] + "\\)$"), reRgbaInteger = new RegExp("^rgba\\(" + [reI, reI, reI, reN] + "\\)$"), reRgbaPercent = new RegExp("^rgba\\(" + [reP, reP, reP, reN] + "\\)$"), reHslPercent = new RegExp("^hsl\\(" + [reN, reP, reP] + "\\)$"), reHslaPercent = new RegExp("^hsla\\(" + [reN, reP, reP, reN] + "\\)$"), named = {
+      aliceblue: 15792383,
+      antiquewhite: 16444375,
+      aqua: 65535,
+      aquamarine: 8388564,
+      azure: 15794175,
+      beige: 16119260,
+      bisque: 16770244,
+      black: 0,
+      blanchedalmond: 16772045,
+      blue: 255,
+      blueviolet: 9055202,
+      brown: 10824234,
+      burlywood: 14596231,
+      cadetblue: 6266528,
+      chartreuse: 8388352,
+      chocolate: 13789470,
+      coral: 16744272,
+      cornflowerblue: 6591981,
+      cornsilk: 16775388,
+      crimson: 14423100,
+      cyan: 65535,
+      darkblue: 139,
+      darkcyan: 35723,
+      darkgoldenrod: 12092939,
+      darkgray: 11119017,
+      darkgreen: 25600,
+      darkgrey: 11119017,
+      darkkhaki: 12433259,
+      darkmagenta: 9109643,
+      darkolivegreen: 5597999,
+      darkorange: 16747520,
+      darkorchid: 10040012,
+      darkred: 9109504,
+      darksalmon: 15308410,
+      darkseagreen: 9419919,
+      darkslateblue: 4734347,
+      darkslategray: 3100495,
+      darkslategrey: 3100495,
+      darkturquoise: 52945,
+      darkviolet: 9699539,
+      deeppink: 16716947,
+      deepskyblue: 49151,
+      dimgray: 6908265,
+      dimgrey: 6908265,
+      dodgerblue: 2003199,
+      firebrick: 11674146,
+      floralwhite: 16775920,
+      forestgreen: 2263842,
+      fuchsia: 16711935,
+      gainsboro: 14474460,
+      ghostwhite: 16316671,
+      gold: 16766720,
+      goldenrod: 14329120,
+      gray: 8421504,
+      green: 32768,
+      greenyellow: 11403055,
+      grey: 8421504,
+      honeydew: 15794160,
+      hotpink: 16738740,
+      indianred: 13458524,
+      indigo: 4915330,
+      ivory: 16777200,
+      khaki: 15787660,
+      lavender: 15132410,
+      lavenderblush: 16773365,
+      lawngreen: 8190976,
+      lemonchiffon: 16775885,
+      lightblue: 11393254,
+      lightcoral: 15761536,
+      lightcyan: 14745599,
+      lightgoldenrodyellow: 16448210,
+      lightgray: 13882323,
+      lightgreen: 9498256,
+      lightgrey: 13882323,
+      lightpink: 16758465,
+      lightsalmon: 16752762,
+      lightseagreen: 2142890,
+      lightskyblue: 8900346,
+      lightslategray: 7833753,
+      lightslategrey: 7833753,
+      lightsteelblue: 11584734,
+      lightyellow: 16777184,
+      lime: 65280,
+      limegreen: 3329330,
+      linen: 16445670,
+      magenta: 16711935,
+      maroon: 8388608,
+      mediumaquamarine: 6737322,
+      mediumblue: 205,
+      mediumorchid: 12211667,
+      mediumpurple: 9662683,
+      mediumseagreen: 3978097,
+      mediumslateblue: 8087790,
+      mediumspringgreen: 64154,
+      mediumturquoise: 4772300,
+      mediumvioletred: 13047173,
+      midnightblue: 1644912,
+      mintcream: 16121850,
+      mistyrose: 16770273,
+      moccasin: 16770229,
+      navajowhite: 16768685,
+      navy: 128,
+      oldlace: 16643558,
+      olive: 8421376,
+      olivedrab: 7048739,
+      orange: 16753920,
+      orangered: 16729344,
+      orchid: 14315734,
+      palegoldenrod: 15657130,
+      palegreen: 10025880,
+      paleturquoise: 11529966,
+      palevioletred: 14381203,
+      papayawhip: 16773077,
+      peachpuff: 16767673,
+      peru: 13468991,
+      pink: 16761035,
+      plum: 14524637,
+      powderblue: 11591910,
+      purple: 8388736,
+      rebeccapurple: 6697881,
+      red: 16711680,
+      rosybrown: 12357519,
+      royalblue: 4286945,
+      saddlebrown: 9127187,
+      salmon: 16416882,
+      sandybrown: 16032864,
+      seagreen: 3050327,
+      seashell: 16774638,
+      sienna: 10506797,
+      silver: 12632256,
+      skyblue: 8900331,
+      slateblue: 6970061,
+      slategray: 7372944,
+      slategrey: 7372944,
+      snow: 16775930,
+      springgreen: 65407,
+      steelblue: 4620980,
+      tan: 13808780,
+      teal: 32896,
+      thistle: 14204888,
+      tomato: 16737095,
+      turquoise: 4251856,
+      violet: 15631086,
+      wheat: 16113331,
+      white: 16777215,
+      whitesmoke: 16119285,
+      yellow: 16776960,
+      yellowgreen: 10145074
+    };
+    define_default(Color, color, {
+      copy: function(channels) {
+        return Object.assign(new this.constructor(), this, channels);
+      },
+      displayable: function() {
+        return this.rgb().displayable();
+      },
+      hex: color_formatHex,
+      formatHex: color_formatHex,
+      formatHsl: color_formatHsl,
+      formatRgb: color_formatRgb,
+      toString: color_formatRgb
+    });
+    define_default(Rgb, rgb, extend(Color, {
+      brighter: function(k) {
+        return k = k == null ? brighter : Math.pow(brighter, k), new Rgb(this.r * k, this.g * k, this.b * k, this.opacity);
+      },
+      darker: function(k) {
+        return k = k == null ? darker : Math.pow(darker, k), new Rgb(this.r * k, this.g * k, this.b * k, this.opacity);
+      },
+      rgb: function() {
+        return this;
+      },
+      displayable: function() {
+        return -0.5 <= this.r && this.r < 255.5 && -0.5 <= this.g && this.g < 255.5 && -0.5 <= this.b && this.b < 255.5 && 0 <= this.opacity && this.opacity <= 1;
+      },
+      hex: rgb_formatHex,
+      formatHex: rgb_formatHex,
+      formatRgb: rgb_formatRgb,
+      toString: rgb_formatRgb
+    }));
+    define_default(Hsl, hsl, extend(Color, {
+      brighter: function(k) {
+        return k = k == null ? brighter : Math.pow(brighter, k), new Hsl(this.h, this.s, this.l * k, this.opacity);
+      },
+      darker: function(k) {
+        return k = k == null ? darker : Math.pow(darker, k), new Hsl(this.h, this.s, this.l * k, this.opacity);
+      },
+      rgb: function() {
+        var h = this.h % 360 + (this.h < 0) * 360, s = isNaN(h) || isNaN(this.s) ? 0 : this.s, l = this.l, m2 = l + (l < 0.5 ? l : 1 - l) * s, m1 = 2 * l - m2;
+        return new Rgb(
+          hsl2rgb(h >= 240 ? h - 240 : h + 120, m1, m2),
+          hsl2rgb(h, m1, m2),
+          hsl2rgb(h < 120 ? h + 240 : h - 120, m1, m2),
+          this.opacity
+        );
+      },
+      displayable: function() {
+        return (0 <= this.s && this.s <= 1 || isNaN(this.s)) && 0 <= this.l && this.l <= 1 && 0 <= this.opacity && this.opacity <= 1;
+      },
+      formatHsl: function() {
+        var a = this.opacity;
+        return a = isNaN(a) ? 1 : Math.max(0, Math.min(1, a)), (a === 1 ? "hsl(" : "hsla(") + (this.h || 0) + ", " + (this.s || 0) * 100 + "%, " + (this.l || 0) * 100 + "%" + (a === 1 ? ")" : ", " + a + ")");
+      }
+    }));
+  }
+});
+
+// node_modules/d3-color/src/index.js
+var init_src8 = __esm({
+  "node_modules/d3-color/src/index.js"() {
+    init_color();
+  }
+});
+
+// node_modules/d3-interpolate/src/basis.js
+function basis(t1, v0, v1, v2, v3) {
+  var t2 = t1 * t1, t3 = t2 * t1;
+  return ((1 - 3 * t1 + 3 * t2 - t3) * v0 + (4 - 6 * t2 + 3 * t3) * v1 + (1 + 3 * t1 + 3 * t2 - 3 * t3) * v2 + t3 * v3) / 6;
+}
+function basis_default(values) {
+  var n = values.length - 1;
+  return function(t) {
+    var i = t <= 0 ? t = 0 : t >= 1 ? (t = 1, n - 1) : Math.floor(t * n), v1 = values[i], v2 = values[i + 1], v0 = i > 0 ? values[i - 1] : 2 * v1 - v2, v3 = i < n - 1 ? values[i + 2] : 2 * v2 - v1;
+    return basis((t - i / n) * n, v0, v1, v2, v3);
+  };
+}
+var init_basis = __esm({
+  "node_modules/d3-interpolate/src/basis.js"() {
+  }
+});
+
+// node_modules/d3-interpolate/src/basisClosed.js
+function basisClosed_default(values) {
+  var n = values.length;
+  return function(t) {
+    var i = Math.floor(((t %= 1) < 0 ? ++t : t) * n), v0 = values[(i + n - 1) % n], v1 = values[i % n], v2 = values[(i + 1) % n], v3 = values[(i + 2) % n];
+    return basis((t - i / n) * n, v0, v1, v2, v3);
+  };
+}
+var init_basisClosed = __esm({
+  "node_modules/d3-interpolate/src/basisClosed.js"() {
+    init_basis();
+  }
+});
+
+// node_modules/d3-interpolate/src/constant.js
+var constant_default3, init_constant3 = __esm({
+  "node_modules/d3-interpolate/src/constant.js"() {
+    constant_default3 = (x) => () => x;
+  }
+});
+
+// node_modules/d3-interpolate/src/color.js
+function linear(a, d) {
+  return function(t) {
+    return a + t * d;
+  };
+}
+function exponential(a, b, y) {
+  return a = Math.pow(a, y), b = Math.pow(b, y) - a, y = 1 / y, function(t) {
+    return Math.pow(a + t * b, y);
+  };
+}
+function gamma(y) {
+  return (y = +y) == 1 ? nogamma : function(a, b) {
+    return b - a ? exponential(a, b, y) : constant_default3(isNaN(a) ? b : a);
+  };
+}
+function nogamma(a, b) {
+  var d = b - a;
+  return d ? linear(a, d) : constant_default3(isNaN(a) ? b : a);
+}
+var init_color2 = __esm({
+  "node_modules/d3-interpolate/src/color.js"() {
+    init_constant3();
+  }
+});
+
+// node_modules/d3-interpolate/src/rgb.js
+function rgbSpline(spline) {
+  return function(colors) {
+    var n = colors.length, r = new Array(n), g = new Array(n), b = new Array(n), i, color2;
+    for (i = 0; i < n; ++i)
+      color2 = rgb(colors[i]), r[i] = color2.r || 0, g[i] = color2.g || 0, b[i] = color2.b || 0;
+    return r = spline(r), g = spline(g), b = spline(b), color2.opacity = 1, function(t) {
+      return color2.r = r(t), color2.g = g(t), color2.b = b(t), color2 + "";
+    };
+  };
+}
+var rgb_default, rgbBasis, rgbBasisClosed, init_rgb = __esm({
+  "node_modules/d3-interpolate/src/rgb.js"() {
+    init_src8();
+    init_basis();
+    init_basisClosed();
+    init_color2();
+    rgb_default = function rgbGamma(y) {
+      var color2 = gamma(y);
+      function rgb2(start2, end) {
+        var r = color2((start2 = rgb(start2)).r, (end = rgb(end)).r), g = color2(start2.g, end.g), b = color2(start2.b, end.b), opacity = nogamma(start2.opacity, end.opacity);
+        return function(t) {
+          return start2.r = r(t), start2.g = g(t), start2.b = b(t), start2.opacity = opacity(t), start2 + "";
+        };
+      }
+      return rgb2.gamma = rgbGamma, rgb2;
+    }(1);
+    rgbBasis = rgbSpline(basis_default), rgbBasisClosed = rgbSpline(basisClosed_default);
+  }
+});
+
+// node_modules/d3-interpolate/src/number.js
+function number_default(a, b) {
+  return a = +a, b = +b, function(t) {
+    return a * (1 - t) + b * t;
+  };
+}
+var init_number = __esm({
+  "node_modules/d3-interpolate/src/number.js"() {
+  }
+});
+
+// node_modules/d3-interpolate/src/string.js
+function zero(b) {
+  return function() {
+    return b;
+  };
+}
+function one(b) {
+  return function(t) {
+    return b(t) + "";
+  };
+}
+function string_default(a, b) {
+  var bi = reA.lastIndex = reB.lastIndex = 0, am, bm, bs, i = -1, s = [], q = [];
+  for (a = a + "", b = b + ""; (am = reA.exec(a)) && (bm = reB.exec(b)); )
+    (bs = bm.index) > bi && (bs = b.slice(bi, bs), s[i] ? s[i] += bs : s[++i] = bs), (am = am[0]) === (bm = bm[0]) ? s[i] ? s[i] += bm : s[++i] = bm : (s[++i] = null, q.push({ i, x: number_default(am, bm) })), bi = reB.lastIndex;
+  return bi < b.length && (bs = b.slice(bi), s[i] ? s[i] += bs : s[++i] = bs), s.length < 2 ? q[0] ? one(q[0].x) : zero(b) : (b = q.length, function(t) {
+    for (var i2 = 0, o; i2 < b; ++i2)
+      s[(o = q[i2]).i] = o.x(t);
+    return s.join("");
+  });
+}
+var reA, reB, init_string2 = __esm({
+  "node_modules/d3-interpolate/src/string.js"() {
+    init_number();
+    reA = /[-+]?(?:\d+\.?\d*|\.?\d+)(?:[eE][-+]?\d+)?/g, reB = new RegExp(reA.source, "g");
+  }
+});
+
+// node_modules/d3-interpolate/src/transform/decompose.js
+function decompose_default(a, b, c, d, e, f) {
+  var scaleX, scaleY, skewX;
+  return (scaleX = Math.sqrt(a * a + b * b)) && (a /= scaleX, b /= scaleX), (skewX = a * c + b * d) && (c -= a * skewX, d -= b * skewX), (scaleY = Math.sqrt(c * c + d * d)) && (c /= scaleY, d /= scaleY, skewX /= scaleY), a * d < b * c && (a = -a, b = -b, skewX = -skewX, scaleX = -scaleX), {
+    translateX: e,
+    translateY: f,
+    rotate: Math.atan2(b, a) * degrees2,
+    skewX: Math.atan(skewX) * degrees2,
+    scaleX,
+    scaleY
+  };
+}
+var degrees2, identity, init_decompose = __esm({
+  "node_modules/d3-interpolate/src/transform/decompose.js"() {
+    degrees2 = 180 / Math.PI, identity = {
+      translateX: 0,
+      translateY: 0,
+      rotate: 0,
+      skewX: 0,
+      scaleX: 1,
+      scaleY: 1
+    };
+  }
+});
+
+// node_modules/d3-interpolate/src/transform/parse.js
+function parseCss(value) {
+  let m = new (typeof DOMMatrix == "function" ? DOMMatrix : WebKitCSSMatrix)(value + "");
+  return m.isIdentity ? identity : decompose_default(m.a, m.b, m.c, m.d, m.e, m.f);
+}
+function parseSvg(value) {
+  return value == null ? identity : (svgNode || (svgNode = document.createElementNS("http://www.w3.org/2000/svg", "g")), svgNode.setAttribute("transform", value), (value = svgNode.transform.baseVal.consolidate()) ? (value = value.matrix, decompose_default(value.a, value.b, value.c, value.d, value.e, value.f)) : identity);
+}
+var svgNode, init_parse = __esm({
+  "node_modules/d3-interpolate/src/transform/parse.js"() {
+    init_decompose();
+  }
+});
+
+// node_modules/d3-interpolate/src/transform/index.js
+function interpolateTransform(parse2, pxComma, pxParen, degParen) {
+  function pop(s) {
+    return s.length ? s.pop() + " " : "";
+  }
+  function translate(xa, ya, xb, yb, s, q) {
+    if (xa !== xb || ya !== yb) {
+      var i = s.push("translate(", null, pxComma, null, pxParen);
+      q.push({ i: i - 4, x: number_default(xa, xb) }, { i: i - 2, x: number_default(ya, yb) });
+    } else
+      (xb || yb) && s.push("translate(" + xb + pxComma + yb + pxParen);
+  }
+  function rotate(a, b, s, q) {
+    a !== b ? (a - b > 180 ? b += 360 : b - a > 180 && (a += 360), q.push({ i: s.push(pop(s) + "rotate(", null, degParen) - 2, x: number_default(a, b) })) : b && s.push(pop(s) + "rotate(" + b + degParen);
+  }
+  function skewX(a, b, s, q) {
+    a !== b ? q.push({ i: s.push(pop(s) + "skewX(", null, degParen) - 2, x: number_default(a, b) }) : b && s.push(pop(s) + "skewX(" + b + degParen);
+  }
+  function scale(xa, ya, xb, yb, s, q) {
+    if (xa !== xb || ya !== yb) {
+      var i = s.push(pop(s) + "scale(", null, ",", null, ")");
+      q.push({ i: i - 4, x: number_default(xa, xb) }, { i: i - 2, x: number_default(ya, yb) });
+    } else
+      (xb !== 1 || yb !== 1) && s.push(pop(s) + "scale(" + xb + "," + yb + ")");
+  }
+  return function(a, b) {
+    var s = [], q = [];
+    return a = parse2(a), b = parse2(b), translate(a.translateX, a.translateY, b.translateX, b.translateY, s, q), rotate(a.rotate, b.rotate, s, q), skewX(a.skewX, b.skewX, s, q), scale(a.scaleX, a.scaleY, b.scaleX, b.scaleY, s, q), a = b = null, function(t) {
+      for (var i = -1, n = q.length, o; ++i < n; )
+        s[(o = q[i]).i] = o.x(t);
+      return s.join("");
+    };
+  };
+}
+var interpolateTransformCss, interpolateTransformSvg, init_transform3 = __esm({
+  "node_modules/d3-interpolate/src/transform/index.js"() {
+    init_number();
+    init_parse();
+    interpolateTransformCss = interpolateTransform(parseCss, "px, ", "px)", "deg)"), interpolateTransformSvg = interpolateTransform(parseSvg, ", ", ")", ")");
+  }
+});
+
+// node_modules/d3-interpolate/src/zoom.js
+function cosh(x) {
+  return ((x = Math.exp(x)) + 1 / x) / 2;
+}
+function sinh(x) {
+  return ((x = Math.exp(x)) - 1 / x) / 2;
+}
+function tanh(x) {
+  return ((x = Math.exp(2 * x)) - 1) / (x + 1);
+}
+var epsilon22, zoom_default, init_zoom = __esm({
+  "node_modules/d3-interpolate/src/zoom.js"() {
+    epsilon22 = 1e-12;
+    zoom_default = function zoomRho(rho, rho2, rho4) {
+      function zoom(p02, p1) {
+        var ux0 = p02[0], uy0 = p02[1], w0 = p02[2], ux1 = p1[0], uy1 = p1[1], w1 = p1[2], dx = ux1 - ux0, dy = uy1 - uy0, d2 = dx * dx + dy * dy, i, S;
+        if (d2 < epsilon22)
+          S = Math.log(w1 / w0) / rho, i = function(t) {
+            return [
+              ux0 + t * dx,
+              uy0 + t * dy,
+              w0 * Math.exp(rho * t * S)
+            ];
+          };
+        else {
+          var d1 = Math.sqrt(d2), b0 = (w1 * w1 - w0 * w0 + rho4 * d2) / (2 * w0 * rho2 * d1), b1 = (w1 * w1 - w0 * w0 - rho4 * d2) / (2 * w1 * rho2 * d1), r0 = Math.log(Math.sqrt(b0 * b0 + 1) - b0), r1 = Math.log(Math.sqrt(b1 * b1 + 1) - b1);
+          S = (r1 - r0) / rho, i = function(t) {
+            var s = t * S, coshr0 = cosh(r0), u = w0 / (rho2 * d1) * (coshr0 * tanh(rho * s + r0) - sinh(r0));
+            return [
+              ux0 + u * dx,
+              uy0 + u * dy,
+              w0 * coshr0 / cosh(rho * s + r0)
+            ];
+          };
+        }
+        return i.duration = S * 1e3 * rho / Math.SQRT2, i;
+      }
+      return zoom.rho = function(_) {
+        var _1 = Math.max(1e-3, +_), _2 = _1 * _1, _4 = _2 * _2;
+        return zoomRho(_1, _2, _4);
+      }, zoom;
+    }(Math.SQRT2, 2, 4);
+  }
+});
+
+// node_modules/d3-interpolate/src/index.js
+var init_src9 = __esm({
+  "node_modules/d3-interpolate/src/index.js"() {
+    init_number();
+    init_string2();
+    init_transform3();
+    init_zoom();
+    init_rgb();
+  }
+});
+
+// node_modules/d3-timer/src/timer.js
+function now() {
+  return clockNow || (setFrame(clearNow), clockNow = clock.now() + clockSkew);
+}
+function clearNow() {
+  clockNow = 0;
+}
+function Timer() {
+  this._call = this._time = this._next = null;
+}
+function timer(callback, delay, time) {
+  var t = new Timer();
+  return t.restart(callback, delay, time), t;
+}
+function timerFlush() {
+  now(), ++frame;
+  for (var t = taskHead, e; t; )
+    (e = clockNow - t._time) >= 0 && t._call.call(null, e), t = t._next;
+  --frame;
+}
+function wake() {
+  clockNow = (clockLast = clock.now()) + clockSkew, frame = timeout = 0;
+  try {
+    timerFlush();
+  } finally {
+    frame = 0, nap(), clockNow = 0;
+  }
+}
+function poke() {
+  var now2 = clock.now(), delay = now2 - clockLast;
+  delay > pokeDelay && (clockSkew -= delay, clockLast = now2);
+}
+function nap() {
+  for (var t0, t1 = taskHead, t2, time = 1 / 0; t1; )
+    t1._call ? (time > t1._time && (time = t1._time), t0 = t1, t1 = t1._next) : (t2 = t1._next, t1._next = null, t1 = t0 ? t0._next = t2 : taskHead = t2);
+  taskTail = t0, sleep(time);
+}
+function sleep(time) {
+  if (!frame) {
+    timeout && (timeout = clearTimeout(timeout));
+    var delay = time - clockNow;
+    delay > 24 ? (time < 1 / 0 && (timeout = setTimeout(wake, time - clock.now() - clockSkew)), interval && (interval = clearInterval(interval))) : (interval || (clockLast = clock.now(), interval = setInterval(poke, pokeDelay)), frame = 1, setFrame(wake));
+  }
+}
+var frame, timeout, interval, pokeDelay, taskHead, taskTail, clockLast, clockNow, clockSkew, clock, setFrame, init_timer = __esm({
+  "node_modules/d3-timer/src/timer.js"() {
+    frame = 0, timeout = 0, interval = 0, pokeDelay = 1e3, clockLast = 0, clockNow = 0, clockSkew = 0, clock = typeof performance == "object" && performance.now ? performance : Date, setFrame = typeof window == "object" && window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : function(f) {
+      setTimeout(f, 17);
+    };
+    Timer.prototype = timer.prototype = {
+      constructor: Timer,
+      restart: function(callback, delay, time) {
+        if (typeof callback != "function")
+          throw new TypeError("callback is not a function");
+        time = (time == null ? now() : +time) + (delay == null ? 0 : +delay), !this._next && taskTail !== this && (taskTail ? taskTail._next = this : taskHead = this, taskTail = this), this._call = callback, this._time = time, sleep();
+      },
+      stop: function() {
+        this._call && (this._call = null, this._time = 1 / 0, sleep());
+      }
+    };
+  }
+});
+
+// node_modules/d3-timer/src/timeout.js
+function timeout_default(callback, delay, time) {
+  var t = new Timer();
+  return delay = delay == null ? 0 : +delay, t.restart((elapsed) => {
+    t.stop(), callback(elapsed + delay);
+  }, delay, time), t;
+}
+var init_timeout = __esm({
+  "node_modules/d3-timer/src/timeout.js"() {
+    init_timer();
+  }
+});
+
+// node_modules/d3-timer/src/index.js
+var init_src10 = __esm({
+  "node_modules/d3-timer/src/index.js"() {
+    init_timer();
+    init_timeout();
+  }
+});
+
+// node_modules/d3-transition/src/transition/schedule.js
+function schedule_default(node, name, id2, index, group, timing) {
+  var schedules = node.__transition;
+  if (!schedules)
+    node.__transition = {};
+  else if (id2 in schedules)
+    return;
+  create(node, id2, {
+    name,
+    index,
+    group,
+    on: emptyOn,
+    tween: emptyTween,
+    time: timing.time,
+    delay: timing.delay,
+    duration: timing.duration,
+    ease: timing.ease,
+    timer: null,
+    state: CREATED
+  });
+}
+function init(node, id2) {
+  var schedule = get2(node, id2);
+  if (schedule.state > CREATED)
+    throw new Error("too late; already scheduled");
+  return schedule;
+}
+function set2(node, id2) {
+  var schedule = get2(node, id2);
+  if (schedule.state > STARTED)
+    throw new Error("too late; already running");
+  return schedule;
+}
+function get2(node, id2) {
+  var schedule = node.__transition;
+  if (!schedule || !(schedule = schedule[id2]))
+    throw new Error("transition not found");
+  return schedule;
+}
+function create(node, id2, self2) {
+  var schedules = node.__transition, tween;
+  schedules[id2] = self2, self2.timer = timer(schedule, 0, self2.time);
+  function schedule(elapsed) {
+    self2.state = SCHEDULED, self2.timer.restart(start2, self2.delay, self2.time), self2.delay <= elapsed && start2(elapsed - self2.delay);
+  }
+  function start2(elapsed) {
+    var i, j, n, o;
+    if (self2.state !== SCHEDULED)
+      return stop();
+    for (i in schedules)
+      if (o = schedules[i], o.name === self2.name) {
+        if (o.state === STARTED)
+          return timeout_default(start2);
+        o.state === RUNNING ? (o.state = ENDED, o.timer.stop(), o.on.call("interrupt", node, node.__data__, o.index, o.group), delete schedules[i]) : +i < id2 && (o.state = ENDED, o.timer.stop(), o.on.call("cancel", node, node.__data__, o.index, o.group), delete schedules[i]);
+      }
+    if (timeout_default(function() {
+      self2.state === STARTED && (self2.state = RUNNING, self2.timer.restart(tick, self2.delay, self2.time), tick(elapsed));
+    }), self2.state = STARTING, self2.on.call("start", node, node.__data__, self2.index, self2.group), self2.state === STARTING) {
+      for (self2.state = STARTED, tween = new Array(n = self2.tween.length), i = 0, j = -1; i < n; ++i)
+        (o = self2.tween[i].value.call(node, node.__data__, self2.index, self2.group)) && (tween[++j] = o);
+      tween.length = j + 1;
+    }
+  }
+  function tick(elapsed) {
+    for (var t = elapsed < self2.duration ? self2.ease.call(null, elapsed / self2.duration) : (self2.timer.restart(stop), self2.state = ENDING, 1), i = -1, n = tween.length; ++i < n; )
+      tween[i].call(node, t);
+    self2.state === ENDING && (self2.on.call("end", node, node.__data__, self2.index, self2.group), stop());
+  }
+  function stop() {
+    self2.state = ENDED, self2.timer.stop(), delete schedules[id2];
+    for (var i in schedules)
+      return;
+    delete node.__transition;
+  }
+}
+var emptyOn, emptyTween, CREATED, SCHEDULED, STARTING, STARTED, RUNNING, ENDING, ENDED, init_schedule = __esm({
+  "node_modules/d3-transition/src/transition/schedule.js"() {
+    init_src5();
+    init_src10();
+    emptyOn = dispatch_default("start", "end", "cancel", "interrupt"), emptyTween = [], CREATED = 0, SCHEDULED = 1, STARTING = 2, STARTED = 3, RUNNING = 4, ENDING = 5, ENDED = 6;
+  }
+});
+
+// node_modules/d3-transition/src/interrupt.js
+function interrupt_default(node, name) {
+  var schedules = node.__transition, schedule, active, empty2 = !0, i;
+  if (!!schedules) {
+    name = name == null ? null : name + "";
+    for (i in schedules) {
+      if ((schedule = schedules[i]).name !== name) {
+        empty2 = !1;
+        continue;
+      }
+      active = schedule.state > STARTING && schedule.state < ENDING, schedule.state = ENDED, schedule.timer.stop(), schedule.on.call(active ? "interrupt" : "cancel", node, node.__data__, schedule.index, schedule.group), delete schedules[i];
+    }
+    empty2 && delete node.__transition;
+  }
+}
+var init_interrupt = __esm({
+  "node_modules/d3-transition/src/interrupt.js"() {
+    init_schedule();
+  }
+});
+
+// node_modules/d3-transition/src/selection/interrupt.js
+function interrupt_default2(name) {
+  return this.each(function() {
+    interrupt_default(this, name);
+  });
+}
+var init_interrupt2 = __esm({
+  "node_modules/d3-transition/src/selection/interrupt.js"() {
+    init_interrupt();
+  }
+});
+
+// node_modules/d3-transition/src/transition/tween.js
+function tweenRemove(id2, name) {
+  var tween0, tween1;
+  return function() {
+    var schedule = set2(this, id2), tween = schedule.tween;
+    if (tween !== tween0) {
+      tween1 = tween0 = tween;
+      for (var i = 0, n = tween1.length; i < n; ++i)
+        if (tween1[i].name === name) {
+          tween1 = tween1.slice(), tween1.splice(i, 1);
+          break;
+        }
+    }
+    schedule.tween = tween1;
+  };
+}
+function tweenFunction(id2, name, value) {
+  var tween0, tween1;
+  if (typeof value != "function")
+    throw new Error();
+  return function() {
+    var schedule = set2(this, id2), tween = schedule.tween;
+    if (tween !== tween0) {
+      tween1 = (tween0 = tween).slice();
+      for (var t = { name, value }, i = 0, n = tween1.length; i < n; ++i)
+        if (tween1[i].name === name) {
+          tween1[i] = t;
+          break;
+        }
+      i === n && tween1.push(t);
+    }
+    schedule.tween = tween1;
+  };
+}
+function tween_default(name, value) {
+  var id2 = this._id;
+  if (name += "", arguments.length < 2) {
+    for (var tween = get2(this.node(), id2).tween, i = 0, n = tween.length, t; i < n; ++i)
+      if ((t = tween[i]).name === name)
+        return t.value;
+    return null;
+  }
+  return this.each((value == null ? tweenRemove : tweenFunction)(id2, name, value));
+}
+function tweenValue(transition2, name, value) {
+  var id2 = transition2._id;
+  return transition2.each(function() {
+    var schedule = set2(this, id2);
+    (schedule.value || (schedule.value = {}))[name] = value.apply(this, arguments);
+  }), function(node) {
+    return get2(node, id2).value[name];
+  };
+}
+var init_tween = __esm({
+  "node_modules/d3-transition/src/transition/tween.js"() {
+    init_schedule();
+  }
+});
+
+// node_modules/d3-transition/src/transition/interpolate.js
+function interpolate_default2(a, b) {
+  var c;
+  return (typeof b == "number" ? number_default : b instanceof color ? rgb_default : (c = color(b)) ? (b = c, rgb_default) : string_default)(a, b);
+}
+var init_interpolate2 = __esm({
+  "node_modules/d3-transition/src/transition/interpolate.js"() {
+    init_src8();
+    init_src9();
+  }
+});
+
+// node_modules/d3-transition/src/transition/attr.js
+function attrRemove2(name) {
+  return function() {
+    this.removeAttribute(name);
+  };
+}
+function attrRemoveNS2(fullname) {
+  return function() {
+    this.removeAttributeNS(fullname.space, fullname.local);
+  };
+}
+function attrConstant2(name, interpolate, value1) {
+  var string00, string1 = value1 + "", interpolate0;
+  return function() {
+    var string0 = this.getAttribute(name);
+    return string0 === string1 ? null : string0 === string00 ? interpolate0 : interpolate0 = interpolate(string00 = string0, value1);
+  };
+}
+function attrConstantNS2(fullname, interpolate, value1) {
+  var string00, string1 = value1 + "", interpolate0;
+  return function() {
+    var string0 = this.getAttributeNS(fullname.space, fullname.local);
+    return string0 === string1 ? null : string0 === string00 ? interpolate0 : interpolate0 = interpolate(string00 = string0, value1);
+  };
+}
+function attrFunction2(name, interpolate, value) {
+  var string00, string10, interpolate0;
+  return function() {
+    var string0, value1 = value(this), string1;
+    return value1 == null ? void this.removeAttribute(name) : (string0 = this.getAttribute(name), string1 = value1 + "", string0 === string1 ? null : string0 === string00 && string1 === string10 ? interpolate0 : (string10 = string1, interpolate0 = interpolate(string00 = string0, value1)));
+  };
+}
+function attrFunctionNS2(fullname, interpolate, value) {
+  var string00, string10, interpolate0;
+  return function() {
+    var string0, value1 = value(this), string1;
+    return value1 == null ? void this.removeAttributeNS(fullname.space, fullname.local) : (string0 = this.getAttributeNS(fullname.space, fullname.local), string1 = value1 + "", string0 === string1 ? null : string0 === string00 && string1 === string10 ? interpolate0 : (string10 = string1, interpolate0 = interpolate(string00 = string0, value1)));
+  };
+}
+function attr_default2(name, value) {
+  var fullname = namespace_default(name), i = fullname === "transform" ? interpolateTransformSvg : interpolate_default2;
+  return this.attrTween(name, typeof value == "function" ? (fullname.local ? attrFunctionNS2 : attrFunction2)(fullname, i, tweenValue(this, "attr." + name, value)) : value == null ? (fullname.local ? attrRemoveNS2 : attrRemove2)(fullname) : (fullname.local ? attrConstantNS2 : attrConstant2)(fullname, i, value));
+}
+var init_attr2 = __esm({
+  "node_modules/d3-transition/src/transition/attr.js"() {
+    init_src9();
+    init_src6();
+    init_tween();
+    init_interpolate2();
+  }
+});
+
+// node_modules/d3-transition/src/transition/attrTween.js
+function attrInterpolate(name, i) {
+  return function(t) {
+    this.setAttribute(name, i.call(this, t));
+  };
+}
+function attrInterpolateNS(fullname, i) {
+  return function(t) {
+    this.setAttributeNS(fullname.space, fullname.local, i.call(this, t));
+  };
+}
+function attrTweenNS(fullname, value) {
+  var t0, i0;
+  function tween() {
+    var i = value.apply(this, arguments);
+    return i !== i0 && (t0 = (i0 = i) && attrInterpolateNS(fullname, i)), t0;
+  }
+  return tween._value = value, tween;
+}
+function attrTween(name, value) {
+  var t0, i0;
+  function tween() {
+    var i = value.apply(this, arguments);
+    return i !== i0 && (t0 = (i0 = i) && attrInterpolate(name, i)), t0;
+  }
+  return tween._value = value, tween;
+}
+function attrTween_default(name, value) {
+  var key = "attr." + name;
+  if (arguments.length < 2)
+    return (key = this.tween(key)) && key._value;
+  if (value == null)
+    return this.tween(key, null);
+  if (typeof value != "function")
+    throw new Error();
+  var fullname = namespace_default(name);
+  return this.tween(key, (fullname.local ? attrTweenNS : attrTween)(fullname, value));
+}
+var init_attrTween = __esm({
+  "node_modules/d3-transition/src/transition/attrTween.js"() {
+    init_src6();
+  }
+});
+
+// node_modules/d3-transition/src/transition/delay.js
+function delayFunction(id2, value) {
+  return function() {
+    init(this, id2).delay = +value.apply(this, arguments);
+  };
+}
+function delayConstant(id2, value) {
+  return value = +value, function() {
+    init(this, id2).delay = value;
+  };
+}
+function delay_default(value) {
+  var id2 = this._id;
+  return arguments.length ? this.each((typeof value == "function" ? delayFunction : delayConstant)(id2, value)) : get2(this.node(), id2).delay;
+}
+var init_delay = __esm({
+  "node_modules/d3-transition/src/transition/delay.js"() {
+    init_schedule();
+  }
+});
+
+// node_modules/d3-transition/src/transition/duration.js
+function durationFunction(id2, value) {
+  return function() {
+    set2(this, id2).duration = +value.apply(this, arguments);
+  };
+}
+function durationConstant(id2, value) {
+  return value = +value, function() {
+    set2(this, id2).duration = value;
+  };
+}
+function duration_default(value) {
+  var id2 = this._id;
+  return arguments.length ? this.each((typeof value == "function" ? durationFunction : durationConstant)(id2, value)) : get2(this.node(), id2).duration;
+}
+var init_duration = __esm({
+  "node_modules/d3-transition/src/transition/duration.js"() {
+    init_schedule();
+  }
+});
+
+// node_modules/d3-transition/src/transition/ease.js
+function easeConstant(id2, value) {
+  if (typeof value != "function")
+    throw new Error();
+  return function() {
+    set2(this, id2).ease = value;
+  };
+}
+function ease_default(value) {
+  var id2 = this._id;
+  return arguments.length ? this.each(easeConstant(id2, value)) : get2(this.node(), id2).ease;
+}
+var init_ease = __esm({
+  "node_modules/d3-transition/src/transition/ease.js"() {
+    init_schedule();
+  }
+});
+
+// node_modules/d3-transition/src/transition/easeVarying.js
+function easeVarying(id2, value) {
+  return function() {
+    var v = value.apply(this, arguments);
+    if (typeof v != "function")
+      throw new Error();
+    set2(this, id2).ease = v;
+  };
+}
+function easeVarying_default(value) {
+  if (typeof value != "function")
+    throw new Error();
+  return this.each(easeVarying(this._id, value));
+}
+var init_easeVarying = __esm({
+  "node_modules/d3-transition/src/transition/easeVarying.js"() {
+    init_schedule();
+  }
+});
+
+// node_modules/d3-transition/src/transition/filter.js
+function filter_default2(match) {
+  typeof match != "function" && (match = matcher_default(match));
+  for (var groups = this._groups, m = groups.length, subgroups = new Array(m), j = 0; j < m; ++j)
+    for (var group = groups[j], n = group.length, subgroup = subgroups[j] = [], node, i = 0; i < n; ++i)
+      (node = group[i]) && match.call(node, node.__data__, i, group) && subgroup.push(node);
+  return new Transition(subgroups, this._parents, this._name, this._id);
+}
+var init_filter2 = __esm({
+  "node_modules/d3-transition/src/transition/filter.js"() {
+    init_src6();
+    init_transition2();
+  }
+});
+
+// node_modules/d3-transition/src/transition/merge.js
+function merge_default3(transition2) {
+  if (transition2._id !== this._id)
+    throw new Error();
+  for (var groups0 = this._groups, groups1 = transition2._groups, m0 = groups0.length, m1 = groups1.length, m = Math.min(m0, m1), merges = new Array(m0), j = 0; j < m; ++j)
+    for (var group0 = groups0[j], group1 = groups1[j], n = group0.length, merge2 = merges[j] = new Array(n), node, i = 0; i < n; ++i)
+      (node = group0[i] || group1[i]) && (merge2[i] = node);
+  for (; j < m0; ++j)
+    merges[j] = groups0[j];
+  return new Transition(merges, this._parents, this._name, this._id);
+}
+var init_merge4 = __esm({
+  "node_modules/d3-transition/src/transition/merge.js"() {
+    init_transition2();
+  }
+});
+
+// node_modules/d3-transition/src/transition/on.js
+function start(name) {
+  return (name + "").trim().split(/^|\s+/).every(function(t) {
+    var i = t.indexOf(".");
+    return i >= 0 && (t = t.slice(0, i)), !t || t === "start";
+  });
+}
+function onFunction(id2, name, listener) {
+  var on0, on1, sit = start(name) ? init : set2;
+  return function() {
+    var schedule = sit(this, id2), on = schedule.on;
+    on !== on0 && (on1 = (on0 = on).copy()).on(name, listener), schedule.on = on1;
+  };
+}
+function on_default2(name, listener) {
+  var id2 = this._id;
+  return arguments.length < 2 ? get2(this.node(), id2).on.on(name) : this.each(onFunction(id2, name, listener));
+}
+var init_on2 = __esm({
+  "node_modules/d3-transition/src/transition/on.js"() {
+    init_schedule();
+  }
+});
+
+// node_modules/d3-transition/src/transition/remove.js
+function removeFunction(id2) {
+  return function() {
+    var parent = this.parentNode;
+    for (var i in this.__transition)
+      if (+i !== id2)
+        return;
+    parent && parent.removeChild(this);
+  };
+}
+function remove_default2() {
+  return this.on("end.remove", removeFunction(this._id));
+}
+var init_remove2 = __esm({
+  "node_modules/d3-transition/src/transition/remove.js"() {
+  }
+});
+
+// node_modules/d3-transition/src/transition/select.js
+function select_default3(select) {
+  var name = this._name, id2 = this._id;
+  typeof select != "function" && (select = selector_default(select));
+  for (var groups = this._groups, m = groups.length, subgroups = new Array(m), j = 0; j < m; ++j)
+    for (var group = groups[j], n = group.length, subgroup = subgroups[j] = new Array(n), node, subnode, i = 0; i < n; ++i)
+      (node = group[i]) && (subnode = select.call(node, node.__data__, i, group)) && ("__data__" in node && (subnode.__data__ = node.__data__), subgroup[i] = subnode, schedule_default(subgroup[i], name, id2, i, subgroup, get2(node, id2)));
+  return new Transition(subgroups, this._parents, name, id2);
+}
+var init_select3 = __esm({
+  "node_modules/d3-transition/src/transition/select.js"() {
+    init_src6();
+    init_transition2();
+    init_schedule();
+  }
+});
+
+// node_modules/d3-transition/src/transition/selectAll.js
+function selectAll_default3(select) {
+  var name = this._name, id2 = this._id;
+  typeof select != "function" && (select = selectorAll_default(select));
+  for (var groups = this._groups, m = groups.length, subgroups = [], parents = [], j = 0; j < m; ++j)
+    for (var group = groups[j], n = group.length, node, i = 0; i < n; ++i)
+      if (node = group[i]) {
+        for (var children2 = select.call(node, node.__data__, i, group), child, inherit2 = get2(node, id2), k = 0, l = children2.length; k < l; ++k)
+          (child = children2[k]) && schedule_default(child, name, id2, k, children2, inherit2);
+        subgroups.push(children2), parents.push(node);
+      }
+  return new Transition(subgroups, parents, name, id2);
+}
+var init_selectAll3 = __esm({
+  "node_modules/d3-transition/src/transition/selectAll.js"() {
+    init_src6();
+    init_transition2();
+    init_schedule();
+  }
+});
+
+// node_modules/d3-transition/src/transition/selection.js
+function selection_default2() {
+  return new Selection2(this._groups, this._parents);
+}
+var Selection2, init_selection2 = __esm({
+  "node_modules/d3-transition/src/transition/selection.js"() {
+    init_src6();
+    Selection2 = selection_default.prototype.constructor;
+  }
+});
+
+// node_modules/d3-transition/src/transition/style.js
+function styleNull(name, interpolate) {
+  var string00, string10, interpolate0;
+  return function() {
+    var string0 = styleValue(this, name), string1 = (this.style.removeProperty(name), styleValue(this, name));
+    return string0 === string1 ? null : string0 === string00 && string1 === string10 ? interpolate0 : interpolate0 = interpolate(string00 = string0, string10 = string1);
+  };
+}
+function styleRemove2(name) {
+  return function() {
+    this.style.removeProperty(name);
+  };
+}
+function styleConstant2(name, interpolate, value1) {
+  var string00, string1 = value1 + "", interpolate0;
+  return function() {
+    var string0 = styleValue(this, name);
+    return string0 === string1 ? null : string0 === string00 ? interpolate0 : interpolate0 = interpolate(string00 = string0, value1);
+  };
+}
+function styleFunction2(name, interpolate, value) {
+  var string00, string10, interpolate0;
+  return function() {
+    var string0 = styleValue(this, name), value1 = value(this), string1 = value1 + "";
+    return value1 == null && (string1 = value1 = (this.style.removeProperty(name), styleValue(this, name))), string0 === string1 ? null : string0 === string00 && string1 === string10 ? interpolate0 : (string10 = string1, interpolate0 = interpolate(string00 = string0, value1));
+  };
+}
+function styleMaybeRemove(id2, name) {
+  var on0, on1, listener0, key = "style." + name, event = "end." + key, remove2;
+  return function() {
+    var schedule = set2(this, id2), on = schedule.on, listener = schedule.value[key] == null ? remove2 || (remove2 = styleRemove2(name)) : void 0;
+    (on !== on0 || listener0 !== listener) && (on1 = (on0 = on).copy()).on(event, listener0 = listener), schedule.on = on1;
+  };
+}
+function style_default2(name, value, priority) {
+  var i = (name += "") == "transform" ? interpolateTransformCss : interpolate_default2;
+  return value == null ? this.styleTween(name, styleNull(name, i)).on("end.style." + name, styleRemove2(name)) : typeof value == "function" ? this.styleTween(name, styleFunction2(name, i, tweenValue(this, "style." + name, value))).each(styleMaybeRemove(this._id, name)) : this.styleTween(name, styleConstant2(name, i, value), priority).on("end.style." + name, null);
+}
+var init_style2 = __esm({
+  "node_modules/d3-transition/src/transition/style.js"() {
+    init_src9();
+    init_src6();
+    init_schedule();
+    init_tween();
+    init_interpolate2();
+  }
+});
+
+// node_modules/d3-transition/src/transition/styleTween.js
+function styleInterpolate(name, i, priority) {
+  return function(t) {
+    this.style.setProperty(name, i.call(this, t), priority);
+  };
+}
+function styleTween(name, value, priority) {
+  var t, i0;
+  function tween() {
+    var i = value.apply(this, arguments);
+    return i !== i0 && (t = (i0 = i) && styleInterpolate(name, i, priority)), t;
+  }
+  return tween._value = value, tween;
+}
+function styleTween_default(name, value, priority) {
+  var key = "style." + (name += "");
+  if (arguments.length < 2)
+    return (key = this.tween(key)) && key._value;
+  if (value == null)
+    return this.tween(key, null);
+  if (typeof value != "function")
+    throw new Error();
+  return this.tween(key, styleTween(name, value, priority ?? ""));
+}
+var init_styleTween = __esm({
+  "node_modules/d3-transition/src/transition/styleTween.js"() {
+  }
+});
+
+// node_modules/d3-transition/src/transition/text.js
+function textConstant2(value) {
+  return function() {
+    this.textContent = value;
+  };
+}
+function textFunction2(value) {
+  return function() {
+    var value1 = value(this);
+    this.textContent = value1 ?? "";
+  };
+}
+function text_default2(value) {
+  return this.tween("text", typeof value == "function" ? textFunction2(tweenValue(this, "text", value)) : textConstant2(value == null ? "" : value + ""));
+}
+var init_text2 = __esm({
+  "node_modules/d3-transition/src/transition/text.js"() {
+    init_tween();
+  }
+});
+
+// node_modules/d3-transition/src/transition/textTween.js
+function textInterpolate(i) {
+  return function(t) {
+    this.textContent = i.call(this, t);
+  };
+}
+function textTween(value) {
+  var t0, i0;
+  function tween() {
+    var i = value.apply(this, arguments);
+    return i !== i0 && (t0 = (i0 = i) && textInterpolate(i)), t0;
+  }
+  return tween._value = value, tween;
+}
+function textTween_default(value) {
+  var key = "text";
+  if (arguments.length < 1)
+    return (key = this.tween(key)) && key._value;
+  if (value == null)
+    return this.tween(key, null);
+  if (typeof value != "function")
+    throw new Error();
+  return this.tween(key, textTween(value));
+}
+var init_textTween = __esm({
+  "node_modules/d3-transition/src/transition/textTween.js"() {
+  }
+});
+
+// node_modules/d3-transition/src/transition/transition.js
+function transition_default() {
+  for (var name = this._name, id0 = this._id, id1 = newId(), groups = this._groups, m = groups.length, j = 0; j < m; ++j)
+    for (var group = groups[j], n = group.length, node, i = 0; i < n; ++i)
+      if (node = group[i]) {
+        var inherit2 = get2(node, id0);
+        schedule_default(node, name, id1, i, group, {
+          time: inherit2.time + inherit2.delay + inherit2.duration,
+          delay: 0,
+          duration: inherit2.duration,
+          ease: inherit2.ease
+        });
+      }
+  return new Transition(groups, this._parents, name, id1);
+}
+var init_transition = __esm({
+  "node_modules/d3-transition/src/transition/transition.js"() {
+    init_transition2();
+    init_schedule();
+  }
+});
+
+// node_modules/d3-transition/src/transition/end.js
+function end_default() {
+  var on0, on1, that = this, id2 = that._id, size = that.size();
+  return new Promise(function(resolve, reject) {
+    var cancel = { value: reject }, end = { value: function() {
+      --size === 0 && resolve();
+    } };
+    that.each(function() {
+      var schedule = set2(this, id2), on = schedule.on;
+      on !== on0 && (on1 = (on0 = on).copy(), on1._.cancel.push(cancel), on1._.interrupt.push(cancel), on1._.end.push(end)), schedule.on = on1;
+    }), size === 0 && resolve();
+  });
+}
+var init_end = __esm({
+  "node_modules/d3-transition/src/transition/end.js"() {
+    init_schedule();
+  }
+});
+
+// node_modules/d3-transition/src/transition/index.js
+function Transition(groups, parents, name, id2) {
+  this._groups = groups, this._parents = parents, this._name = name, this._id = id2;
+}
+function transition(name) {
+  return selection_default().transition(name);
+}
+function newId() {
+  return ++id;
+}
+var id, selection_prototype, init_transition2 = __esm({
+  "node_modules/d3-transition/src/transition/index.js"() {
+    init_src6();
+    init_attr2();
+    init_attrTween();
+    init_delay();
+    init_duration();
+    init_ease();
+    init_easeVarying();
+    init_filter2();
+    init_merge4();
+    init_on2();
+    init_remove2();
+    init_select3();
+    init_selectAll3();
+    init_selection2();
+    init_style2();
+    init_styleTween();
+    init_text2();
+    init_textTween();
+    init_transition();
+    init_tween();
+    init_end();
+    id = 0;
+    selection_prototype = selection_default.prototype;
+    Transition.prototype = transition.prototype = {
+      constructor: Transition,
+      select: select_default3,
+      selectAll: selectAll_default3,
+      filter: filter_default2,
+      merge: merge_default3,
+      selection: selection_default2,
+      transition: transition_default,
+      call: selection_prototype.call,
+      nodes: selection_prototype.nodes,
+      node: selection_prototype.node,
+      size: selection_prototype.size,
+      empty: selection_prototype.empty,
+      each: selection_prototype.each,
+      on: on_default2,
+      attr: attr_default2,
+      attrTween: attrTween_default,
+      style: style_default2,
+      styleTween: styleTween_default,
+      text: text_default2,
+      textTween: textTween_default,
+      remove: remove_default2,
+      tween: tween_default,
+      delay: delay_default,
+      duration: duration_default,
+      ease: ease_default,
+      easeVarying: easeVarying_default,
+      end: end_default,
+      [Symbol.iterator]: selection_prototype[Symbol.iterator]
+    };
+  }
+});
+
+// node_modules/d3-ease/src/cubic.js
+function cubicInOut(t) {
+  return ((t *= 2) <= 1 ? t * t * t : (t -= 2) * t * t + 2) / 2;
+}
+var init_cubic = __esm({
+  "node_modules/d3-ease/src/cubic.js"() {
+  }
+});
+
+// node_modules/d3-ease/src/index.js
+var init_src11 = __esm({
+  "node_modules/d3-ease/src/index.js"() {
+    init_cubic();
+  }
+});
+
+// node_modules/d3-transition/src/selection/transition.js
+function inherit(node, id2) {
+  for (var timing; !(timing = node.__transition) || !(timing = timing[id2]); )
+    if (!(node = node.parentNode))
+      throw new Error(`transition ${id2} not found`);
+  return timing;
+}
+function transition_default2(name) {
+  var id2, timing;
+  name instanceof Transition ? (id2 = name._id, name = name._name) : (id2 = newId(), (timing = defaultTiming).time = now(), name = name == null ? null : name + "");
+  for (var groups = this._groups, m = groups.length, j = 0; j < m; ++j)
+    for (var group = groups[j], n = group.length, node, i = 0; i < n; ++i)
+      (node = group[i]) && schedule_default(node, name, id2, i, group, timing || inherit(node, id2));
+  return new Transition(groups, this._parents, name, id2);
+}
+var defaultTiming, init_transition3 = __esm({
+  "node_modules/d3-transition/src/selection/transition.js"() {
+    init_transition2();
+    init_schedule();
+    init_src11();
+    init_src10();
+    defaultTiming = {
+      time: null,
+      delay: 0,
+      duration: 250,
+      ease: cubicInOut
+    };
+  }
+});
+
+// node_modules/d3-transition/src/selection/index.js
+var init_selection3 = __esm({
+  "node_modules/d3-transition/src/selection/index.js"() {
+    init_src6();
+    init_interrupt2();
+    init_transition3();
+    selection_default.prototype.interrupt = interrupt_default2;
+    selection_default.prototype.transition = transition_default2;
+  }
+});
+
+// node_modules/d3-transition/src/active.js
+var init_active = __esm({
+  "node_modules/d3-transition/src/active.js"() {
+    init_transition2();
+    init_schedule();
+  }
+});
+
+// node_modules/d3-transition/src/index.js
+var init_src12 = __esm({
+  "node_modules/d3-transition/src/index.js"() {
+    init_selection3();
+    init_transition2();
+    init_active();
+    init_interrupt();
+  }
+});
+
+// node_modules/d3-zoom/src/constant.js
+var constant_default4, init_constant4 = __esm({
+  "node_modules/d3-zoom/src/constant.js"() {
+    constant_default4 = (x) => () => x;
+  }
+});
+
+// node_modules/d3-zoom/src/event.js
+function ZoomEvent(type, {
+  sourceEvent,
+  target,
+  transform: transform2,
+  dispatch: dispatch2
+}) {
+  Object.defineProperties(this, {
+    type: { value: type, enumerable: !0, configurable: !0 },
+    sourceEvent: { value: sourceEvent, enumerable: !0, configurable: !0 },
+    target: { value: target, enumerable: !0, configurable: !0 },
+    transform: { value: transform2, enumerable: !0, configurable: !0 },
+    _: { value: dispatch2 }
+  });
+}
+var init_event = __esm({
+  "node_modules/d3-zoom/src/event.js"() {
+  }
+});
+
+// node_modules/d3-zoom/src/transform.js
+function Transform(k, x, y) {
+  this.k = k, this.x = x, this.y = y;
+}
+function transform(node) {
+  for (; !node.__zoom; )
+    if (!(node = node.parentNode))
+      return identity2;
+  return node.__zoom;
+}
+var identity2, init_transform4 = __esm({
+  "node_modules/d3-zoom/src/transform.js"() {
+    Transform.prototype = {
+      constructor: Transform,
+      scale: function(k) {
+        return k === 1 ? this : new Transform(this.k * k, this.x, this.y);
+      },
+      translate: function(x, y) {
+        return x === 0 & y === 0 ? this : new Transform(this.k, this.x + this.k * x, this.y + this.k * y);
+      },
+      apply: function(point) {
+        return [point[0] * this.k + this.x, point[1] * this.k + this.y];
+      },
+      applyX: function(x) {
+        return x * this.k + this.x;
+      },
+      applyY: function(y) {
+        return y * this.k + this.y;
+      },
+      invert: function(location) {
+        return [(location[0] - this.x) / this.k, (location[1] - this.y) / this.k];
+      },
+      invertX: function(x) {
+        return (x - this.x) / this.k;
+      },
+      invertY: function(y) {
+        return (y - this.y) / this.k;
+      },
+      rescaleX: function(x) {
+        return x.copy().domain(x.range().map(this.invertX, this).map(x.invert, x));
+      },
+      rescaleY: function(y) {
+        return y.copy().domain(y.range().map(this.invertY, this).map(y.invert, y));
+      },
+      toString: function() {
+        return "translate(" + this.x + "," + this.y + ") scale(" + this.k + ")";
+      }
+    };
+    identity2 = new Transform(1, 0, 0);
+    transform.prototype = Transform.prototype;
+  }
+});
+
+// node_modules/d3-zoom/src/noevent.js
+function nopropagation(event) {
+  event.stopImmediatePropagation();
+}
+function noevent_default2(event) {
+  event.preventDefault(), event.stopImmediatePropagation();
+}
+var init_noevent2 = __esm({
+  "node_modules/d3-zoom/src/noevent.js"() {
+  }
+});
+
+// node_modules/d3-zoom/src/zoom.js
+function defaultFilter(event) {
+  return (!event.ctrlKey || event.type === "wheel") && !event.button;
+}
+function defaultExtent() {
+  var e = this;
+  return e instanceof SVGElement ? (e = e.ownerSVGElement || e, e.hasAttribute("viewBox") ? (e = e.viewBox.baseVal, [[e.x, e.y], [e.x + e.width, e.y + e.height]]) : [[0, 0], [e.width.baseVal.value, e.height.baseVal.value]]) : [[0, 0], [e.clientWidth, e.clientHeight]];
+}
+function defaultTransform() {
+  return this.__zoom || identity2;
+}
+function defaultWheelDelta(event) {
+  return -event.deltaY * (event.deltaMode === 1 ? 0.05 : event.deltaMode ? 1 : 2e-3) * (event.ctrlKey ? 10 : 1);
+}
+function defaultTouchable() {
+  return navigator.maxTouchPoints || "ontouchstart" in this;
+}
+function defaultConstrain(transform2, extent, translateExtent) {
+  var dx0 = transform2.invertX(extent[0][0]) - translateExtent[0][0], dx1 = transform2.invertX(extent[1][0]) - translateExtent[1][0], dy0 = transform2.invertY(extent[0][1]) - translateExtent[0][1], dy1 = transform2.invertY(extent[1][1]) - translateExtent[1][1];
+  return transform2.translate(
+    dx1 > dx0 ? (dx0 + dx1) / 2 : Math.min(0, dx0) || Math.max(0, dx1),
+    dy1 > dy0 ? (dy0 + dy1) / 2 : Math.min(0, dy0) || Math.max(0, dy1)
+  );
+}
+function zoom_default2() {
+  var filter2 = defaultFilter, extent = defaultExtent, constrain = defaultConstrain, wheelDelta = defaultWheelDelta, touchable = defaultTouchable, scaleExtent = [0, 1 / 0], translateExtent = [[-1 / 0, -1 / 0], [1 / 0, 1 / 0]], duration = 250, interpolate = zoom_default, listeners = dispatch_default("start", "zoom", "end"), touchstarting, touchfirst, touchending, touchDelay = 500, wheelDelay = 150, clickDistance2 = 0, tapDistance = 10;
+  function zoom(selection2) {
+    selection2.property("__zoom", defaultTransform).on("wheel.zoom", wheeled).on("mousedown.zoom", mousedowned).on("dblclick.zoom", dblclicked).filter(touchable).on("touchstart.zoom", touchstarted).on("touchmove.zoom", touchmoved).on("touchend.zoom touchcancel.zoom", touchended).style("-webkit-tap-highlight-color", "rgba(0,0,0,0)");
+  }
+  zoom.transform = function(collection, transform2, point, event) {
+    var selection2 = collection.selection ? collection.selection() : collection;
+    selection2.property("__zoom", defaultTransform), collection !== selection2 ? schedule(collection, transform2, point, event) : selection2.interrupt().each(function() {
+      gesture(this, arguments).event(event).start().zoom(null, typeof transform2 == "function" ? transform2.apply(this, arguments) : transform2).end();
+    });
+  }, zoom.scaleBy = function(selection2, k, p, event) {
+    zoom.scaleTo(selection2, function() {
+      var k0 = this.__zoom.k, k1 = typeof k == "function" ? k.apply(this, arguments) : k;
+      return k0 * k1;
+    }, p, event);
+  }, zoom.scaleTo = function(selection2, k, p, event) {
+    zoom.transform(selection2, function() {
+      var e = extent.apply(this, arguments), t0 = this.__zoom, p02 = p == null ? centroid(e) : typeof p == "function" ? p.apply(this, arguments) : p, p1 = t0.invert(p02), k1 = typeof k == "function" ? k.apply(this, arguments) : k;
+      return constrain(translate(scale(t0, k1), p02, p1), e, translateExtent);
+    }, p, event);
+  }, zoom.translateBy = function(selection2, x, y, event) {
+    zoom.transform(selection2, function() {
+      return constrain(this.__zoom.translate(
+        typeof x == "function" ? x.apply(this, arguments) : x,
+        typeof y == "function" ? y.apply(this, arguments) : y
+      ), extent.apply(this, arguments), translateExtent);
+    }, null, event);
+  }, zoom.translateTo = function(selection2, x, y, p, event) {
+    zoom.transform(selection2, function() {
+      var e = extent.apply(this, arguments), t = this.__zoom, p02 = p == null ? centroid(e) : typeof p == "function" ? p.apply(this, arguments) : p;
+      return constrain(identity2.translate(p02[0], p02[1]).scale(t.k).translate(
+        typeof x == "function" ? -x.apply(this, arguments) : -x,
+        typeof y == "function" ? -y.apply(this, arguments) : -y
+      ), e, translateExtent);
+    }, p, event);
+  };
+  function scale(transform2, k) {
+    return k = Math.max(scaleExtent[0], Math.min(scaleExtent[1], k)), k === transform2.k ? transform2 : new Transform(k, transform2.x, transform2.y);
+  }
+  function translate(transform2, p02, p1) {
+    var x = p02[0] - p1[0] * transform2.k, y = p02[1] - p1[1] * transform2.k;
+    return x === transform2.x && y === transform2.y ? transform2 : new Transform(transform2.k, x, y);
+  }
+  function centroid(extent2) {
+    return [(+extent2[0][0] + +extent2[1][0]) / 2, (+extent2[0][1] + +extent2[1][1]) / 2];
+  }
+  function schedule(transition2, transform2, point, event) {
+    transition2.on("start.zoom", function() {
+      gesture(this, arguments).event(event).start();
+    }).on("interrupt.zoom end.zoom", function() {
+      gesture(this, arguments).event(event).end();
+    }).tween("zoom", function() {
+      var that = this, args = arguments, g = gesture(that, args).event(event), e = extent.apply(that, args), p = point == null ? centroid(e) : typeof point == "function" ? point.apply(that, args) : point, w = Math.max(e[1][0] - e[0][0], e[1][1] - e[0][1]), a = that.__zoom, b = typeof transform2 == "function" ? transform2.apply(that, args) : transform2, i = interpolate(a.invert(p).concat(w / a.k), b.invert(p).concat(w / b.k));
+      return function(t) {
+        if (t === 1)
+          t = b;
+        else {
+          var l = i(t), k = w / l[2];
+          t = new Transform(k, p[0] - l[0] * k, p[1] - l[1] * k);
+        }
+        g.zoom(null, t);
+      };
+    });
+  }
+  function gesture(that, args, clean) {
+    return !clean && that.__zooming || new Gesture(that, args);
+  }
+  function Gesture(that, args) {
+    this.that = that, this.args = args, this.active = 0, this.sourceEvent = null, this.extent = extent.apply(that, args), this.taps = 0;
+  }
+  Gesture.prototype = {
+    event: function(event) {
+      return event && (this.sourceEvent = event), this;
+    },
+    start: function() {
+      return ++this.active === 1 && (this.that.__zooming = this, this.emit("start")), this;
+    },
+    zoom: function(key, transform2) {
+      return this.mouse && key !== "mouse" && (this.mouse[1] = transform2.invert(this.mouse[0])), this.touch0 && key !== "touch" && (this.touch0[1] = transform2.invert(this.touch0[0])), this.touch1 && key !== "touch" && (this.touch1[1] = transform2.invert(this.touch1[0])), this.that.__zoom = transform2, this.emit("zoom"), this;
+    },
+    end: function() {
+      return --this.active === 0 && (delete this.that.__zooming, this.emit("end")), this;
+    },
+    emit: function(type) {
+      var d = select_default2(this.that).datum();
+      listeners.call(
+        type,
+        this.that,
+        new ZoomEvent(type, {
+          sourceEvent: this.sourceEvent,
+          target: zoom,
+          type,
+          transform: this.that.__zoom,
+          dispatch: listeners
+        }),
+        d
+      );
+    }
+  };
+  function wheeled(event, ...args) {
+    if (!filter2.apply(this, arguments))
+      return;
+    var g = gesture(this, args).event(event), t = this.__zoom, k = Math.max(scaleExtent[0], Math.min(scaleExtent[1], t.k * Math.pow(2, wheelDelta.apply(this, arguments)))), p = pointer_default(event);
+    if (g.wheel)
+      (g.mouse[0][0] !== p[0] || g.mouse[0][1] !== p[1]) && (g.mouse[1] = t.invert(g.mouse[0] = p)), clearTimeout(g.wheel);
+    else {
+      if (t.k === k)
+        return;
+      g.mouse = [p, t.invert(p)], interrupt_default(this), g.start();
+    }
+    noevent_default2(event), g.wheel = setTimeout(wheelidled, wheelDelay), g.zoom("mouse", constrain(translate(scale(t, k), g.mouse[0], g.mouse[1]), g.extent, translateExtent));
+    function wheelidled() {
+      g.wheel = null, g.end();
+    }
+  }
+  function mousedowned(event, ...args) {
+    if (touchending || !filter2.apply(this, arguments))
+      return;
+    var g = gesture(this, args, !0).event(event), v = select_default2(event.view).on("mousemove.zoom", mousemoved, !0).on("mouseup.zoom", mouseupped, !0), p = pointer_default(event, currentTarget), currentTarget = event.currentTarget, x06 = event.clientX, y06 = event.clientY;
+    nodrag_default(event.view), nopropagation(event), g.mouse = [p, this.__zoom.invert(p)], interrupt_default(this), g.start();
+    function mousemoved(event2) {
+      if (noevent_default2(event2), !g.moved) {
+        var dx = event2.clientX - x06, dy = event2.clientY - y06;
+        g.moved = dx * dx + dy * dy > clickDistance2;
+      }
+      g.event(event2).zoom("mouse", constrain(translate(g.that.__zoom, g.mouse[0] = pointer_default(event2, currentTarget), g.mouse[1]), g.extent, translateExtent));
+    }
+    function mouseupped(event2) {
+      v.on("mousemove.zoom mouseup.zoom", null), yesdrag(event2.view, g.moved), noevent_default2(event2), g.event(event2).end();
+    }
+  }
+  function dblclicked(event, ...args) {
+    if (!!filter2.apply(this, arguments)) {
+      var t0 = this.__zoom, p02 = pointer_default(event.changedTouches ? event.changedTouches[0] : event, this), p1 = t0.invert(p02), k1 = t0.k * (event.shiftKey ? 0.5 : 2), t1 = constrain(translate(scale(t0, k1), p02, p1), extent.apply(this, args), translateExtent);
+      noevent_default2(event), duration > 0 ? select_default2(this).transition().duration(duration).call(schedule, t1, p02, event) : select_default2(this).call(zoom.transform, t1, p02, event);
+    }
+  }
+  function touchstarted(event, ...args) {
+    if (!!filter2.apply(this, arguments)) {
+      var touches = event.touches, n = touches.length, g = gesture(this, args, event.changedTouches.length === n).event(event), started, i, t, p;
+      for (nopropagation(event), i = 0; i < n; ++i)
+        t = touches[i], p = pointer_default(t, this), p = [p, this.__zoom.invert(p), t.identifier], g.touch0 ? !g.touch1 && g.touch0[2] !== p[2] && (g.touch1 = p, g.taps = 0) : (g.touch0 = p, started = !0, g.taps = 1 + !!touchstarting);
+      touchstarting && (touchstarting = clearTimeout(touchstarting)), started && (g.taps < 2 && (touchfirst = p[0], touchstarting = setTimeout(function() {
+        touchstarting = null;
+      }, touchDelay)), interrupt_default(this), g.start());
+    }
+  }
+  function touchmoved(event, ...args) {
+    if (!!this.__zooming) {
+      var g = gesture(this, args).event(event), touches = event.changedTouches, n = touches.length, i, t, p, l;
+      for (noevent_default2(event), i = 0; i < n; ++i)
+        t = touches[i], p = pointer_default(t, this), g.touch0 && g.touch0[2] === t.identifier ? g.touch0[0] = p : g.touch1 && g.touch1[2] === t.identifier && (g.touch1[0] = p);
+      if (t = g.that.__zoom, g.touch1) {
+        var p02 = g.touch0[0], l0 = g.touch0[1], p1 = g.touch1[0], l1 = g.touch1[1], dp = (dp = p1[0] - p02[0]) * dp + (dp = p1[1] - p02[1]) * dp, dl = (dl = l1[0] - l0[0]) * dl + (dl = l1[1] - l0[1]) * dl;
+        t = scale(t, Math.sqrt(dp / dl)), p = [(p02[0] + p1[0]) / 2, (p02[1] + p1[1]) / 2], l = [(l0[0] + l1[0]) / 2, (l0[1] + l1[1]) / 2];
+      } else if (g.touch0)
+        p = g.touch0[0], l = g.touch0[1];
+      else
+        return;
+      g.zoom("touch", constrain(translate(t, p, l), g.extent, translateExtent));
+    }
+  }
+  function touchended(event, ...args) {
+    if (!!this.__zooming) {
+      var g = gesture(this, args).event(event), touches = event.changedTouches, n = touches.length, i, t;
+      for (nopropagation(event), touchending && clearTimeout(touchending), touchending = setTimeout(function() {
+        touchending = null;
+      }, touchDelay), i = 0; i < n; ++i)
+        t = touches[i], g.touch0 && g.touch0[2] === t.identifier ? delete g.touch0 : g.touch1 && g.touch1[2] === t.identifier && delete g.touch1;
+      if (g.touch1 && !g.touch0 && (g.touch0 = g.touch1, delete g.touch1), g.touch0)
+        g.touch0[1] = this.__zoom.invert(g.touch0[0]);
+      else if (g.end(), g.taps === 2 && (t = pointer_default(t, this), Math.hypot(touchfirst[0] - t[0], touchfirst[1] - t[1]) < tapDistance)) {
+        var p = select_default2(this).on("dblclick.zoom");
+        p && p.apply(this, arguments);
+      }
+    }
+  }
+  return zoom.wheelDelta = function(_) {
+    return arguments.length ? (wheelDelta = typeof _ == "function" ? _ : constant_default4(+_), zoom) : wheelDelta;
+  }, zoom.filter = function(_) {
+    return arguments.length ? (filter2 = typeof _ == "function" ? _ : constant_default4(!!_), zoom) : filter2;
+  }, zoom.touchable = function(_) {
+    return arguments.length ? (touchable = typeof _ == "function" ? _ : constant_default4(!!_), zoom) : touchable;
+  }, zoom.extent = function(_) {
+    return arguments.length ? (extent = typeof _ == "function" ? _ : constant_default4([[+_[0][0], +_[0][1]], [+_[1][0], +_[1][1]]]), zoom) : extent;
+  }, zoom.scaleExtent = function(_) {
+    return arguments.length ? (scaleExtent[0] = +_[0], scaleExtent[1] = +_[1], zoom) : [scaleExtent[0], scaleExtent[1]];
+  }, zoom.translateExtent = function(_) {
+    return arguments.length ? (translateExtent[0][0] = +_[0][0], translateExtent[1][0] = +_[1][0], translateExtent[0][1] = +_[0][1], translateExtent[1][1] = +_[1][1], zoom) : [[translateExtent[0][0], translateExtent[0][1]], [translateExtent[1][0], translateExtent[1][1]]];
+  }, zoom.constrain = function(_) {
+    return arguments.length ? (constrain = _, zoom) : constrain;
+  }, zoom.duration = function(_) {
+    return arguments.length ? (duration = +_, zoom) : duration;
+  }, zoom.interpolate = function(_) {
+    return arguments.length ? (interpolate = _, zoom) : interpolate;
+  }, zoom.on = function() {
+    var value = listeners.on.apply(listeners, arguments);
+    return value === listeners ? zoom : value;
+  }, zoom.clickDistance = function(_) {
+    return arguments.length ? (clickDistance2 = (_ = +_) * _, zoom) : Math.sqrt(clickDistance2);
+  }, zoom.tapDistance = function(_) {
+    return arguments.length ? (tapDistance = +_, zoom) : tapDistance;
+  }, zoom;
+}
+var init_zoom2 = __esm({
+  "node_modules/d3-zoom/src/zoom.js"() {
+    init_src5();
+    init_src7();
+    init_src9();
+    init_src6();
+    init_src12();
+    init_constant4();
+    init_event();
+    init_transform4();
+    init_noevent2();
+  }
+});
+
+// node_modules/d3-zoom/src/index.js
+var src_exports4 = {};
+__export(src_exports4, {
+  zoom: () => zoom_default2,
+  zoomIdentity: () => identity2,
+  zoomTransform: () => transform
+});
+var init_src13 = __esm({
+  "node_modules/d3-zoom/src/index.js"() {
+    init_zoom2();
+    init_transform4();
+  }
+});
+
+// node_modules/react-simple-maps/dist/index.umd.js
+var require_index_umd = __commonJS({
+  "node_modules/react-simple-maps/dist/index.umd.js"(exports, module) {
+    (function(e, t) {
+      typeof exports == "object" && typeof module < "u" ? t(exports, require_react(), require_prop_types(), (init_src3(), __toCommonJS(src_exports)), (init_src4(), __toCommonJS(src_exports2)), (init_src13(), __toCommonJS(src_exports4)), (init_src6(), __toCommonJS(src_exports3))) : typeof define == "function" && define.amd ? define(["exports", "react", "prop-types", "d3-geo", "topojson-client", "d3-zoom", "d3-selection"], t) : t((e = typeof globalThis < "u" ? globalThis : e || self).reactSimpleMaps = e.reactSimpleMaps || {}, e.React, e.PropTypes, e.d3, e.topojson, e.d3, e.d3);
+    })(exports, function(e, t, r, o, n, a, u) {
+      "use strict";
+      function s(e2) {
+        return e2 && typeof e2 == "object" && "default" in e2 ? e2 : { default: e2 };
+      }
+      function l(e2) {
+        if (e2 && e2.__esModule)
+          return e2;
+        var t2 = /* @__PURE__ */ Object.create(null);
+        return e2 && Object.keys(e2).forEach(function(r2) {
+          if (r2 !== "default") {
+            var o2 = Object.getOwnPropertyDescriptor(e2, r2);
+            Object.defineProperty(t2, r2, o2.get ? o2 : { enumerable: !0, get: function() {
+              return e2[r2];
+            } });
+          }
+        }), t2.default = e2, Object.freeze(t2);
+      }
+      var i = s(t), c = s(r), f = l(o);
+      function d(e2, t2) {
+        var r2 = Object.keys(e2);
+        if (Object.getOwnPropertySymbols) {
+          var o2 = Object.getOwnPropertySymbols(e2);
+          t2 && (o2 = o2.filter(function(t3) {
+            return Object.getOwnPropertyDescriptor(e2, t3).enumerable;
+          })), r2.push.apply(r2, o2);
+        }
+        return r2;
+      }
+      function p(e2) {
+        for (var t2 = 1; t2 < arguments.length; t2++) {
+          var r2 = arguments[t2] != null ? arguments[t2] : {};
+          t2 % 2 ? d(Object(r2), !0).forEach(function(t3) {
+            y(e2, t3, r2[t3]);
+          }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e2, Object.getOwnPropertyDescriptors(r2)) : d(Object(r2)).forEach(function(t3) {
+            Object.defineProperty(e2, t3, Object.getOwnPropertyDescriptor(r2, t3));
+          });
+        }
+        return e2;
+      }
+      function m(e2) {
+        return m = typeof Symbol == "function" && typeof Symbol.iterator == "symbol" ? function(e3) {
+          return typeof e3;
+        } : function(e3) {
+          return e3 && typeof Symbol == "function" && e3.constructor === Symbol && e3 !== Symbol.prototype ? "symbol" : typeof e3;
+        }, m(e2);
+      }
+      function y(e2, t2, r2) {
+        return t2 in e2 ? Object.defineProperty(e2, t2, { value: r2, enumerable: !0, configurable: !0, writable: !0 }) : e2[t2] = r2, e2;
+      }
+      function g() {
+        return g = Object.assign ? Object.assign.bind() : function(e2) {
+          for (var t2 = 1; t2 < arguments.length; t2++) {
+            var r2 = arguments[t2];
+            for (var o2 in r2)
+              Object.prototype.hasOwnProperty.call(r2, o2) && (e2[o2] = r2[o2]);
+          }
+          return e2;
+        }, g.apply(this, arguments);
+      }
+      function v(e2, t2) {
+        if (e2 == null)
+          return {};
+        var r2, o2, n2 = function(e3, t3) {
+          if (e3 == null)
+            return {};
+          var r3, o3, n3 = {}, a3 = Object.keys(e3);
+          for (o3 = 0; o3 < a3.length; o3++)
+            r3 = a3[o3], t3.indexOf(r3) >= 0 || (n3[r3] = e3[r3]);
+          return n3;
+        }(e2, t2);
+        if (Object.getOwnPropertySymbols) {
+          var a2 = Object.getOwnPropertySymbols(e2);
+          for (o2 = 0; o2 < a2.length; o2++)
+            r2 = a2[o2], t2.indexOf(r2) >= 0 || Object.prototype.propertyIsEnumerable.call(e2, r2) && (n2[r2] = e2[r2]);
+        }
+        return n2;
+      }
+      function h(e2, t2) {
+        return function(e3) {
+          if (Array.isArray(e3))
+            return e3;
+        }(e2) || function(e3, t3) {
+          var r2 = e3 == null ? null : typeof Symbol < "u" && e3[Symbol.iterator] || e3["@@iterator"];
+          if (r2 != null) {
+            var o2, n2, a2 = [], u2 = !0, s2 = !1;
+            try {
+              for (r2 = r2.call(e3); !(u2 = (o2 = r2.next()).done) && (a2.push(o2.value), !t3 || a2.length !== t3); u2 = !0)
+                ;
+            } catch (e4) {
+              s2 = !0, n2 = e4;
+            } finally {
+              try {
+                u2 || r2.return == null || r2.return();
+              } finally {
+                if (s2)
+                  throw n2;
+              }
+            }
+            return a2;
+          }
+        }(e2, t2) || function(e3, t3) {
+          if (!!e3) {
+            if (typeof e3 == "string")
+              return b(e3, t3);
+            var r2 = Object.prototype.toString.call(e3).slice(8, -1);
+            if (r2 === "Object" && e3.constructor && (r2 = e3.constructor.name), r2 === "Map" || r2 === "Set")
+              return Array.from(e3);
+            if (r2 === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(r2))
+              return b(e3, t3);
+          }
+        }(e2, t2) || function() {
+          throw new TypeError(`Invalid attempt to destructure non-iterable instance.
+In order to be iterable, non-array objects must have a [Symbol.iterator]() method.`);
+        }();
+      }
+      function b(e2, t2) {
+        (t2 == null || t2 > e2.length) && (t2 = e2.length);
+        for (var r2 = 0, o2 = new Array(t2); r2 < t2; r2++)
+          o2[r2] = e2[r2];
+        return o2;
+      }
+      var j = ["width", "height", "projection", "projectionConfig"], M2 = f.geoPath, E = v(f, ["geoPath"]), x = t.createContext(), k = function(e2) {
+        var r2 = e2.width, o2 = e2.height, n2 = e2.projection, a2 = e2.projectionConfig, u2 = v(e2, j), s2 = h(a2.center || [], 2), l2 = s2[0], c2 = s2[1], f2 = h(a2.rotate || [], 3), d2 = f2[0], p2 = f2[1], m2 = f2[2], y2 = h(a2.parallels || [], 2), b2 = y2[0], k2 = y2[1], w2 = a2.scale || null, O2 = t.useMemo(function() {
+          return function(e3) {
+            var t2 = e3.projectionConfig, r3 = t2 === void 0 ? {} : t2, o3 = e3.projection, n3 = o3 === void 0 ? "geoEqualEarth" : o3, a3 = e3.width, u3 = a3 === void 0 ? 800 : a3, s3 = e3.height, l3 = s3 === void 0 ? 600 : s3;
+            if (typeof n3 == "function")
+              return n3;
+            var i2 = E[n3]().translate([u3 / 2, l3 / 2]);
+            return [i2.center ? "center" : null, i2.rotate ? "rotate" : null, i2.scale ? "scale" : null, i2.parallels ? "parallels" : null].forEach(function(e4) {
+              e4 && (i2 = i2[e4](r3[e4] || i2[e4]()));
+            }), i2;
+          }({ projectionConfig: { center: l2 || l2 === 0 || c2 || c2 === 0 ? [l2, c2] : null, rotate: d2 || d2 === 0 || p2 || p2 === 0 ? [d2, p2, m2] : null, parallels: b2 || b2 === 0 || k2 || k2 === 0 ? [b2, k2] : null, scale: w2 }, projection: n2, width: r2, height: o2 });
+        }, [r2, o2, n2, l2, c2, d2, p2, m2, b2, k2, w2]), N2 = t.useCallback(O2, [O2]), S2 = t.useMemo(function() {
+          return { width: r2, height: o2, projection: N2, path: M2().projection(N2) };
+        }, [r2, o2, N2]);
+        return i.default.createElement(x.Provider, g({ value: S2 }, u2));
+      };
+      k.propTypes = { width: c.default.number, height: c.default.number, projection: c.default.oneOfType([c.default.string, c.default.func]), projectionConfig: c.default.object };
+      var w = ["width", "height", "projection", "projectionConfig", "className"], O = t.forwardRef(function(e2, t2) {
+        var r2 = e2.width, o2 = r2 === void 0 ? 800 : r2, n2 = e2.height, a2 = n2 === void 0 ? 600 : n2, u2 = e2.projection, s2 = u2 === void 0 ? "geoEqualEarth" : u2, l2 = e2.projectionConfig, c2 = l2 === void 0 ? {} : l2, f2 = e2.className, d2 = f2 === void 0 ? "" : f2, p2 = v(e2, w);
+        return i.default.createElement(k, { width: o2, height: a2, projection: s2, projectionConfig: c2 }, i.default.createElement("svg", g({ ref: t2, viewBox: "0 0 ".concat(o2, " ").concat(a2), className: "rsm-svg ".concat(d2) }, p2)));
+      });
+      function N(e2, t2, r2) {
+        var o2 = (e2 * r2.k - e2) / 2, n2 = (t2 * r2.k - t2) / 2;
+        return [e2 / 2 - (o2 + r2.x) / r2.k, t2 / 2 - (n2 + r2.y) / r2.k];
+      }
+      function S(e2, t2) {
+        if (e2.type !== "Topology")
+          return t2 ? t2(e2.features || e2) : e2.features || e2;
+        var r2 = n.feature(e2, e2.objects[Object.keys(e2.objects)[0]]).features;
+        return t2 ? t2(r2) : r2;
+      }
+      function P(e2) {
+        return e2.type === "Topology" ? { outline: n.mesh(e2, e2.objects[Object.keys(e2.objects)[0]], function(e3, t2) {
+          return e3 === t2;
+        }), borders: n.mesh(e2, e2.objects[Object.keys(e2.objects)[0]], function(e3, t2) {
+          return e3 !== t2;
+        }) } : null;
+      }
+      function C(e2, t2) {
+        return e2 ? e2.map(function(e3, r2) {
+          return p(p({}, e3), {}, { rsmKey: "geo-".concat(r2), svgPath: t2(e3) });
+        }) : [];
+      }
+      function T(e2) {
+        var r2 = e2.geography, o2 = e2.parseGeographies, n2 = t.useContext(x).path, a2 = h(t.useState({}), 2), u2 = a2[0], s2 = a2[1];
+        t.useEffect(function() {
+          var e3;
+          (typeof window > "u" ? "undefined" : m(window)) !== "undefined" && r2 && (typeof r2 == "string" ? (e3 = r2, fetch(e3).then(function(e4) {
+            if (!e4.ok)
+              throw Error(e4.statusText);
+            return e4.json();
+          }).catch(function(e4) {
+            console.log("There was a problem when fetching the data: ", e4);
+          })).then(function(e4) {
+            e4 && s2({ geographies: S(e4, o2), mesh: P(e4) });
+          }) : s2({ geographies: S(r2, o2), mesh: P(r2) }));
+        }, [r2, o2]);
+        var l2 = t.useMemo(function() {
+          var e3 = u2.mesh || {}, t2 = function(e4, t3, r3) {
+            return e4 && t3 ? { outline: p(p({}, e4), {}, { rsmKey: "outline", svgPath: r3(e4) }), borders: p(p({}, t3), {}, { rsmKey: "borders", svgPath: r3(t3) }) } : {};
+          }(e3.outline, e3.borders, n2);
+          return { geographies: C(u2.geographies, n2), outline: t2.outline, borders: t2.borders };
+        }, [u2, n2]);
+        return { geographies: l2.geographies, outline: l2.outline, borders: l2.borders };
+      }
+      O.displayName = "ComposableMap", O.propTypes = { width: c.default.number, height: c.default.number, projection: c.default.oneOfType([c.default.string, c.default.func]), projectionConfig: c.default.object, className: c.default.string };
+      var R = ["geography", "children", "parseGeographies", "className"], Z = t.forwardRef(function(e2, r2) {
+        var o2 = e2.geography, n2 = e2.children, a2 = e2.parseGeographies, u2 = e2.className, s2 = u2 === void 0 ? "" : u2, l2 = v(e2, R), c2 = t.useContext(x), f2 = c2.path, d2 = c2.projection, p2 = T({ geography: o2, parseGeographies: a2 }), m2 = p2.geographies, y2 = p2.outline, h2 = p2.borders;
+        return i.default.createElement("g", g({ ref: r2, className: "rsm-geographies ".concat(s2) }, l2), m2 && m2.length > 0 && n2({ geographies: m2, outline: y2, borders: h2, path: f2, projection: d2 }));
+      });
+      Z.displayName = "Geographies", Z.propTypes = { geography: c.default.oneOfType([c.default.string, c.default.object, c.default.array]), children: c.default.func, parseGeographies: c.default.func, className: c.default.string };
+      var z = ["geography", "onMouseEnter", "onMouseLeave", "onMouseDown", "onMouseUp", "onFocus", "onBlur", "style", "className"], G = t.forwardRef(function(e2, r2) {
+        var o2 = e2.geography, n2 = e2.onMouseEnter, a2 = e2.onMouseLeave, u2 = e2.onMouseDown, s2 = e2.onMouseUp, l2 = e2.onFocus, c2 = e2.onBlur, f2 = e2.style, d2 = f2 === void 0 ? {} : f2, p2 = e2.className, m2 = p2 === void 0 ? "" : p2, y2 = v(e2, z), b2 = h(t.useState(!1), 2), j2 = b2[0], M3 = b2[1], E2 = h(t.useState(!1), 2), x2 = E2[0], k2 = E2[1];
+        return i.default.createElement("path", g({ ref: r2, tabIndex: "0", className: "rsm-geography ".concat(m2), d: o2.svgPath, onMouseEnter: function(e3) {
+          k2(!0), n2 && n2(e3);
+        }, onMouseLeave: function(e3) {
+          k2(!1), j2 && M3(!1), a2 && a2(e3);
+        }, onFocus: function(e3) {
+          k2(!0), l2 && l2(e3);
+        }, onBlur: function(e3) {
+          k2(!1), j2 && M3(!1), c2 && c2(e3);
+        }, onMouseDown: function(e3) {
+          M3(!0), u2 && u2(e3);
+        }, onMouseUp: function(e3) {
+          M3(!1), s2 && s2(e3);
+        }, style: d2[j2 || x2 ? j2 ? "pressed" : "hover" : "default"] }, y2));
+      });
+      G.displayName = "Geography", G.propTypes = { geography: c.default.object, onMouseEnter: c.default.func, onMouseLeave: c.default.func, onMouseDown: c.default.func, onMouseUp: c.default.func, onFocus: c.default.func, onBlur: c.default.func, style: c.default.object, className: c.default.string };
+      var D = t.memo(G), L = ["fill", "stroke", "step", "className"], A = t.forwardRef(function(e2, r2) {
+        var n2 = e2.fill, a2 = n2 === void 0 ? "transparent" : n2, u2 = e2.stroke, s2 = u2 === void 0 ? "currentcolor" : u2, l2 = e2.step, c2 = l2 === void 0 ? [10, 10] : l2, f2 = e2.className, d2 = f2 === void 0 ? "" : f2, p2 = v(e2, L), m2 = t.useContext(x).path;
+        return i.default.createElement("path", g({ ref: r2, d: m2(o.geoGraticule().step(c2)()), fill: a2, stroke: s2, className: "rsm-graticule ".concat(d2) }, p2));
+      });
+      A.displayName = "Graticule", A.propTypes = { fill: c.default.string, stroke: c.default.string, step: c.default.array, className: c.default.string };
+      var B = t.memo(A), F = ["value"], U = t.createContext(), q = { x: 0, y: 0, k: 1, transformString: "translate(0 0) scale(1)" }, W = function(e2) {
+        var t2 = e2.value, r2 = t2 === void 0 ? q : t2, o2 = v(e2, F);
+        return i.default.createElement(U.Provider, g({ value: r2 }, o2));
+      };
+      W.propTypes = { x: c.default.number, y: c.default.number, k: c.default.number, transformString: c.default.string };
+      function I(e2) {
+        var r2 = e2.center, o2 = e2.filterZoomEvent, n2 = e2.onMoveStart, s2 = e2.onMoveEnd, l2 = e2.onMove, i2 = e2.translateExtent, c2 = i2 === void 0 ? [[-1 / 0, -1 / 0], [1 / 0, 1 / 0]] : i2, f2 = e2.scaleExtent, d2 = f2 === void 0 ? [1, 8] : f2, p2 = e2.zoom, m2 = p2 === void 0 ? 1 : p2, y2 = t.useContext(x), g2 = y2.width, v2 = y2.height, b2 = y2.projection, j2 = h(r2, 2), M3 = j2[0], E2 = j2[1], k2 = h(t.useState({ x: 0, y: 0, k: 1 }), 2), w2 = k2[0], O2 = k2[1], S2 = t.useRef({ x: 0, y: 0, k: 1 }), P2 = t.useRef(), C2 = t.useRef(), T2 = t.useRef(!1), R2 = h(c2, 2), Z3 = R2[0], z2 = R2[1], G2 = h(Z3, 2), D2 = G2[0], L2 = G2[1], A5 = h(z2, 2), B2 = A5[0], F2 = A5[1], U2 = h(d2, 2), q2 = U2[0], W2 = U2[1];
+        return t.useEffect(function() {
+          var e3 = u.select(P2.current), t2 = a.zoom().filter(function(e4) {
+            return o2 ? o2(e4) : !!e4 && !e4.ctrlKey && !e4.button;
+          }).scaleExtent([q2, W2]).translateExtent([[D2, L2], [B2, F2]]).on("start", function(e4) {
+            n2 && !T2.current && n2({ coordinates: b2.invert(N(g2, v2, e4.transform)), zoom: e4.transform.k }, e4);
+          }).on("zoom", function(e4) {
+            if (!T2.current) {
+              var t3 = e4.transform, r3 = e4.sourceEvent;
+              O2({ x: t3.x, y: t3.y, k: t3.k, dragging: r3 }), l2 && l2({ x: t3.x, y: t3.y, zoom: t3.k, dragging: r3 }, e4);
+            }
+          }).on("end", function(e4) {
+            if (T2.current)
+              T2.current = !1;
+            else {
+              var t3 = h(b2.invert(N(g2, v2, e4.transform)), 2), r3 = t3[0], o3 = t3[1];
+              S2.current = { x: r3, y: o3, k: e4.transform.k }, s2 && s2({ coordinates: [r3, o3], zoom: e4.transform.k }, e4);
+            }
+          });
+          C2.current = t2, e3.call(t2);
+        }, [g2, v2, D2, L2, B2, F2, q2, W2, b2, n2, l2, s2, o2]), t.useEffect(function() {
+          if (M3 !== S2.current.x || E2 !== S2.current.y || m2 !== S2.current.k) {
+            var e3 = b2([M3, E2]), t2 = e3[0] * m2, r3 = e3[1] * m2, o3 = u.select(P2.current);
+            T2.current = !0, o3.call(C2.current.transform, a.zoomIdentity.translate(g2 / 2 - t2, v2 / 2 - r3).scale(m2)), O2({ x: g2 / 2 - t2, y: v2 / 2 - r3, k: m2 }), S2.current = { x: M3, y: E2, k: m2 };
+          }
+        }, [M3, E2, m2, g2, v2, b2]), { mapRef: P2, position: w2, transformString: "translate(".concat(w2.x, " ").concat(w2.y, ") scale(").concat(w2.k, ")") };
+      }
+      var K = ["center", "zoom", "minZoom", "maxZoom", "translateExtent", "filterZoomEvent", "onMoveStart", "onMove", "onMoveEnd", "className"], _ = t.forwardRef(function(e2, r2) {
+        var o2 = e2.center, n2 = o2 === void 0 ? [0, 0] : o2, a2 = e2.zoom, u2 = a2 === void 0 ? 1 : a2, s2 = e2.minZoom, l2 = s2 === void 0 ? 1 : s2, c2 = e2.maxZoom, f2 = c2 === void 0 ? 8 : c2, d2 = e2.translateExtent, p2 = e2.filterZoomEvent, m2 = e2.onMoveStart, y2 = e2.onMove, h2 = e2.onMoveEnd, b2 = e2.className, j2 = v(e2, K), M3 = t.useContext(x), E2 = M3.width, k2 = M3.height, w2 = I({ center: n2, filterZoomEvent: p2, onMoveStart: m2, onMove: y2, onMoveEnd: h2, scaleExtent: [l2, f2], translateExtent: d2, zoom: u2 }), O2 = w2.mapRef, N2 = w2.transformString, S2 = w2.position;
+        return i.default.createElement(W, { value: { x: S2.x, y: S2.y, k: S2.k, transformString: N2 } }, i.default.createElement("g", { ref: O2 }, i.default.createElement("rect", { width: E2, height: k2, fill: "transparent" }), i.default.createElement("g", g({ ref: r2, transform: N2, className: "rsm-zoomable-group ".concat(b2) }, j2))));
+      });
+      _.displayName = "ZoomableGroup", _.propTypes = { center: c.default.array, zoom: c.default.number, minZoom: c.default.number, maxZoom: c.default.number, translateExtent: c.default.arrayOf(c.default.array), onMoveStart: c.default.func, onMove: c.default.func, onMoveEnd: c.default.func, className: c.default.string };
+      var Q = ["id", "fill", "stroke", "strokeWidth", "className"], $ = t.forwardRef(function(e2, r2) {
+        var o2 = e2.id, n2 = o2 === void 0 ? "rsm-sphere" : o2, a2 = e2.fill, u2 = a2 === void 0 ? "transparent" : a2, s2 = e2.stroke, l2 = s2 === void 0 ? "currentcolor" : s2, c2 = e2.strokeWidth, f2 = c2 === void 0 ? 0.5 : c2, d2 = e2.className, p2 = d2 === void 0 ? "" : d2, m2 = v(e2, Q), y2 = t.useContext(x).path, h2 = t.useMemo(function() {
+          return y2({ type: "Sphere" });
+        }, [y2]);
+        return i.default.createElement(t.Fragment, null, i.default.createElement("defs", null, i.default.createElement("clipPath", { id: n2 }, i.default.createElement("path", { d: h2 }))), i.default.createElement("path", g({ ref: r2, d: h2, fill: u2, stroke: l2, strokeWidth: f2, style: { pointerEvents: "none" }, className: "rsm-sphere ".concat(p2) }, m2)));
+      });
+      $.displayName = "Sphere", $.propTypes = { id: c.default.string, fill: c.default.string, stroke: c.default.string, strokeWidth: c.default.number, className: c.default.string };
+      var H = t.memo($), J = ["coordinates", "children", "onMouseEnter", "onMouseLeave", "onMouseDown", "onMouseUp", "onFocus", "onBlur", "style", "className"], V = t.forwardRef(function(e2, r2) {
+        var o2 = e2.coordinates, n2 = e2.children, a2 = e2.onMouseEnter, u2 = e2.onMouseLeave, s2 = e2.onMouseDown, l2 = e2.onMouseUp, c2 = e2.onFocus, f2 = e2.onBlur, d2 = e2.style, p2 = d2 === void 0 ? {} : d2, m2 = e2.className, y2 = m2 === void 0 ? "" : m2, b2 = v(e2, J), j2 = t.useContext(x).projection, M3 = h(t.useState(!1), 2), E2 = M3[0], k2 = M3[1], w2 = h(t.useState(!1), 2), O2 = w2[0], N2 = w2[1], S2 = h(j2(o2), 2), P2 = S2[0], C2 = S2[1];
+        return i.default.createElement("g", g({ ref: r2, transform: "translate(".concat(P2, ", ").concat(C2, ")"), className: "rsm-marker ".concat(y2), onMouseEnter: function(e3) {
+          N2(!0), a2 && a2(e3);
+        }, onMouseLeave: function(e3) {
+          N2(!1), E2 && k2(!1), u2 && u2(e3);
+        }, onFocus: function(e3) {
+          N2(!0), c2 && c2(e3);
+        }, onBlur: function(e3) {
+          N2(!1), E2 && k2(!1), f2 && f2(e3);
+        }, onMouseDown: function(e3) {
+          k2(!0), s2 && s2(e3);
+        }, onMouseUp: function(e3) {
+          k2(!1), l2 && l2(e3);
+        }, style: p2[E2 || O2 ? E2 ? "pressed" : "hover" : "default"] }, b2), n2);
+      });
+      V.displayName = "Marker", V.propTypes = { coordinates: c.default.array, children: c.default.oneOfType([c.default.node, c.default.arrayOf(c.default.node)]), onMouseEnter: c.default.func, onMouseLeave: c.default.func, onMouseDown: c.default.func, onMouseUp: c.default.func, onFocus: c.default.func, onBlur: c.default.func, style: c.default.object, className: c.default.string };
+      var X = ["from", "to", "coordinates", "stroke", "strokeWidth", "fill", "className"], Y = t.forwardRef(function(e2, r2) {
+        var o2 = e2.from, n2 = o2 === void 0 ? [0, 0] : o2, a2 = e2.to, u2 = a2 === void 0 ? [0, 0] : a2, s2 = e2.coordinates, l2 = e2.stroke, c2 = l2 === void 0 ? "currentcolor" : l2, f2 = e2.strokeWidth, d2 = f2 === void 0 ? 3 : f2, p2 = e2.fill, m2 = p2 === void 0 ? "transparent" : p2, y2 = e2.className, h2 = y2 === void 0 ? "" : y2, b2 = v(e2, X), j2 = t.useContext(x).path, M3 = { type: "LineString", coordinates: s2 || [n2, u2] };
+        return i.default.createElement("path", g({ ref: r2, d: j2(M3), className: "rsm-line ".concat(h2), stroke: c2, strokeWidth: d2, fill: m2 }, b2));
+      });
+      Y.displayName = "Line", Y.propTypes = { from: c.default.array, to: c.default.array, coordinates: c.default.array, stroke: c.default.string, strokeWidth: c.default.number, fill: c.default.string, className: c.default.string };
+      var ee = ["subject", "children", "connectorProps", "dx", "dy", "curve", "className"], te = t.forwardRef(function(e2, r2) {
+        var o2 = e2.subject, n2 = e2.children, a2 = e2.connectorProps, u2 = e2.dx, s2 = u2 === void 0 ? 30 : u2, l2 = e2.dy, c2 = l2 === void 0 ? 30 : l2, f2 = e2.curve, d2 = f2 === void 0 ? 0 : f2, p2 = e2.className, m2 = p2 === void 0 ? "" : p2, y2 = v(e2, ee), b2 = h((0, t.useContext(x).projection)(o2), 2), j2 = b2[0], M3 = b2[1], E2 = function() {
+          var e3 = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : 30, t2 = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : 30, r3 = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : 0.5, o3 = Array.isArray(r3) ? r3 : [r3, r3], n3 = e3 / 2 * o3[0], a3 = t2 / 2 * o3[1];
+          return "M".concat(0, ",", 0, " Q", -e3 / 2 - n3, ",").concat(-t2 / 2 + a3, " ").concat(-e3, ",").concat(-t2);
+        }(s2, c2, d2);
+        return i.default.createElement("g", g({ ref: r2, transform: "translate(".concat(j2 + s2, ", ").concat(M3 + c2, ")"), className: "rsm-annotation ".concat(m2) }, y2), i.default.createElement("path", g({ d: E2, fill: "transparent", stroke: "#000" }, a2)), n2);
+      });
+      te.displayName = "Annotation", te.propTypes = { subject: c.default.array, children: c.default.oneOfType([c.default.node, c.default.arrayOf(c.default.node)]), dx: c.default.number, dy: c.default.number, curve: c.default.number, connectorProps: c.default.object, className: c.default.string }, e.Annotation = te, e.ComposableMap = O, e.Geographies = Z, e.Geography = D, e.Graticule = B, e.Line = Y, e.MapContext = x, e.MapProvider = k, e.Marker = V, e.Sphere = H, e.ZoomPanContext = U, e.ZoomPanProvider = W, e.ZoomableGroup = _, e.useGeographies = T, e.useMapContext = function() {
+        return t.useContext(x);
+      }, e.useZoomPan = I, e.useZoomPanContext = function() {
+        return t.useContext(U);
+      }, Object.defineProperty(e, "__esModule", { value: !0 });
+    });
   }
 });
 
@@ -14073,11 +20670,11 @@ function useCatch() {
 function RemixCatchBoundary({
   catch: catchVal,
   component: Component2,
-  children
+  children: children2
 }) {
   return catchVal ? /* @__PURE__ */ import_react.default.createElement(RemixCatchContext.Provider, {
     value: catchVal
-  }, /* @__PURE__ */ import_react.default.createElement(Component2, null)) : /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, children);
+  }, /* @__PURE__ */ import_react.default.createElement(Component2, null)) : /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, children2);
 }
 function RemixRootDefaultCatchBoundary() {
   let caught = useCatch();
@@ -14145,21 +20742,21 @@ function getLinksForMatches(matches, routeModules, manifest) {
   }).flat(1), preloads = getCurrentPageModulePreloadHrefs(matches, manifest);
   return dedupe(descriptors, preloads);
 }
-function isPageLinkDescriptor(object) {
-  return object != null && typeof object.page == "string";
+function isPageLinkDescriptor(object3) {
+  return object3 != null && typeof object3.page == "string";
 }
-function isHtmlLinkDescriptor(object) {
-  return object == null ? !1 : object.href == null ? object.rel === "preload" && (typeof object.imageSrcSet == "string" || typeof object.imagesrcset == "string") && (typeof object.imageSizes == "string" || typeof object.imagesizes == "string") : typeof object.rel == "string" && typeof object.href == "string";
+function isHtmlLinkDescriptor(object3) {
+  return object3 == null ? !1 : object3.href == null ? object3.rel === "preload" && (typeof object3.imageSrcSet == "string" || typeof object3.imagesrcset == "string") && (typeof object3.imageSizes == "string" || typeof object3.imagesizes == "string") : typeof object3.rel == "string" && typeof object3.href == "string";
 }
 async function getStylesheetPrefetchLinks(matches, manifest, routeModules) {
   return (await Promise.all(matches.map(async (match) => {
     let mod = await loadRouteModule(manifest.routes[match.route.id], routeModules);
     return mod.links ? mod.links() : [];
-  }))).flat(1).filter(isHtmlLinkDescriptor).filter((link) => link.rel === "stylesheet" || link.rel === "preload").map((link) => link.rel === "preload" ? {
-    ...link,
+  }))).flat(1).filter(isHtmlLinkDescriptor).filter((link2) => link2.rel === "stylesheet" || link2.rel === "preload").map((link2) => link2.rel === "preload" ? {
+    ...link2,
     rel: "prefetch"
   } : {
-    ...link,
+    ...link2,
     rel: "prefetch",
     as: "style"
   });
@@ -14218,12 +20815,12 @@ function dedupeHrefs(hrefs) {
   return [...new Set(hrefs)];
 }
 function dedupe(descriptors, preloads) {
-  let set = /* @__PURE__ */ new Set(), preloadsSet = new Set(preloads);
+  let set3 = /* @__PURE__ */ new Set(), preloadsSet = new Set(preloads);
   return descriptors.reduce((deduped, descriptor) => {
     if (!isPageLinkDescriptor(descriptor) && descriptor.as === "script" && descriptor.href && preloadsSet.has(descriptor.href))
       return deduped;
     let str = JSON.stringify(descriptor);
-    return set.has(str) || (set.add(str), deduped.push(descriptor)), deduped;
+    return set3.has(str) || (set3.add(str), deduped.push(descriptor)), deduped;
   }, []);
 }
 function parsePathPatch(href) {
@@ -14270,7 +20867,7 @@ function useRemixContext() {
   return invariant3(context, "You must render this element inside a <Remix> element"), context;
 }
 function RemixRoute({
-  id
+  id: id2
 }) {
   let {
     routeModules
@@ -14280,12 +20877,12 @@ Check this link for more details:
 https://remix.run/pages/gotchas#server-code-in-client-bundles`);
   let {
     default: Component2
-  } = routeModules[id];
-  return invariant3(Component2, `Route "${id}" has no component! Please go add a \`default\` export in the route module file.
+  } = routeModules[id2];
+  return invariant3(Component2, `Route "${id2}" has no component! Please go add a \`default\` export in the route module file.
 If you were trying to navigate or submit to a resource route, use \`<a>\` instead of \`<Link>\` or \`<Form reloadDocument>\`.`), /* @__PURE__ */ React3.createElement(Component2, null);
 }
 function RemixRouteError({
-  id
+  id: id2
 }) {
   let {
     future: future2,
@@ -14297,13 +20894,13 @@ https://remix.run/pages/gotchas#server-code-in-client-bundles`);
   let error = useRouteError(), {
     CatchBoundary,
     ErrorBoundary
-  } = routeModules[id];
+  } = routeModules[id2];
   if (future2.v2_errorBoundary) {
-    if (id === "root" && (ErrorBoundary || (ErrorBoundary = V2_RemixRootDefaultErrorBoundary)), ErrorBoundary)
+    if (id2 === "root" && (ErrorBoundary || (ErrorBoundary = V2_RemixRootDefaultErrorBoundary)), ErrorBoundary)
       return /* @__PURE__ */ React3.createElement(ErrorBoundary, null);
     throw error;
   }
-  if (id === "root" && (CatchBoundary || (CatchBoundary = RemixRootDefaultCatchBoundary), ErrorBoundary || (ErrorBoundary = RemixRootDefaultErrorBoundary)), isRouteErrorResponse(error)) {
+  if (id2 === "root" && (CatchBoundary || (CatchBoundary = RemixRootDefaultCatchBoundary), ErrorBoundary || (ErrorBoundary = RemixRootDefaultErrorBoundary)), isRouteErrorResponse(error)) {
     let tError = error;
     if ((tError == null ? void 0 : tError.error) instanceof Error && tError.status !== 404 && ErrorBoundary)
       return /* @__PURE__ */ React3.createElement(ErrorBoundary, {
@@ -14339,11 +20936,11 @@ function usePrefetchBehavior(prefetch, theirElementProps) {
   };
   return React3.useEffect(() => {
     if (maybePrefetch) {
-      let id = setTimeout(() => {
+      let id2 = setTimeout(() => {
         setShouldPrefetch(!0);
       }, 100);
       return () => {
-        clearTimeout(id);
+        clearTimeout(id2);
       };
     }
   }, [maybePrefetch]), [shouldPrefetch, {
@@ -14396,16 +20993,16 @@ function Links() {
     matches
   } = useDataRouterStateContext(), links2 = React3.useMemo(() => getLinksForMatches(matches, routeModules, manifest), [matches, routeModules, manifest]);
   return React3.useEffect(() => {
-    links2.some((link) => "imagesizes" in link || "imagesrcset" in link) && logDeprecationOnce(linksWarning);
-  }, [links2]), /* @__PURE__ */ React3.createElement(React3.Fragment, null, links2.map((link) => {
-    if (isPageLinkDescriptor(link))
+    links2.some((link2) => "imagesizes" in link2 || "imagesrcset" in link2) && logDeprecationOnce(linksWarning);
+  }, [links2]), /* @__PURE__ */ React3.createElement(React3.Fragment, null, links2.map((link2) => {
+    if (isPageLinkDescriptor(link2))
       return /* @__PURE__ */ React3.createElement(PrefetchPageLinks, _extends4({
-        key: link.page
-      }, link));
+        key: link2.page
+      }, link2));
     let imageSrcSet = null;
-    return "useId" in React3 ? (link.imagesrcset && (link.imageSrcSet = imageSrcSet = link.imagesrcset, delete link.imagesrcset), link.imagesizes && (link.imageSizes = link.imagesizes, delete link.imagesizes)) : (link.imageSrcSet && (link.imagesrcset = imageSrcSet = link.imageSrcSet, delete link.imageSrcSet), link.imageSizes && (link.imagesizes = link.imageSizes, delete link.imageSizes)), /* @__PURE__ */ React3.createElement("link", _extends4({
-      key: link.rel + (link.href || "") + (imageSrcSet || "")
-    }, link));
+    return "useId" in React3 ? (link2.imagesrcset && (link2.imageSrcSet = imageSrcSet = link2.imagesrcset, delete link2.imagesrcset), link2.imagesizes && (link2.imageSizes = link2.imagesizes, delete link2.imagesizes)) : (link2.imageSrcSet && (link2.imagesrcset = imageSrcSet = link2.imageSrcSet, delete link2.imageSrcSet), link2.imageSizes && (link2.imagesizes = link2.imageSizes, delete link2.imageSizes)), /* @__PURE__ */ React3.createElement("link", _extends4({
+      key: link2.rel + (link2.href || "") + (imageSrcSet || "")
+    }, link2));
   }));
 }
 function PrefetchPageLinks({
@@ -14453,9 +21050,9 @@ function PrefetchPageLinksImpl({
     key: href,
     rel: "modulepreload",
     href
-  }, linkProps))), styleLinks.map((link) => /* @__PURE__ */ React3.createElement("link", _extends4({
-    key: link.href
-  }, link))));
+  }, linkProps))), styleLinks.map((link2) => /* @__PURE__ */ React3.createElement("link", _extends4({
+    key: link2.href
+  }, link2))));
 }
 function V1Meta() {
   let {
@@ -14863,8 +21460,8 @@ function createServerRoutes(manifest, routeModules, future2, parentId = "", rout
       index: route.index,
       path: route.path,
       handle: routeModules[route.id].handle
-    }, children = createServerRoutes(manifest, routeModules, future2, route.id, routesByParentId);
-    return children.length > 0 && (dataRoute.children = children), dataRoute;
+    }, children2 = createServerRoutes(manifest, routeModules, future2, route.id, routesByParentId);
+    return children2.length > 0 && (dataRoute.children = children2), dataRoute;
   });
 }
 
@@ -15331,8 +21928,8 @@ var flags = "i", _list = /* @__PURE__ */ new WeakMap(), _pattern = /* @__PURE__ 
       var _this2 = this, filters = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : [];
       [].push.apply(_classPrivateFieldGet(this, _list), filters.filter(function(rule) {
         return _classPrivateMethodGet(_this2, _index, _index2).call(_this2, rule) === -1;
-      }).map(function(filter) {
-        return filter.toLowerCase();
+      }).map(function(filter2) {
+        return filter2.toLowerCase();
       })), _classPrivateMethodGet(this, _update, _update2).call(this);
     }
   }, {
@@ -15389,12 +21986,12 @@ __export(root_exports, {
 });
 
 // app/tailwind.css
-var tailwind_default = "/build/_assets/tailwind-QCUUWVYV.css";
+var tailwind_default = "/build/_assets/tailwind-DNVIDG3S.css";
 
 // app/components/navigationTabs/NavigationTabContainer.tsx
 var import_jsx_dev_runtime2 = __toESM(require_jsx_dev_runtime()), NavigationTabContainer = ({
-  children
-}) => /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("ul", { className: "flex flex-wrap text-sm font-medium text-center text-slate-500 border-b border-slate-200 dark:border-slate-700 dark:text-slate-400", children }, void 0, !1, {
+  children: children2
+}) => /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("ul", { className: "flex flex-wrap text-sm font-medium text-center text-slate-500 border-b border-slate-200 dark:border-slate-700 dark:text-slate-400", children: children2 }, void 0, !1, {
   fileName: "app/components/navigationTabs/NavigationTabContainer.tsx",
   lineNumber: 14,
   columnNumber: 5
@@ -15527,16 +22124,70 @@ var travel_exports = {};
 __export(travel_exports, {
   default: () => Travel
 });
-var import_jsx_dev_runtime5 = __toESM(require_jsx_dev_runtime());
+var import_react_simple_maps = __toESM(require_index_umd()), import_react5 = __toESM(require_react()), import_jsx_dev_runtime5 = __toESM(require_jsx_dev_runtime()), geoUrl = "https://raw.githubusercontent.com/deldersveld/topojson/master/world-countries.json", nameMap = [
+  ["Turkiye", "Turkey"],
+  ["Korea", "South Korea"],
+  ["\xC5land", "Finland"]
+], getReplacedNameOrDefault = (countryName) => {
+  let replacedName = countryName;
+  return nameMap.forEach((namePair) => {
+    namePair[0] === countryName && (replacedName = namePair[1]);
+  }), replacedName;
+};
 function Travel() {
-  return /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)("main", { children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)("h1", { children: "Travel" }, void 0, !1, {
+  let [imagesMetaData, setImagesMetaData] = (0, import_react5.useState)();
+  return (0, import_react5.useEffect)(() => {
+    fetch("/imageMetaData.json").then((r) => r.json()).then(
+      (r) => r.map(
+        (imageMetaData) => ({
+          ...imageMetaData,
+          country: getReplacedNameOrDefault(imageMetaData.country)
+        })
+      )
+    ).then((r) => setImagesMetaData(r));
+  }, []), console.log(imagesMetaData), /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)("main", { children: [
+    /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)("h1", { children: "Travel" }, void 0, !1, {
+      fileName: "app/routes/travel/index.tsx",
+      lineNumber: 61,
+      columnNumber: 7
+    }, this),
+    /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)("div", { className: "container mx-auto w-3/4", children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(import_react_simple_maps.ComposableMap, { projection: "geoMercator", children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(import_react_simple_maps.ZoomableGroup, { children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(import_react_simple_maps.Geographies, { geography: geoUrl, children: ({ geographies }) => geographies.map((geo) => /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(
+      import_react_simple_maps.Geography,
+      {
+        geography: geo,
+        fill: imagesMetaData && imagesMetaData.some(
+          (imageMetaData) => imageMetaData.country.includes(geo.properties.name)
+        ) ? "rgb(217 70 239)" : void 0
+      },
+      geo.rsmKey,
+      !1,
+      {
+        fileName: "app/routes/travel/index.tsx",
+        lineNumber: 68,
+        columnNumber: 19
+      },
+      this
+    )) }, void 0, !1, {
+      fileName: "app/routes/travel/index.tsx",
+      lineNumber: 65,
+      columnNumber: 13
+    }, this) }, void 0, !1, {
+      fileName: "app/routes/travel/index.tsx",
+      lineNumber: 64,
+      columnNumber: 11
+    }, this) }, void 0, !1, {
+      fileName: "app/routes/travel/index.tsx",
+      lineNumber: 63,
+      columnNumber: 9
+    }, this) }, void 0, !1, {
+      fileName: "app/routes/travel/index.tsx",
+      lineNumber: 62,
+      columnNumber: 7
+    }, this)
+  ] }, void 0, !0, {
     fileName: "app/routes/travel/index.tsx",
-    lineNumber: 4,
-    columnNumber: 9
-  }, this) }, void 0, !1, {
-    fileName: "app/routes/travel/index.tsx",
-    lineNumber: 3,
-    columnNumber: 7
+    lineNumber: 60,
+    columnNumber: 5
   }, this);
 }
 
@@ -15551,27 +22202,27 @@ function _index3() {
   return /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)("div", { style: { fontFamily: "system-ui, sans-serif", lineHeight: "1.4" }, children: [
     /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)("h1", { className: "text-center mt-4", children: "Hi, I'm Enes" }, void 0, !1, {
       fileName: "app/routes/_index.tsx",
-      lineNumber: 11,
+      lineNumber: 10,
       columnNumber: 7
     }, this),
     /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)("div", { className: "mx-auto mt-16 max-w-7xl text-center", children: /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)("span", { children: "This is my personal page where I document things I'm doing (including this page)" }, void 0, !1, {
       fileName: "app/routes/_index.tsx",
-      lineNumber: 13,
+      lineNumber: 12,
       columnNumber: 9
     }, this) }, void 0, !1, {
       fileName: "app/routes/_index.tsx",
-      lineNumber: 12,
+      lineNumber: 11,
       columnNumber: 7
     }, this)
   ] }, void 0, !0, {
     fileName: "app/routes/_index.tsx",
-    lineNumber: 10,
+    lineNumber: 9,
     columnNumber: 5
   }, this);
 }
 
 // server-assets-manifest:@remix-run/dev/assets-manifest
-var assets_manifest_default = { version: "7f9ab92f", entry: { module: "/build/entry.client-JEDOSHU7.js", imports: ["/build/_shared/chunk-ZQRHYKA3.js", "/build/_shared/chunk-EETRBLDB.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-3O2C5UEW.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-YMBIECSU.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-BEGSPICC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-7F9AB92F.js" };
+var assets_manifest_default = { version: "c970f694", entry: { module: "/build/entry.client-VAXLI7WO.js", imports: ["/build/_shared/chunk-LVTXOD43.js", "/build/_shared/chunk-56THQXCK.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-OKOAXR6P.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-JT3YTAT4.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-RCS5DEGT.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-C970F694.js" };
 
 // server-entry-module:@remix-run/dev/server-build
 var assetsBuildDirectory = "public\\build", future = { unstable_cssModules: !1, unstable_cssSideEffectImports: !1, unstable_dev: !1, unstable_postcss: !1, unstable_tailwind: !0, unstable_vanillaExtract: !1, v2_errorBoundary: !0, v2_meta: !0, v2_normalizeFormMethod: !0, v2_routeConvention: !0 }, publicPath = "/build/", entry = { module: entry_server_exports }, routes = {

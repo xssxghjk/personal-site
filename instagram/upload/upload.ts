@@ -49,9 +49,10 @@ mediaDirectories.forEach((mediaDirectory) => {
 })
 console.log(cloudinary.config())
 interface MediaMetaData {
-  mediaDirectory: string
+  country: string
   url: string
   type: 'image' | 'video'
+  year: number
 }
 
 const mediaMetaData: MediaMetaData[] = []
@@ -76,17 +77,19 @@ const videoBaseUrl =
   'https://res.cloudinary.com/dvwkrskzv/video/upload/v1685997940/instagram/'
 imagesToUpload.forEach((image) =>
   mediaMetaData.push({
-    mediaDirectory: image.mediaDirectory,
+    country: image.mediaDirectory.split('_')[0],
     url: imageBaseUrl + image.mediaDirectory + '/' + image.name,
     type: 'image',
+    year: Number(image.mediaDirectory.split('_')[1]),
   })
 )
 
 videosToUpload.forEach((video) =>
   mediaMetaData.push({
-    mediaDirectory: video.mediaDirectory,
+    country: video.mediaDirectory.split('_')[0],
     url: videoBaseUrl + video.mediaDirectory + '/' + video.name,
     type: 'video',
+    year: Number(video.mediaDirectory.split('_')[1]),
   })
 )
 
