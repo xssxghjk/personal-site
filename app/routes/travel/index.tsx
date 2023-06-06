@@ -58,8 +58,7 @@ export default function Travel() {
   console.log(imagesMetaData)
   return (
     <main>
-      <h1>Travel</h1>
-      <div className={'container mx-auto w-3/4'}>
+      <div className={'md:mx-auto md:w-5/6 lg:w-3/4 w-full'}>
         <ComposableMap projection={'geoMercator'}>
           <ZoomableGroup>
             <Geographies geography={geoUrl}>

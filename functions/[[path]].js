@@ -21986,7 +21986,7 @@ __export(root_exports, {
 });
 
 // app/tailwind.css
-var tailwind_default = "/build/_assets/tailwind-DNVIDG3S.css";
+var tailwind_default = "/build/_assets/tailwind-KBILQYEJ.css";
 
 // app/components/navigationTabs/NavigationTabContainer.tsx
 var import_jsx_dev_runtime2 = __toESM(require_jsx_dev_runtime()), NavigationTabContainer = ({
@@ -22145,46 +22145,39 @@ function Travel() {
         })
       )
     ).then((r) => setImagesMetaData(r));
-  }, []), console.log(imagesMetaData), /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)("main", { children: [
-    /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)("h1", { children: "Travel" }, void 0, !1, {
+  }, []), console.log(imagesMetaData), /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)("main", { children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)("div", { className: "md:mx-auto md:w-5/6 lg:w-3/4 w-full", children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(import_react_simple_maps.ComposableMap, { projection: "geoMercator", children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(import_react_simple_maps.ZoomableGroup, { children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(import_react_simple_maps.Geographies, { geography: geoUrl, children: ({ geographies }) => geographies.map((geo) => /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(
+    import_react_simple_maps.Geography,
+    {
+      geography: geo,
+      fill: imagesMetaData && imagesMetaData.some(
+        (imageMetaData) => imageMetaData.country.includes(geo.properties.name)
+      ) ? "rgb(217 70 239)" : void 0
+    },
+    geo.rsmKey,
+    !1,
+    {
       fileName: "app/routes/travel/index.tsx",
-      lineNumber: 61,
-      columnNumber: 7
-    }, this),
-    /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)("div", { className: "container mx-auto w-3/4", children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(import_react_simple_maps.ComposableMap, { projection: "geoMercator", children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(import_react_simple_maps.ZoomableGroup, { children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(import_react_simple_maps.Geographies, { geography: geoUrl, children: ({ geographies }) => geographies.map((geo) => /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(
-      import_react_simple_maps.Geography,
-      {
-        geography: geo,
-        fill: imagesMetaData && imagesMetaData.some(
-          (imageMetaData) => imageMetaData.country.includes(geo.properties.name)
-        ) ? "rgb(217 70 239)" : void 0
-      },
-      geo.rsmKey,
-      !1,
-      {
-        fileName: "app/routes/travel/index.tsx",
-        lineNumber: 68,
-        columnNumber: 19
-      },
-      this
-    )) }, void 0, !1, {
-      fileName: "app/routes/travel/index.tsx",
-      lineNumber: 65,
-      columnNumber: 13
-    }, this) }, void 0, !1, {
-      fileName: "app/routes/travel/index.tsx",
-      lineNumber: 64,
-      columnNumber: 11
-    }, this) }, void 0, !1, {
-      fileName: "app/routes/travel/index.tsx",
-      lineNumber: 63,
-      columnNumber: 9
-    }, this) }, void 0, !1, {
-      fileName: "app/routes/travel/index.tsx",
-      lineNumber: 62,
-      columnNumber: 7
-    }, this)
-  ] }, void 0, !0, {
+      lineNumber: 67,
+      columnNumber: 19
+    },
+    this
+  )) }, void 0, !1, {
+    fileName: "app/routes/travel/index.tsx",
+    lineNumber: 64,
+    columnNumber: 13
+  }, this) }, void 0, !1, {
+    fileName: "app/routes/travel/index.tsx",
+    lineNumber: 63,
+    columnNumber: 11
+  }, this) }, void 0, !1, {
+    fileName: "app/routes/travel/index.tsx",
+    lineNumber: 62,
+    columnNumber: 9
+  }, this) }, void 0, !1, {
+    fileName: "app/routes/travel/index.tsx",
+    lineNumber: 61,
+    columnNumber: 7
+  }, this) }, void 0, !1, {
     fileName: "app/routes/travel/index.tsx",
     lineNumber: 60,
     columnNumber: 5
@@ -22222,7 +22215,7 @@ function _index3() {
 }
 
 // server-assets-manifest:@remix-run/dev/assets-manifest
-var assets_manifest_default = { version: "c970f694", entry: { module: "/build/entry.client-VAXLI7WO.js", imports: ["/build/_shared/chunk-LVTXOD43.js", "/build/_shared/chunk-56THQXCK.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-OKOAXR6P.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-JT3YTAT4.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-RCS5DEGT.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-C970F694.js" };
+var assets_manifest_default = { version: "a67b9f4b", entry: { module: "/build/entry.client-VAXLI7WO.js", imports: ["/build/_shared/chunk-LVTXOD43.js", "/build/_shared/chunk-56THQXCK.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-IXQKLH2B.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-JT3YTAT4.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-W3E6LUBD.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-A67B9F4B.js" };
 
 // server-entry-module:@remix-run/dev/server-build
 var assetsBuildDirectory = "public\\build", future = { unstable_cssModules: !1, unstable_cssSideEffectImports: !1, unstable_dev: !1, unstable_postcss: !1, unstable_tailwind: !0, unstable_vanillaExtract: !1, v2_errorBoundary: !0, v2_meta: !0, v2_normalizeFormMethod: !0, v2_routeConvention: !0 }, publicPath = "/build/", entry = { module: entry_server_exports }, routes = {
