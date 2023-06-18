@@ -4,7 +4,8 @@ import {
   Geography,
   ZoomableGroup,
 } from 'react-simple-maps'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useTravelMetaData } from '~/hooks/useTravelMetaData'
 
 const geoUrl =
   'https://raw.githubusercontent.com/deldersveld/topojson/master/world-countries.json'
@@ -14,73 +15,81 @@ interface Geography {
     name: string
   }
   rsmKey: string
+  svgPath: string
 }
 
-interface ImageMetaData {
-  country: string
-  url: string
-  type: 'image' | 'video'
-  year: number
-}
+const average = (array: number[]) =>
+  array.reduce((p, c) => p + c, 0) / array.length
 
-const nameMap: [string, string][] = [
-  ['Turkiye', 'Turkey'],
-  ['Korea', 'South Korea'],
-  ['Åland', 'Finland'],
-]
-
-const getReplacedNameOrDefault = (countryName: string) => {
-  let replacedName = countryName
-  nameMap.forEach((namePair) => {
-    if (namePair[0] === countryName) replacedName = namePair[1]
-  })
-  return replacedName
-}
+const getGeographyName = (geo: Geography) => geo.properties.name
 
 export default function Travel() {
-  const [imagesMetaData, setImagesMetaData] = useState<
-    ImageMetaData[] | undefined
-  >()
-  useEffect(() => {
-    fetch('/imageMetaData.json')
-      .then((r) => r.json())
-      .then((r) =>
-        (r as ImageMetaData[]).map(
-          (imageMetaData): ImageMetaData => ({
-            ...imageMetaData,
-            country: getReplacedNameOrDefault(imageMetaData.country),
-          })
-        )
-      )
-      .then((r) => setImagesMetaData(r as ImageMetaData[]))
-  }, [])
+  const [selectedCountry, setSelectedCountry] = useState<
+    string | undefined
+  >(undefined)
+  const imagesMetaData = useTravelMetaData()
 
-  console.log(imagesMetaData)
+  const isTravelledCountry = (geo: Geography) =>
+    imagesMetaData &&
+    imagesMetaData.some((imageMetaData) =>
+      imageMetaData.country.includes(geo.properties.name)
+    )
+
+  const selectCountry = (geo: Geography) => {
+    if (isTravelledCountry(geo))
+      setSelectedCountry(getGeographyName(geo))
+  }
+
+  const getColorByGeography = (geo: Geography): string => {
+    if (getGeographyName(geo) === selectedCountry)
+      return 'fill-fuchsia-600 dark:fill-fuchsia-500'
+    if (isTravelledCountry(geo))
+      return 'fill-slate-600 dark:fill-slate-300'
+    return 'fill-slate-200 dark:fill-slate-600'
+  }
+
   return (
     <main>
-      <div className={'md:mx-auto md:w-5/6 lg:w-3/4 w-full'}>
-        <ComposableMap projection={'geoMercator'}>
-          <ZoomableGroup>
-            <Geographies geography={geoUrl}>
-              {({ geographies }) => {
-                return geographies.map((geo: Geography) => (
-                  <Geography
-                    key={geo.rsmKey}
-                    geography={geo}
-                    fill={
-                      imagesMetaData &&
-                      imagesMetaData.some((imageMetaData) =>
-                        imageMetaData.country.includes(geo.properties.name)
-                      )
-                        ? 'rgb(217 70 239)'
-                        : undefined
-                    }
-                  />
-                ))
-              }}
-            </Geographies>
-          </ZoomableGroup>
-        </ComposableMap>
+      <div className={'grid grid-cols-3 w-full'}>
+        <div className={'col-span-3 lg:col-span-2'}>
+          <ComposableMap projection={'geoMercator'}>
+            <ZoomableGroup>
+              <Geographies geography={geoUrl}>
+                {({ geographies }) => {
+                  return geographies.map((geo: Geography) => (
+                    <Geography
+                      key={geo.rsmKey}
+                      geography={geo}
+                      className={getColorByGeography(geo)}
+                      onClick={() => {
+                        selectCountry(geo)
+                      }}
+                      onTouchStart={() => {
+                        selectCountry(geo)
+                      }}
+                      style={{
+                        default: { outline: 'none' },
+                        hover: { outline: 'none' },
+                        pressed: { outline: 'none' },
+                      }}
+                    />
+                  ))
+                }}
+              </Geographies>
+            </ZoomableGroup>
+          </ComposableMap>
+        </div>
+        <div className={'col-span-3 lg:col-span-1 '}>
+          {imagesMetaData
+            ?.filter(
+              (imageMetaData) =>
+                imageMetaData.country === selectedCountry
+            )
+            .filter((imageMetaData) => imageMetaData.type === 'image')
+            .map((imageMetaData) => (
+              <img src={imageMetaData.url} />
+            ))}
+        </div>
       </div>
     </main>
   )

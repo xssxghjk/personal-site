@@ -4330,7 +4330,7 @@ See https://reactjs.org/link/invalid-hook-call for tips about how to debug and f
         }
         return dispatcher.useContext(Context);
       }
-      function useState6(initialState) {
+      function useState7(initialState) {
         var dispatcher = resolveDispatcher();
         return dispatcher.useState(initialState);
       }
@@ -4869,7 +4869,7 @@ Check the top-level render call using <` + parentName + ">.");
         toArray,
         only: onlyChild
       };
-      exports.Children = Children2, exports.Component = Component2, exports.Fragment = REACT_FRAGMENT_TYPE, exports.Profiler = REACT_PROFILER_TYPE, exports.PureComponent = PureComponent, exports.StrictMode = REACT_STRICT_MODE_TYPE, exports.Suspense = REACT_SUSPENSE_TYPE, exports.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = ReactSharedInternals, exports.cloneElement = cloneElement$1, exports.createContext = createContext3, exports.createElement = createElement$1, exports.createFactory = createFactory, exports.createRef = createRef, exports.forwardRef = forwardRef3, exports.isValidElement = isValidElement2, exports.lazy = lazy, exports.memo = memo, exports.startTransition = startTransition, exports.unstable_act = act, exports.useCallback = useCallback3, exports.useContext = useContext5, exports.useDebugValue = useDebugValue2, exports.useDeferredValue = useDeferredValue, exports.useEffect = useEffect6, exports.useId = useId, exports.useImperativeHandle = useImperativeHandle, exports.useInsertionEffect = useInsertionEffect, exports.useLayoutEffect = useLayoutEffect4, exports.useMemo = useMemo5, exports.useReducer = useReducer, exports.useRef = useRef3, exports.useState = useState6, exports.useSyncExternalStore = useSyncExternalStore2, exports.useTransition = useTransition2, exports.version = ReactVersion, typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ < "u" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop == "function" && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(new Error());
+      exports.Children = Children2, exports.Component = Component2, exports.Fragment = REACT_FRAGMENT_TYPE, exports.Profiler = REACT_PROFILER_TYPE, exports.PureComponent = PureComponent, exports.StrictMode = REACT_STRICT_MODE_TYPE, exports.Suspense = REACT_SUSPENSE_TYPE, exports.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = ReactSharedInternals, exports.cloneElement = cloneElement$1, exports.createContext = createContext3, exports.createElement = createElement$1, exports.createFactory = createFactory, exports.createRef = createRef, exports.forwardRef = forwardRef3, exports.isValidElement = isValidElement2, exports.lazy = lazy, exports.memo = memo, exports.startTransition = startTransition, exports.unstable_act = act, exports.useCallback = useCallback3, exports.useContext = useContext5, exports.useDebugValue = useDebugValue2, exports.useDeferredValue = useDeferredValue, exports.useEffect = useEffect6, exports.useId = useId, exports.useImperativeHandle = useImperativeHandle, exports.useInsertionEffect = useInsertionEffect, exports.useLayoutEffect = useLayoutEffect4, exports.useMemo = useMemo5, exports.useReducer = useReducer, exports.useRef = useRef3, exports.useState = useState7, exports.useSyncExternalStore = useSyncExternalStore2, exports.useTransition = useTransition2, exports.version = ReactVersion, typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ < "u" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop == "function" && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(new Error());
     })();
   }
 });
@@ -8950,7 +8950,7 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
       function basicStateReducer(state, action) {
         return typeof action == "function" ? action(state) : action;
       }
-      function useState6(initialState) {
+      function useState7(initialState) {
         return currentHookNameInDev = "useState", useReducer(
           basicStateReducer,
           initialState
@@ -9069,7 +9069,7 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
         useMemo: useMemo5,
         useReducer,
         useRef: useRef3,
-        useState: useState6,
+        useState: useState7,
         useInsertionEffect: noop3,
         useLayoutEffect: useLayoutEffect4,
         useCallback: useCallback3,
@@ -12385,7 +12385,7 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
       function basicStateReducer(state, action) {
         return typeof action == "function" ? action(state) : action;
       }
-      function useState6(initialState) {
+      function useState7(initialState) {
         return currentHookNameInDev = "useState", useReducer(
           basicStateReducer,
           initialState
@@ -12504,7 +12504,7 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
         useMemo: useMemo5,
         useReducer,
         useRef: useRef3,
-        useState: useState6,
+        useState: useState7,
         useInsertionEffect: noop3,
         useLayoutEffect: useLayoutEffect4,
         useCallback: useCallback3,
@@ -21986,7 +21986,7 @@ __export(root_exports, {
 });
 
 // app/tailwind.css
-var tailwind_default = "/build/_assets/tailwind-KBILQYEJ.css";
+var tailwind_default = "/build/_assets/tailwind-FUQSJWBP.css";
 
 // app/components/navigationTabs/NavigationTabContainer.tsx
 var import_jsx_dev_runtime2 = __toESM(require_jsx_dev_runtime()), NavigationTabContainer = ({
@@ -22124,7 +22124,10 @@ var travel_exports = {};
 __export(travel_exports, {
   default: () => Travel
 });
-var import_react_simple_maps = __toESM(require_index_umd()), import_react5 = __toESM(require_react()), import_jsx_dev_runtime5 = __toESM(require_jsx_dev_runtime()), geoUrl = "https://raw.githubusercontent.com/deldersveld/topojson/master/world-countries.json", nameMap = [
+var import_react_simple_maps = __toESM(require_index_umd()), import_react6 = __toESM(require_react());
+
+// app/hooks/useTravelMetaData.ts
+var import_react5 = __toESM(require_react()), nameMap = [
   ["Turkiye", "Turkey"],
   ["Korea", "South Korea"],
   ["\xC5land", "Finland"]
@@ -22133,8 +22136,7 @@ var import_react_simple_maps = __toESM(require_index_umd()), import_react5 = __t
   return nameMap.forEach((namePair) => {
     namePair[0] === countryName && (replacedName = namePair[1]);
   }), replacedName;
-};
-function Travel() {
+}, useTravelMetaData = () => {
   let [imagesMetaData, setImagesMetaData] = (0, import_react5.useState)();
   return (0, import_react5.useEffect)(() => {
     fetch("/imageMetaData.json").then((r) => r.json()).then(
@@ -22145,41 +22147,79 @@ function Travel() {
         })
       )
     ).then((r) => setImagesMetaData(r));
-  }, []), console.log(imagesMetaData), /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)("main", { children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)("div", { className: "md:mx-auto md:w-5/6 lg:w-3/4 w-full", children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(import_react_simple_maps.ComposableMap, { projection: "geoMercator", children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(import_react_simple_maps.ZoomableGroup, { children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(import_react_simple_maps.Geographies, { geography: geoUrl, children: ({ geographies }) => geographies.map((geo) => /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(
-    import_react_simple_maps.Geography,
-    {
-      geography: geo,
-      fill: imagesMetaData && imagesMetaData.some(
-        (imageMetaData) => imageMetaData.country.includes(geo.properties.name)
-      ) ? "rgb(217 70 239)" : void 0
-    },
-    geo.rsmKey,
-    !1,
-    {
+  }, []), imagesMetaData;
+};
+
+// app/routes/travel/index.tsx
+var import_jsx_dev_runtime5 = __toESM(require_jsx_dev_runtime()), geoUrl = "https://raw.githubusercontent.com/deldersveld/topojson/master/world-countries.json";
+var getGeographyName = (geo) => geo.properties.name;
+function Travel() {
+  let [selectedCountry, setSelectedCountry] = (0, import_react6.useState)(void 0), imagesMetaData = useTravelMetaData(), isTravelledCountry = (geo) => imagesMetaData && imagesMetaData.some(
+    (imageMetaData) => imageMetaData.country.includes(geo.properties.name)
+  ), selectCountry = (geo) => {
+    isTravelledCountry(geo) && setSelectedCountry(getGeographyName(geo));
+  }, getColorByGeography = (geo) => getGeographyName(geo) === selectedCountry ? "fill-fuchsia-600 dark:fill-fuchsia-500" : isTravelledCountry(geo) ? "fill-slate-600 dark:fill-slate-300" : "fill-slate-200 dark:fill-slate-600";
+  return /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)("main", { children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)("div", { className: "grid grid-cols-3 w-full", children: [
+    /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)("div", { className: "col-span-3 lg:col-span-2", children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(import_react_simple_maps.ComposableMap, { projection: "geoMercator", children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(import_react_simple_maps.ZoomableGroup, { children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(import_react_simple_maps.Geographies, { geography: geoUrl, children: ({ geographies }) => geographies.map((geo) => /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(
+      import_react_simple_maps.Geography,
+      {
+        geography: geo,
+        className: getColorByGeography(geo),
+        onClick: () => {
+          selectCountry(geo);
+        },
+        onTouchStart: () => {
+          selectCountry(geo);
+        },
+        style: {
+          default: { outline: "none" },
+          hover: { outline: "none" },
+          pressed: { outline: "none" }
+        }
+      },
+      geo.rsmKey,
+      !1,
+      {
+        fileName: "app/routes/travel/index.tsx",
+        lineNumber: 60,
+        columnNumber: 21
+      },
+      this
+    )) }, void 0, !1, {
       fileName: "app/routes/travel/index.tsx",
-      lineNumber: 67,
-      columnNumber: 19
-    },
-    this
-  )) }, void 0, !1, {
+      lineNumber: 57,
+      columnNumber: 15
+    }, this) }, void 0, !1, {
+      fileName: "app/routes/travel/index.tsx",
+      lineNumber: 56,
+      columnNumber: 13
+    }, this) }, void 0, !1, {
+      fileName: "app/routes/travel/index.tsx",
+      lineNumber: 55,
+      columnNumber: 11
+    }, this) }, void 0, !1, {
+      fileName: "app/routes/travel/index.tsx",
+      lineNumber: 54,
+      columnNumber: 9
+    }, this),
+    /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)("div", { className: "col-span-3 lg:col-span-1 ", children: imagesMetaData == null ? void 0 : imagesMetaData.filter(
+      (imageMetaData) => imageMetaData.country === selectedCountry
+    ).filter((imageMetaData) => imageMetaData.type === "image").map((imageMetaData) => /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)("img", { src: imageMetaData.url }, void 0, !1, {
+      fileName: "app/routes/travel/index.tsx",
+      lineNumber: 90,
+      columnNumber: 15
+    }, this)) }, void 0, !1, {
+      fileName: "app/routes/travel/index.tsx",
+      lineNumber: 82,
+      columnNumber: 9
+    }, this)
+  ] }, void 0, !0, {
     fileName: "app/routes/travel/index.tsx",
-    lineNumber: 64,
-    columnNumber: 13
-  }, this) }, void 0, !1, {
-    fileName: "app/routes/travel/index.tsx",
-    lineNumber: 63,
-    columnNumber: 11
-  }, this) }, void 0, !1, {
-    fileName: "app/routes/travel/index.tsx",
-    lineNumber: 62,
-    columnNumber: 9
-  }, this) }, void 0, !1, {
-    fileName: "app/routes/travel/index.tsx",
-    lineNumber: 61,
+    lineNumber: 53,
     columnNumber: 7
   }, this) }, void 0, !1, {
     fileName: "app/routes/travel/index.tsx",
-    lineNumber: 60,
+    lineNumber: 52,
     columnNumber: 5
   }, this);
 }
@@ -22215,7 +22255,7 @@ function _index3() {
 }
 
 // server-assets-manifest:@remix-run/dev/assets-manifest
-var assets_manifest_default = { version: "a67b9f4b", entry: { module: "/build/entry.client-VAXLI7WO.js", imports: ["/build/_shared/chunk-LVTXOD43.js", "/build/_shared/chunk-56THQXCK.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-IXQKLH2B.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-JT3YTAT4.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-W3E6LUBD.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-A67B9F4B.js" };
+var assets_manifest_default = { version: "4e3f1c1f", entry: { module: "/build/entry.client-VAXLI7WO.js", imports: ["/build/_shared/chunk-LVTXOD43.js", "/build/_shared/chunk-56THQXCK.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-M5F5KF6J.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-JT3YTAT4.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-ITCDKA5A.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-4E3F1C1F.js" };
 
 // server-entry-module:@remix-run/dev/server-build
 var assetsBuildDirectory = "public\\build", future = { unstable_cssModules: !1, unstable_cssSideEffectImports: !1, unstable_dev: !1, unstable_postcss: !1, unstable_tailwind: !0, unstable_vanillaExtract: !1, v2_errorBoundary: !0, v2_meta: !0, v2_normalizeFormMethod: !0, v2_routeConvention: !0 }, publicPath = "/build/", entry = { module: entry_server_exports }, routes = {
