@@ -3,27 +3,25 @@ import { motion } from 'framer-motion'
 
 export interface CountryModalProps {
   children?: React.ReactNode
-  constraintRef: React.RefObject<HTMLElement>
 }
 
-export const CountryModal = ({
-  children,
-  constraintRef,
-}: CountryModalProps) => {
+export const CountryModal = ({ children }: CountryModalProps) => {
   return (
-    <motion.div
-      drag
-      dragConstraints={constraintRef}
-      dragMomentum={false}
-      whileDrag={{ scale: 0.95 }}
-      initial={{ opacity: 0, y: -30 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 30 }}
+    <div
       className={
-        'absolute top-0 right-0 bg-slate-300 dark:bg-slate-700 rounded-xl overflow-hidden drop-shadow-2xl cursor-move'
+        'fixed bottom-3 right-3 md:bottom-4 md:right-4 lg:right-6 lg:bottom-6'
       }
     >
-      {children}
-    </motion.div>
+      <motion.div
+        initial={{ opacity: 0, y: 60 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -60 }}
+        className={
+          'bg-slate-300 dark:bg-slate-700 rounded-xl overflow-hidden drop-shadow-2xl'
+        }
+      >
+        {children}
+      </motion.div>
+    </div>
   )
 }

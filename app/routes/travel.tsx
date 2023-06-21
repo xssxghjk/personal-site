@@ -1,7 +1,6 @@
 import {
   ComposableMap,
   Geographies,
-  Geography,
   ZoomableGroup,
 } from 'react-simple-maps'
 import { useRef, useState } from 'react'
@@ -9,7 +8,7 @@ import { useTravelMetaData } from '~/hooks/useTravelMetaData'
 import { IGeography } from '~/components/travel/geography/MyGeographyProps'
 import { TravelledGeography } from '~/components/travel/geography/TravelledGeography'
 import { UntravelledGeography } from '~/components/travel/geography/UntravelledGeography'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { ImageCarousel } from '~/components/general/ImageCarousel'
 import { CountryModal } from '~/components/travel/countryModal/CountryModal'
 
@@ -75,8 +74,8 @@ export default function Travel() {
         </ComposableMap>
       </div>
       {selectedCountry !== undefined && (
-        <CountryModal constraintRef={mainRef}>
-          <div className={'w-72'}>
+        <CountryModal>
+          <div className={'w-28 md:w-48 lg:w-64 '}>
             <ImageCarousel
               images={[
                 imagesMetaData
@@ -127,17 +126,17 @@ export default function Travel() {
             {/*</Carousel>*/}
           </div>
           <AnimatePresence initial={false}>
-            <motion.h1
+            <motion.div
               key={selectedCountry}
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 30 }}
               className={
-                'm-4 absolute bottom-0 bg-auto drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,0.8)]'
+                'm-2 text-sm md:m-3 md:text-base lg:m-4 lg:text-2xl absolute bottom-0 bg-auto drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,0.8)] '
               }
             >
               {selectedCountry}
-            </motion.h1>
+            </motion.div>
           </AnimatePresence>
         </CountryModal>
       )}
