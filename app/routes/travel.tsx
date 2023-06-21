@@ -74,76 +74,73 @@ export default function Travel() {
           </ZoomableGroup>
         </ComposableMap>
       </div>
-      <AnimatePresence>
-        {selectedCountry !== undefined && (
-          <CountryModal constraintRef={mainRef}>
-            <div className={'w-72'}>
-              <ImageCarousel
-                images={[
-                  imagesMetaData
-                    ?.filter(
-                      (imageMetaData) =>
-                        imageMetaData.country === selectedCountry
-                    )
-                    .filter((_, index) => index < 5)
-                    .filter(
-                      (imageMetaData) =>
-                        imageMetaData.type === 'image'
-                    )[0].url || '',
-                ]}
-              />
-              {/*<motion.img*/}
-              {/*  initial={{ opacity: 0, y: -30 }}*/}
-              {/*  animate={{ opacity: 1, y: 0 }}*/}
-              {/*  exit={{ opacity: 0, y: 30 }}*/}
-              {/*  src={*/}
-              {/*   imagesMetaData*/}
-              {/*     ?.filter(*/}
-              {/*       (imageMetaData) =>*/}
-              {/*         imageMetaData.country === selectedCountry*/}
-              {/*     )*/}
-              {/*     .filter((_, index) => index < 5)*/}
-              {/*     .filter(*/}
-              {/*       (imageMetaData) =>*/}
-              {/*         imageMetaData.type === 'image'*/}
-              {/*     )[0].url*/}
-              {/* }*/}
-              {/*/>*/}
-              {/*<Carousel infiniteLoop autoPlay>*/}
-              {/*  {imagesMetaData*/}
-              {/*    ?.filter(*/}
-              {/*      (imageMetaData) =>*/}
-              {/*        imageMetaData.country === selectedCountry*/}
-              {/*    )*/}
-              {/*    .filter((_, index) => index < 5)*/}
-              {/*    .filter(*/}
-              {/*      (imageMetaData) => imageMetaData.type === 'image'*/}
-              {/*    )*/}
-              {/*    .map((imageMetaData, index) => (*/}
-              {/*      <>*/}
-              {/*        <div>*/}
-              {/*          <img src={imageMetaData.url} />*/}
-              {/*        </div>*/}
-              {/*      </>*/}
-              {/*    ))}*/}
-              {/*</Carousel>*/}
-            </div>
-            <AnimatePresence initial={false}>
-              <motion.h1
-                key={selectedCountry}
-                initial={{ opacity: 0, x: -30 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 30 }}
-                className={
-                  'm-4 absolute bottom-0 bg-auto drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,0.8)]'
-                }
-              >
-                {selectedCountry}
-              </motion.h1>
-            </AnimatePresence>
-          </CountryModal>
-        )}
-      </AnimatePresence>
+      {selectedCountry !== undefined && (
+        <CountryModal constraintRef={mainRef}>
+          <div className={'w-72'}>
+            <ImageCarousel
+              images={[
+                imagesMetaData
+                  ?.filter(
+                    (imageMetaData) =>
+                      imageMetaData.country === selectedCountry
+                  )
+                  .filter((_, index) => index < 5)
+                  .filter(
+                    (imageMetaData) => imageMetaData.type === 'image'
+                  )[0].url || '',
+              ]}
+            />
+            {/*<motion.img*/}
+            {/*  initial={{ opacity: 0, y: -30 }}*/}
+            {/*  animate={{ opacity: 1, y: 0 }}*/}
+            {/*  exit={{ opacity: 0, y: 30 }}*/}
+            {/*  src={*/}
+            {/*   imagesMetaData*/}
+            {/*     ?.filter(*/}
+            {/*       (imageMetaData) =>*/}
+            {/*         imageMetaData.country === selectedCountry*/}
+            {/*     )*/}
+            {/*     .filter((_, index) => index < 5)*/}
+            {/*     .filter(*/}
+            {/*       (imageMetaData) =>*/}
+            {/*         imageMetaData.type === 'image'*/}
+            {/*     )[0].url*/}
+            {/* }*/}
+            {/*/>*/}
+            {/*<Carousel infiniteLoop autoPlay>*/}
+            {/*  {imagesMetaData*/}
+            {/*    ?.filter(*/}
+            {/*      (imageMetaData) =>*/}
+            {/*        imageMetaData.country === selectedCountry*/}
+            {/*    )*/}
+            {/*    .filter((_, index) => index < 5)*/}
+            {/*    .filter(*/}
+            {/*      (imageMetaData) => imageMetaData.type === 'image'*/}
+            {/*    )*/}
+            {/*    .map((imageMetaData, index) => (*/}
+            {/*      <>*/}
+            {/*        <div>*/}
+            {/*          <img src={imageMetaData.url} />*/}
+            {/*        </div>*/}
+            {/*      </>*/}
+            {/*    ))}*/}
+            {/*</Carousel>*/}
+          </div>
+          <AnimatePresence initial={false}>
+            <motion.h1
+              key={selectedCountry}
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 30 }}
+              className={
+                'm-4 absolute bottom-0 bg-auto drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,0.8)]'
+              }
+            >
+              {selectedCountry}
+            </motion.h1>
+          </AnimatePresence>
+        </CountryModal>
+      )}
       {/*<div className={'col-span-3 lg:col-span-1 '}>*/}
       {/*  {imagesMetaData*/}
       {/*    ?.filter(*/}

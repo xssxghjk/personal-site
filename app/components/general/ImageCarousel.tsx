@@ -1,6 +1,6 @@
 import { Logo } from '~/components/general/Logo'
-import { motion } from 'framer-motion'
-import { useEffect, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import React, { useEffect, useState } from 'react'
 
 export interface ImageCarouselProps {
   images: string[]
@@ -16,27 +16,24 @@ export const ImageCarousel = ({ images }: ImageCarouselProps) => {
   console.log(imageLoading)
   return (
     <motion.div
-      className={'w-full'}
+      className={'w-full relative'}
       style={{
         aspectRatio: imageAspectRatio,
       }}
     >
-      <motion.img
-        key={images[0]}
-        initial={{ opacity: 0 }}
-        animate={{
-          opacity: imageLoading ? 0 : 1,
-          height: imageLoading ? 0 : 'auto',
-        }}
-        transition={{
-          height: { delay: 0, duration: 0.4 },
-          opacity: { delay: 0.5, duration: 0.4 },
-        }}
-        exit={{ opacity: 0, height: 0 }}
-        src={images[0]}
-        onLoad={() => setImageLoading(false)}
-        className={'pointer-events-none select-none'}
-      />
+      <AnimatePresence initial={false}>
+        <motion.img
+          key={images[0]}
+          initial={{ opacity: 0 }}
+          animate={{
+            opacity: imageLoading ? 0 : 1,
+          }}
+          exit={{ opacity: 0 }}
+          src={images[0]}
+          onLoad={() => setImageLoading(false)}
+          className={'pointer-events-none select-none absolute'}
+        />
+      </AnimatePresence>
     </motion.div>
   )
 }
