@@ -4330,7 +4330,7 @@ See https://reactjs.org/link/invalid-hook-call for tips about how to debug and f
         }
         return dispatcher.useContext(Context);
       }
-      function useState10(initialState) {
+      function useState11(initialState) {
         var dispatcher = resolveDispatcher();
         return dispatcher.useState(initialState);
       }
@@ -4338,11 +4338,11 @@ See https://reactjs.org/link/invalid-hook-call for tips about how to debug and f
         var dispatcher = resolveDispatcher();
         return dispatcher.useReducer(reducer, initialArg, init4);
       }
-      function useRef10(initialValue) {
+      function useRef11(initialValue) {
         var dispatcher = resolveDispatcher();
         return dispatcher.useRef(initialValue);
       }
-      function useEffect13(create4, deps) {
+      function useEffect14(create4, deps) {
         var dispatcher = resolveDispatcher();
         return dispatcher.useEffect(create4, deps);
       }
@@ -4869,7 +4869,7 @@ Check the top-level render call using <` + parentName + ">.");
         toArray,
         only: onlyChild
       };
-      exports.Children = Children3, exports.Component = Component3, exports.Fragment = REACT_FRAGMENT_TYPE, exports.Profiler = REACT_PROFILER_TYPE, exports.PureComponent = PureComponent, exports.StrictMode = REACT_STRICT_MODE_TYPE, exports.Suspense = REACT_SUSPENSE_TYPE, exports.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = ReactSharedInternals, exports.cloneElement = cloneElement$1, exports.createContext = createContext9, exports.createElement = createElement$1, exports.createFactory = createFactory, exports.createRef = createRef, exports.forwardRef = forwardRef4, exports.isValidElement = isValidElement3, exports.lazy = lazy, exports.memo = memo, exports.startTransition = startTransition, exports.unstable_act = act, exports.useCallback = useCallback5, exports.useContext = useContext12, exports.useDebugValue = useDebugValue2, exports.useDeferredValue = useDeferredValue, exports.useEffect = useEffect13, exports.useId = useId4, exports.useImperativeHandle = useImperativeHandle, exports.useInsertionEffect = useInsertionEffect3, exports.useLayoutEffect = useLayoutEffect5, exports.useMemo = useMemo10, exports.useReducer = useReducer, exports.useRef = useRef10, exports.useState = useState10, exports.useSyncExternalStore = useSyncExternalStore2, exports.useTransition = useTransition2, exports.version = ReactVersion, typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ < "u" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop == "function" && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(new Error());
+      exports.Children = Children3, exports.Component = Component3, exports.Fragment = REACT_FRAGMENT_TYPE, exports.Profiler = REACT_PROFILER_TYPE, exports.PureComponent = PureComponent, exports.StrictMode = REACT_STRICT_MODE_TYPE, exports.Suspense = REACT_SUSPENSE_TYPE, exports.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = ReactSharedInternals, exports.cloneElement = cloneElement$1, exports.createContext = createContext9, exports.createElement = createElement$1, exports.createFactory = createFactory, exports.createRef = createRef, exports.forwardRef = forwardRef4, exports.isValidElement = isValidElement3, exports.lazy = lazy, exports.memo = memo, exports.startTransition = startTransition, exports.unstable_act = act, exports.useCallback = useCallback5, exports.useContext = useContext12, exports.useDebugValue = useDebugValue2, exports.useDeferredValue = useDeferredValue, exports.useEffect = useEffect14, exports.useId = useId4, exports.useImperativeHandle = useImperativeHandle, exports.useInsertionEffect = useInsertionEffect3, exports.useLayoutEffect = useLayoutEffect5, exports.useMemo = useMemo10, exports.useReducer = useReducer, exports.useRef = useRef11, exports.useState = useState11, exports.useSyncExternalStore = useSyncExternalStore2, exports.useTransition = useTransition2, exports.version = ReactVersion, typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ < "u" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop == "function" && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(new Error());
     })();
   }
 });
@@ -6183,7 +6183,7 @@ var require_server = __commonJS({
   "node_modules/react-router-dom/server.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: !0 });
-    var React12 = require_react(), router = (init_router(), __toCommonJS(router_exports)), reactRouterDom = (init_dist2(), __toCommonJS(dist_exports));
+    var React15 = require_react(), router = (init_router(), __toCommonJS(router_exports)), reactRouterDom = (init_dist2(), __toCommonJS(dist_exports));
     function _interopNamespace(e) {
       if (e && e.__esModule)
         return e;
@@ -6200,7 +6200,7 @@ var require_server = __commonJS({
         }
       }), n.default = e, Object.freeze(n);
     }
-    var React__namespace = /* @__PURE__ */ _interopNamespace(React12);
+    var React__namespace = /* @__PURE__ */ _interopNamespace(React15);
     function StaticRouter({
       basename,
       children: children4,
@@ -6412,7 +6412,7 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
     "use strict";
     (function() {
       "use strict";
-      var React12 = require_react(), ReactVersion = "18.2.0", ReactSharedInternals = React12.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+      var React15 = require_react(), ReactVersion = "18.2.0", ReactSharedInternals = React15.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
       function warn(format) {
         {
           for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++)
@@ -7809,7 +7809,7 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
       }
       function flattenOptionChildren(children4) {
         var content = "";
-        return React12.Children.forEach(children4, function(child) {
+        return React15.Children.forEach(children4, function(child) {
           child != null && (content += child, !didWarnInvalidOptionChildren && typeof child != "string" && typeof child != "number" && (didWarnInvalidOptionChildren = !0, error("Cannot infer the option value of complex children. Pass a `value` prop or use a plain string as children to <option>.")));
         }), content;
       }
@@ -8950,7 +8950,7 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
       function basicStateReducer(state, action) {
         return typeof action == "function" ? action(state) : action;
       }
-      function useState10(initialState) {
+      function useState11(initialState) {
         return currentHookNameInDev = "useState", useReducer(
           basicStateReducer,
           initialState
@@ -8998,7 +8998,7 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
         var nextValue = nextCreate();
         return isInHookUserCodeInDev = !1, workInProgressHook.memoizedState = [nextValue, nextDeps], nextValue;
       }
-      function useRef10(initialValue) {
+      function useRef11(initialValue) {
         currentlyRenderingComponent = resolveCurrentlyRenderingComponent(), workInProgressHook = createWorkInProgressHook();
         var previousRef = workInProgressHook.memoizedState;
         if (previousRef === null) {
@@ -9068,8 +9068,8 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
         useContext: useContext12,
         useMemo: useMemo10,
         useReducer,
-        useRef: useRef10,
-        useState: useState10,
+        useRef: useRef11,
+        useState: useState11,
         useInsertionEffect: noop5,
         useLayoutEffect: useLayoutEffect5,
         useCallback: useCallback5,
@@ -9873,7 +9873,7 @@ var require_react_dom_server_browser_development = __commonJS({
     "use strict";
     (function() {
       "use strict";
-      var React12 = require_react(), ReactVersion = "18.2.0", ReactSharedInternals = React12.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+      var React15 = require_react(), ReactVersion = "18.2.0", ReactSharedInternals = React15.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
       function warn(format) {
         {
           for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++)
@@ -11285,7 +11285,7 @@ var require_react_dom_server_browser_development = __commonJS({
       }
       function flattenOptionChildren(children4) {
         var content = "";
-        return React12.Children.forEach(children4, function(child) {
+        return React15.Children.forEach(children4, function(child) {
           child != null && (content += child, !didWarnInvalidOptionChildren && typeof child != "string" && typeof child != "number" && (didWarnInvalidOptionChildren = !0, error("Cannot infer the option value of complex children. Pass a `value` prop or use a plain string as children to <option>.")));
         }), content;
       }
@@ -12385,7 +12385,7 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
       function basicStateReducer(state, action) {
         return typeof action == "function" ? action(state) : action;
       }
-      function useState10(initialState) {
+      function useState11(initialState) {
         return currentHookNameInDev = "useState", useReducer(
           basicStateReducer,
           initialState
@@ -12433,7 +12433,7 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
         var nextValue = nextCreate();
         return isInHookUserCodeInDev = !1, workInProgressHook.memoizedState = [nextValue, nextDeps], nextValue;
       }
-      function useRef10(initialValue) {
+      function useRef11(initialValue) {
         currentlyRenderingComponent = resolveCurrentlyRenderingComponent(), workInProgressHook = createWorkInProgressHook();
         var previousRef = workInProgressHook.memoizedState;
         if (previousRef === null) {
@@ -12503,8 +12503,8 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
         useContext: useContext12,
         useMemo: useMemo10,
         useReducer,
-        useRef: useRef10,
-        useState: useState10,
+        useRef: useRef11,
+        useState: useState11,
         useInsertionEffect: noop5,
         useLayoutEffect: useLayoutEffect5,
         useCallback: useCallback5,
@@ -13327,14 +13327,14 @@ var require_react_jsx_dev_runtime_development = __commonJS({
     "use strict";
     (function() {
       "use strict";
-      var React12 = require_react(), REACT_ELEMENT_TYPE = Symbol.for("react.element"), REACT_PORTAL_TYPE = Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = Symbol.for("react.profiler"), REACT_PROVIDER_TYPE = Symbol.for("react.provider"), REACT_CONTEXT_TYPE = Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = Symbol.for("react.memo"), REACT_LAZY_TYPE = Symbol.for("react.lazy"), REACT_OFFSCREEN_TYPE = Symbol.for("react.offscreen"), MAYBE_ITERATOR_SYMBOL = Symbol.iterator, FAUX_ITERATOR_SYMBOL = "@@iterator";
+      var React15 = require_react(), REACT_ELEMENT_TYPE = Symbol.for("react.element"), REACT_PORTAL_TYPE = Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = Symbol.for("react.profiler"), REACT_PROVIDER_TYPE = Symbol.for("react.provider"), REACT_CONTEXT_TYPE = Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = Symbol.for("react.memo"), REACT_LAZY_TYPE = Symbol.for("react.lazy"), REACT_OFFSCREEN_TYPE = Symbol.for("react.offscreen"), MAYBE_ITERATOR_SYMBOL = Symbol.iterator, FAUX_ITERATOR_SYMBOL = "@@iterator";
       function getIteratorFn(maybeIterable) {
         if (maybeIterable === null || typeof maybeIterable != "object")
           return null;
         var maybeIterator = MAYBE_ITERATOR_SYMBOL && maybeIterable[MAYBE_ITERATOR_SYMBOL] || maybeIterable[FAUX_ITERATOR_SYMBOL];
         return typeof maybeIterator == "function" ? maybeIterator : null;
       }
-      var ReactSharedInternals = React12.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+      var ReactSharedInternals = React15.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
       function error(format) {
         {
           for (var _len2 = arguments.length, args = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++)
@@ -22022,7 +22022,7 @@ __export(root_exports, {
 });
 
 // app/tailwind.css
-var tailwind_default = "/build/_assets/tailwind-UBLXGP5Y.css";
+var tailwind_default = "/build/_assets/tailwind-AZWK2ALF.css";
 
 // app/components/navigationTabs/NavigationTabContainer.tsx
 var import_jsx_dev_runtime2 = __toESM(require_jsx_dev_runtime()), NavigationTabContainer = ({
@@ -22175,7 +22175,7 @@ var travel_exports = {};
 __export(travel_exports, {
   default: () => Travel
 });
-var import_react_simple_maps3 = __toESM(require_index_umd()), import_react32 = __toESM(require_react());
+var import_react_simple_maps3 = __toESM(require_index_umd()), import_react35 = __toESM(require_react());
 
 // app/hooks/useTravelMetaData.ts
 var import_react5 = __toESM(require_react()), nameMap = [
@@ -29975,43 +29975,167 @@ var import_react31 = __toESM(require_react()), import_jsx_dev_runtime7 = __toESM
 };
 
 // app/components/travel/countryModal/CountryModal.tsx
-var import_jsx_dev_runtime8 = __toESM(require_jsx_dev_runtime()), CountryModal = ({ children: children4 }) => /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(
-  "div",
-  {
-    className: "fixed bottom-3 right-3 md:bottom-4 md:right-4 lg:right-6 lg:bottom-6",
-    children: /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(
-      motion.div,
-      {
-        initial: { opacity: 0, y: 60 },
-        animate: { opacity: 1, y: 0 },
-        exit: { opacity: 0, y: -60 },
-        className: "bg-slate-300 dark:bg-slate-700 rounded-xl overflow-hidden drop-shadow-2xl",
-        children: children4
-      },
-      void 0,
-      !1,
-      {
-        fileName: "app/components/travel/countryModal/CountryModal.tsx",
-        lineNumber: 15,
-        columnNumber: 7
-      },
-      this
-    )
-  },
-  void 0,
-  !1,
-  {
-    fileName: "app/components/travel/countryModal/CountryModal.tsx",
-    lineNumber: 10,
-    columnNumber: 5
-  },
-  this
-);
+var import_react34 = __toESM(require_react());
+
+// node_modules/react-icons/lib/esm/iconBase.js
+var import_react33 = __toESM(require_react());
+
+// node_modules/react-icons/lib/esm/iconContext.js
+var import_react32 = __toESM(require_react()), DefaultContext = {
+  color: void 0,
+  size: void 0,
+  className: void 0,
+  style: void 0,
+  attr: void 0
+}, IconContext = import_react32.default.createContext && import_react32.default.createContext(DefaultContext);
+
+// node_modules/react-icons/lib/esm/iconBase.js
+var __assign = function() {
+  return __assign = Object.assign || function(t) {
+    for (var s, i = 1, n = arguments.length; i < n; i++) {
+      s = arguments[i];
+      for (var p in s)
+        Object.prototype.hasOwnProperty.call(s, p) && (t[p] = s[p]);
+    }
+    return t;
+  }, __assign.apply(this, arguments);
+}, __rest = function(s, e) {
+  var t = {};
+  for (var p in s)
+    Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0 && (t[p] = s[p]);
+  if (s != null && typeof Object.getOwnPropertySymbols == "function")
+    for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++)
+      e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]) && (t[p[i]] = s[p[i]]);
+  return t;
+};
+function Tree2Element(tree) {
+  return tree && tree.map(function(node, i) {
+    return import_react33.default.createElement(node.tag, __assign({
+      key: i
+    }, node.attr), Tree2Element(node.child));
+  });
+}
+function GenIcon(data) {
+  return function(props) {
+    return import_react33.default.createElement(IconBase, __assign({
+      attr: __assign({}, data.attr)
+    }, props), Tree2Element(data.child));
+  };
+}
+function IconBase(props) {
+  var elem = function(conf) {
+    var attr = props.attr, size = props.size, title = props.title, svgProps = __rest(props, ["attr", "size", "title"]), computedSize = size || conf.size || "1em", className;
+    return conf.className && (className = conf.className), props.className && (className = (className ? className + " " : "") + props.className), import_react33.default.createElement("svg", __assign({
+      stroke: "currentColor",
+      fill: "currentColor",
+      strokeWidth: "0"
+    }, conf.attr, attr, svgProps, {
+      className,
+      style: __assign(__assign({
+        color: props.color || conf.color
+      }, conf.style), props.style),
+      height: computedSize,
+      width: computedSize,
+      xmlns: "http://www.w3.org/2000/svg"
+    }), title && import_react33.default.createElement("title", null, title), props.children);
+  };
+  return IconContext !== void 0 ? import_react33.default.createElement(IconContext.Consumer, null, function(conf) {
+    return elem(conf);
+  }) : elem(DefaultContext);
+}
+
+// node_modules/react-icons/fi/index.esm.js
+function FiMaximize(props) {
+  return GenIcon({ tag: "svg", attr: { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, child: [{ tag: "path", attr: { d: "M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" } }] })(props);
+}
+function FiX(props) {
+  return GenIcon({ tag: "svg", attr: { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, child: [{ tag: "line", attr: { x1: "18", y1: "6", x2: "6", y2: "18" } }, { tag: "line", attr: { x1: "6", y1: "6", x2: "18", y2: "18" } }] })(props);
+}
+
+// app/components/travel/countryModal/CountryModal.tsx
+var import_jsx_dev_runtime8 = __toESM(require_jsx_dev_runtime()), CountryModal = ({
+  children: children4,
+  onClose
+}) => {
+  let modalRef = (0, import_react34.useRef)(null), [isHovering, setIsHovering] = (0, import_react34.useState)(!1);
+  return (0, import_react34.useEffect)(() => {
+    !modalRef.current || (modalRef.current.addEventListener("mouseenter", () => {
+      setIsHovering(() => !0);
+    }), modalRef.current.addEventListener(
+      "mouseleave",
+      () => setIsHovering(() => !1)
+    ));
+  }, [modalRef]), /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(
+    "div",
+    {
+      className: "transition-all fixed bottom-3 right-3 md:bottom-4 md:right-4 lg:right-6 lg:bottom-6",
+      ref: modalRef,
+      children: /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(
+        motion.div,
+        {
+          initial: { opacity: 0, x: 30 },
+          animate: { opacity: 1, x: 0, scale: isHovering ? 1.05 : 1 },
+          exit: { opacity: 0 },
+          className: "bg-slate-300 dark:bg-slate-700 rounded-xl overflow-hidden drop-shadow-2xl",
+          children: [
+            /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(
+              FiX,
+              {
+                onClick: () => isHovering && onClose(),
+                className: "h-4 w-4 md:h-6 md:w-6 absolute top-2 right-2 z-10 transition-all duration-200 " + (isHovering ? "opacity-100 cursor-pointer" : "opacity-0")
+              },
+              void 0,
+              !1,
+              {
+                fileName: "app/components/travel/countryModal/CountryModal.tsx",
+                lineNumber: 42,
+                columnNumber: 9
+              },
+              this
+            ),
+            /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(
+              FiMaximize,
+              {
+                size: 24,
+                className: "h-4 w-4 md:h-6 md:w-6 absolute top-1/2 left-1/2 translate-x-[-50%] translate-y-[-50%] z-10 transition-all duration-200 " + (isHovering ? "opacity-100 cursor-pointer" : "opacity-0")
+              },
+              void 0,
+              !1,
+              {
+                fileName: "app/components/travel/countryModal/CountryModal.tsx",
+                lineNumber: 49,
+                columnNumber: 9
+              },
+              this
+            ),
+            children4
+          ]
+        },
+        1,
+        !0,
+        {
+          fileName: "app/components/travel/countryModal/CountryModal.tsx",
+          lineNumber: 33,
+          columnNumber: 7
+        },
+        this
+      )
+    },
+    void 0,
+    !1,
+    {
+      fileName: "app/components/travel/countryModal/CountryModal.tsx",
+      lineNumber: 27,
+      columnNumber: 5
+    },
+    this
+  );
+};
 
 // app/routes/travel.tsx
 var import_jsx_dev_runtime9 = __toESM(require_jsx_dev_runtime()), geoUrl = "https://raw.githubusercontent.com/deldersveld/topojson/master/world-countries.json", getGeographyName = (geo) => geo.properties.name;
 function Travel() {
-  let [selectedCountry, setSelectedCountry] = (0, import_react32.useState)(void 0), imagesMetaData = useTravelMetaData(), mainRef = (0, import_react32.useRef)(null), isTravelledCountry = (geo) => imagesMetaData && imagesMetaData.some(
+  let [selectedCountry, setSelectedCountry] = (0, import_react35.useState)(void 0), imagesMetaData = useTravelMetaData(), mainRef = (0, import_react35.useRef)(null), isTravelledCountry = (geo) => imagesMetaData && imagesMetaData.some(
     (imageMetaData) => imageMetaData.country.includes(geo.properties.name)
   ) ? "travelled" : "untravelled", selectCountry = (geo) => {
     isTravelledCountry(geo) && setSelectedCountry(getGeographyName(geo));
@@ -30066,7 +30190,7 @@ function Travel() {
       lineNumber: 49,
       columnNumber: 7
     }, this),
-    selectedCountry !== void 0 && /* @__PURE__ */ (0, import_jsx_dev_runtime9.jsxDEV)(CountryModal, { children: [
+    /* @__PURE__ */ (0, import_jsx_dev_runtime9.jsxDEV)(AnimatePresence, { initial: !1, children: selectedCountry !== void 0 && /* @__PURE__ */ (0, import_jsx_dev_runtime9.jsxDEV)(CountryModal, { onClose: () => setSelectedCountry(void 0), children: [
       /* @__PURE__ */ (0, import_jsx_dev_runtime9.jsxDEV)("div", { className: "w-28 md:w-48 lg:w-64 ", children: /* @__PURE__ */ (0, import_jsx_dev_runtime9.jsxDEV)(
         ImageCarousel,
         {
@@ -30082,14 +30206,14 @@ function Travel() {
         !1,
         {
           fileName: "app/routes/travel.tsx",
-          lineNumber: 79,
-          columnNumber: 13
+          lineNumber: 80,
+          columnNumber: 15
         },
         this
       ) }, void 0, !1, {
         fileName: "app/routes/travel.tsx",
-        lineNumber: 78,
-        columnNumber: 11
+        lineNumber: 79,
+        columnNumber: 13
       }, this),
       /* @__PURE__ */ (0, import_jsx_dev_runtime9.jsxDEV)(AnimatePresence, { initial: !1, children: /* @__PURE__ */ (0, import_jsx_dev_runtime9.jsxDEV)(
         motion.div,
@@ -30104,19 +30228,23 @@ function Travel() {
         !1,
         {
           fileName: "app/routes/travel.tsx",
-          lineNumber: 129,
-          columnNumber: 13
+          lineNumber: 131,
+          columnNumber: 15
         },
         this
       ) }, void 0, !1, {
         fileName: "app/routes/travel.tsx",
-        lineNumber: 128,
-        columnNumber: 11
+        lineNumber: 130,
+        columnNumber: 13
       }, this)
     ] }, void 0, !0, {
       fileName: "app/routes/travel.tsx",
-      lineNumber: 77,
-      columnNumber: 9
+      lineNumber: 78,
+      columnNumber: 11
+    }, this) }, void 0, !1, {
+      fileName: "app/routes/travel.tsx",
+      lineNumber: 76,
+      columnNumber: 7
     }, this)
   ] }, void 0, !0, {
     fileName: "app/routes/travel.tsx",
@@ -30156,7 +30284,7 @@ function _index3() {
 }
 
 // server-assets-manifest:@remix-run/dev/assets-manifest
-var assets_manifest_default = { version: "f542bf45", entry: { module: "/build/entry.client-CBLAPYQN.js", imports: ["/build/_shared/chunk-RC2GTPBO.js", "/build/_shared/chunk-FN3KWL4V.js", "/build/_shared/chunk-4IYZMDEG.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-FGPR23MZ.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-OGJMYIRR.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-NHBZRQPM.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel.$country": { id: "routes/travel.$country", parentId: "routes/travel", path: ":country", index: void 0, caseSensitive: void 0, module: "/build/routes/travel.$country-AHN5ZNAC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-F542BF45.js" };
+var assets_manifest_default = { version: "289f1063", entry: { module: "/build/entry.client-CBLAPYQN.js", imports: ["/build/_shared/chunk-RC2GTPBO.js", "/build/_shared/chunk-FN3KWL4V.js", "/build/_shared/chunk-4IYZMDEG.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-FG72BYBR.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-OGJMYIRR.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-K2RQDZVC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel.$country": { id: "routes/travel.$country", parentId: "routes/travel", path: ":country", index: void 0, caseSensitive: void 0, module: "/build/routes/travel.$country-AHN5ZNAC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-289F1063.js" };
 
 // server-entry-module:@remix-run/dev/server-build
 var assetsBuildDirectory = "public\\build", future = { unstable_cssModules: !1, unstable_cssSideEffectImports: !1, unstable_dev: !1, unstable_postcss: !1, unstable_tailwind: !0, unstable_vanillaExtract: !1, v2_errorBoundary: !0, v2_meta: !0, v2_normalizeFormMethod: !0, v2_routeConvention: !0 }, publicPath = "/build/", entry = { module: entry_server_exports }, routes = {
