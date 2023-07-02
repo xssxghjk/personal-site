@@ -1,77 +1,25 @@
-import {
-  ComposableMap,
-  Geographies,
-  ZoomableGroup,
-} from 'react-simple-maps'
 import { useRef, useState } from 'react'
 import { useTravelMetaData } from '~/hooks/useTravelMetaData'
-import { IGeography } from '~/components/travel/geography/MyGeographyProps'
-import { TravelledGeography } from '~/components/travel/geography/TravelledGeography'
-import { UntravelledGeography } from '~/components/travel/geography/UntravelledGeography'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ImageCarousel } from '~/components/general/ImageCarousel'
 import { CountryModal } from '~/components/travel/countryModal/CountryModal'
-
-const geoUrl =
-  'https://raw.githubusercontent.com/deldersveld/topojson/master/world-countries.json'
-
-const getGeographyName = (geo: IGeography) => geo.properties.name
+import { TravelMap } from '~/components/travel/TravelMap'
 
 export default function Travel() {
   const [selectedCountry, setSelectedCountry] = useState<
     string | undefined
-  >(undefined)
-  const imagesMetaData = useTravelMetaData()
+  >('Turkey')
   const mainRef = useRef<HTMLElement>(null)
-
-  const isTravelledCountry = (
-    geo: IGeography
-  ): 'travelled' | 'untravelled' =>
-    imagesMetaData &&
-    imagesMetaData.some((imageMetaData) =>
-      imageMetaData.country.includes(geo.properties.name)
-    )
-      ? 'travelled'
-      : 'untravelled'
-
-  const selectCountry = (geo: IGeography) => {
-    if (isTravelledCountry(geo))
-      setSelectedCountry(getGeographyName(geo))
-  }
-
-  const geographyMap = {
-    travelled: TravelledGeography,
-    untravelled: UntravelledGeography,
-  } as const
+  const imagesMetaData = useTravelMetaData()
 
   return (
     <main className={'h-full relative'} ref={mainRef}>
       <div className={'h-full'}>
-        <ComposableMap
-          projection={'geoMercator'}
-          className={'h-full w-full'}
-        >
-          <ZoomableGroup>
-            <Geographies geography={geoUrl}>
-              {({ geographies }) => {
-                return geographies.map((geography: IGeography) => {
-                  const MyGeography =
-                    geographyMap[isTravelledCountry(geography)]
-                  return (
-                    <MyGeography
-                      geography={geography}
-                      onSelect={selectCountry}
-                      isSelected={
-                        selectedCountry ===
-                        getGeographyName(geography)
-                      }
-                    />
-                  )
-                })
-              }}
-            </Geographies>
-          </ZoomableGroup>
-        </ComposableMap>
+        <TravelMap
+          selectCountry={setSelectedCountry}
+          selectedCountry={selectedCountry}
+          imagesMetaData={imagesMetaData}
+        />
       </div>
       <AnimatePresence initial={false}>
         {selectedCountry !== undefined && (
@@ -91,41 +39,6 @@ export default function Travel() {
                     )[0].url || '',
                 ]}
               />
-              {/*<motion.img*/}
-              {/*  initial={{ opacity: 0, y: -30 }}*/}
-              {/*  animate={{ opacity: 1, y: 0 }}*/}
-              {/*  exit={{ opacity: 0, y: 30 }}*/}
-              {/*  src={*/}
-              {/*   imagesMetaData*/}
-              {/*     ?.filter(*/}
-              {/*       (imageMetaData) =>*/}
-              {/*         imageMetaData.country === selectedCountry*/}
-              {/*     )*/}
-              {/*     .filter((_, index) => index < 5)*/}
-              {/*     .filter(*/}
-              {/*       (imageMetaData) =>*/}
-              {/*         imageMetaData.type === 'image'*/}
-              {/*     )[0].url*/}
-              {/* }*/}
-              {/*/>*/}
-              {/*<Carousel infiniteLoop autoPlay>*/}
-              {/*  {imagesMetaData*/}
-              {/*    ?.filter(*/}
-              {/*      (imageMetaData) =>*/}
-              {/*        imageMetaData.country === selectedCountry*/}
-              {/*    )*/}
-              {/*    .filter((_, index) => index < 5)*/}
-              {/*    .filter(*/}
-              {/*      (imageMetaData) => imageMetaData.type === 'image'*/}
-              {/*    )*/}
-              {/*    .map((imageMetaData, index) => (*/}
-              {/*      <>*/}
-              {/*        <div>*/}
-              {/*          <img src={imageMetaData.url} />*/}
-              {/*        </div>*/}
-              {/*      </>*/}
-              {/*    ))}*/}
-              {/*</Carousel>*/}
             </div>
             <AnimatePresence initial={false}>
               <motion.div
@@ -143,17 +56,6 @@ export default function Travel() {
           </CountryModal>
         )}
       </AnimatePresence>
-      {/*<div className={'col-span-3 lg:col-span-1 '}>*/}
-      {/*  {imagesMetaData*/}
-      {/*    ?.filter(*/}
-      {/*      (imageMetaData) =>*/}
-      {/*        imageMetaData.country === selectedCountry*/}
-      {/*    )*/}
-      {/*    .filter((imageMetaData) => imageMetaData.type === 'image')*/}
-      {/*    .map((imageMetaData) => (*/}
-      {/*      <img src={imageMetaData.url} />*/}
-      {/*    ))}*/}
-      {/*</div>*/}
     </main>
   )
 }

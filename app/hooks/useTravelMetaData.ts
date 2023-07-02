@@ -6,7 +6,7 @@ const nameMap: [string, string][] = [
   ['Åland', 'Finland'],
 ]
 
-interface ImageMetaData {
+export interface ImageMetaData {
   country: string
   url: string
   type: 'image' | 'video'
