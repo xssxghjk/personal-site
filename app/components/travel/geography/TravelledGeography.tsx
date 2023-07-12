@@ -48,8 +48,8 @@ export const TravelledGeography = ({
       className={
         'transition-all duration-200 cursor-pointer' +
         (isSelected
-          ? ' fill-fuchsia-600 dark:fill-fuchsia-300'
-          : ' fill-slate-600 dark:fill-slate-300 hover:fill-slate-700 hover:dark:fill-slate-200')
+          ? ' fill-fuchsia-300'
+          : ' fill-slate-300 hover:fill-slate-200')
       }
       style={{
         default: { outline: 'none' },

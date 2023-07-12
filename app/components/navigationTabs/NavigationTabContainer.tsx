@@ -11,7 +11,7 @@ export const NavigationTabContainer = ({
   children,
 }: NavigationTabContainerProps) => {
   return (
-    <ul className="flex flex-wrap text-sm font-medium text-center text-slate-500 border-b border-slate-200 dark:border-slate-700 dark:text-slate-400">
+    <ul className="flex flex-wrap text-sm font-medium text-center border-b border-slate-700 text-slate-400">
       {children}
     </ul>
   )

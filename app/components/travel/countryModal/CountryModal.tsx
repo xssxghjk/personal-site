@@ -38,7 +38,7 @@ export const CountryModal = ({
         animate={{ opacity: 1, x: 0, scale: isHovering ? 1.05 : 1 }}
         exit={{ opacity: 0 }}
         className={
-          'bg-slate-300 dark:bg-slate-700 rounded-xl overflow-hidden drop-shadow-2xl'
+          'bg-slate-700 rounded-xl overflow-hidden drop-shadow-2xl'
         }
       >
         <div

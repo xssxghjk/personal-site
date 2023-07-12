@@ -8,7 +8,7 @@ export const UntravelledGeography = ({
     <Geography
       key={geography.rsmKey}
       geography={geography}
-      className={'fill-slate-200 dark:fill-slate-600'}
+      className={'fill-slate-600'}
       style={{
         default: { outline: 'none' },
         hover: { outline: 'none' },

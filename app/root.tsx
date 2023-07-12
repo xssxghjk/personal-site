@@ -30,7 +30,7 @@ export default function App() {
       </head>
       <body
         className={
-          'bg-slate-100 dark:bg-slate-800 w-screen h-screen dark:text-slate-300 text-slate-700 overflow-hidden'
+          'bg-slate-800 w-screen h-screen text-slate-300 overflow-hidden'
         }
       >
         <NavigationTabContainer>

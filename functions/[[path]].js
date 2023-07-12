@@ -22022,12 +22022,12 @@ __export(root_exports, {
 });
 
 // app/tailwind.css
-var tailwind_default = "/build/_assets/tailwind-E6Q3JKRY.css";
+var tailwind_default = "/build/_assets/tailwind-MVAKHUKW.css";
 
 // app/components/navigationTabs/NavigationTabContainer.tsx
 var import_jsx_dev_runtime2 = __toESM(require_jsx_dev_runtime()), NavigationTabContainer = ({
   children: children4
-}) => /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("ul", { className: "flex flex-wrap text-sm font-medium text-center text-slate-500 border-b border-slate-200 dark:border-slate-700 dark:text-slate-400", children: children4 }, void 0, !1, {
+}) => /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("ul", { className: "flex flex-wrap text-sm font-medium text-center border-b border-slate-700 text-slate-400", children: children4 }, void 0, !1, {
   fileName: "app/components/navigationTabs/NavigationTabContainer.tsx",
   lineNumber: 14,
   columnNumber: 5
@@ -22038,7 +22038,7 @@ var import_jsx_dev_runtime3 = __toESM(require_jsx_dev_runtime()), NavigationTab 
   displayString,
   to
 }) => {
-  let { pathname } = useLocation(), conditionalStyles = sameRootPaths(pathname, to) ? "text-fuchsia-600 dark:text-fuchsia-500 active" : "hover:text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 dark:hover:text-slate-300";
+  let { pathname } = useLocation(), conditionalStyles = sameRootPaths(pathname, to) ? "text-fuchsia-500 active" : "hover:bg-slate-800 hover:text-slate-300";
   return /* @__PURE__ */ (0, import_jsx_dev_runtime3.jsxDEV)("li", { className: "mr-2", children: /* @__PURE__ */ (0, import_jsx_dev_runtime3.jsxDEV)(
     Link2,
     {
@@ -22111,7 +22111,7 @@ function App() {
     /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(
       "body",
       {
-        className: "bg-slate-100 dark:bg-slate-800 w-screen h-screen dark:text-slate-300 text-slate-700 overflow-hidden",
+        className: "bg-slate-800 w-screen h-screen text-slate-300 overflow-hidden",
         children: [
           /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(NavigationTabContainer, { children: [
             /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(NavigationTab, { to: "/", displayString: "Home" }, void 0, !1, {
@@ -22169,6 +22169,36 @@ function App() {
 
 // server-entry-module:@remix-run/dev/server-build
 var route1 = __toESM(require_travel_country());
+
+// app/routes/_index.tsx
+var index_exports = {};
+__export(index_exports, {
+  default: () => _index3,
+  meta: () => meta
+});
+var import_jsx_dev_runtime5 = __toESM(require_jsx_dev_runtime()), meta = () => [{ title: "New Remix App" }];
+function _index3() {
+  return /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)("div", { style: { fontFamily: "system-ui, sans-serif", lineHeight: "1.4" }, children: [
+    /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)("h1", { className: "text-center mt-4", children: "Hi, I'm Enes" }, void 0, !1, {
+      fileName: "app/routes/_index.tsx",
+      lineNumber: 10,
+      columnNumber: 7
+    }, this),
+    /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)("div", { className: "mx-auto mt-16 max-w-7xl text-center", children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)("span", { children: "This is my personal page where I document things I'm doing (including this page)" }, void 0, !1, {
+      fileName: "app/routes/_index.tsx",
+      lineNumber: 12,
+      columnNumber: 9
+    }, this) }, void 0, !1, {
+      fileName: "app/routes/_index.tsx",
+      lineNumber: 11,
+      columnNumber: 7
+    }, this)
+  ] }, void 0, !0, {
+    fileName: "app/routes/_index.tsx",
+    lineNumber: 9,
+    columnNumber: 5
+  }, this);
+}
 
 // app/routes/travel.tsx
 var travel_exports = {};
@@ -26593,26 +26623,26 @@ var AnimatePresence = ({ children: children4, custom, initial = !0, onExitComple
 };
 
 // app/components/general/ImageCarousel.tsx
-var import_react30 = __toESM(require_react()), import_jsx_dev_runtime5 = __toESM(require_jsx_dev_runtime()), imageAspectRatio = 384 / 683, ImageCarousel = ({ images }) => {
+var import_react30 = __toESM(require_react()), import_jsx_dev_runtime6 = __toESM(require_jsx_dev_runtime()), imageAspectRatio = 384 / 683, ImageCarousel = ({ images }) => {
   let [imageLoading, setImageLoading] = (0, import_react30.useState)(!0);
   return (0, import_react30.useEffect)(() => {
     setImageLoading(!0);
-  }, [images[0]]), /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(
+  }, [images[0]]), /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
     motion.div,
     {
       className: "w-full relative",
       style: {
         aspectRatio: imageAspectRatio
       },
-      children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(AnimatePresence, { initial: !1, children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(
+      children: /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(AnimatePresence, { initial: !1, children: /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
         motion.img,
         {
           initial: { opacity: 0 },
           animate: {
-            opacity: 1
+            opacity: imageLoading ? 0 : 1
           },
           exit: { opacity: 0 },
-          src: "sample.png",
+          src: images[0],
           onLoad: () => setImageLoading(!1),
           className: "pointer-events-none select-none absolute"
         },
@@ -26720,7 +26750,7 @@ function FiX(props) {
 }
 
 // app/components/travel/countryModal/CountryModal.tsx
-var import_jsx_dev_runtime6 = __toESM(require_jsx_dev_runtime()), CountryModal = ({
+var import_jsx_dev_runtime7 = __toESM(require_jsx_dev_runtime()), CountryModal = ({
   children: children4,
   onClose
 }) => {
@@ -26734,20 +26764,20 @@ var import_jsx_dev_runtime6 = __toESM(require_jsx_dev_runtime()), CountryModal =
     ));
   }, [modalRef]);
   let sharedIconStyles = " h-4 w-4 md:h-6 md:w-6 z-20 ";
-  return /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
+  return /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(
     "div",
     {
       className: "transition-all fixed bottom-3 right-3 md:bottom-4 md:right-4 lg:right-6 lg:bottom-6",
       ref: modalRef,
-      children: /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
+      children: /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(
         motion.div,
         {
           initial: { opacity: 0, x: 30 },
           animate: { opacity: 1, x: 0, scale: isHovering ? 1.05 : 1 },
           exit: { opacity: 0 },
-          className: "bg-slate-300 dark:bg-slate-700 rounded-xl overflow-hidden drop-shadow-2xl",
+          className: "bg-slate-700 rounded-xl overflow-hidden drop-shadow-2xl",
           children: [
-            /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
+            /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(
               "div",
               {
                 className: "z-10 h-full w-full absolute bg-slate-900 transition-all " + (isHovering ? "opacity-50" : "opacity-0")
@@ -26761,7 +26791,7 @@ var import_jsx_dev_runtime6 = __toESM(require_jsx_dev_runtime()), CountryModal =
               },
               this
             ),
-            /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
+            /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(
               FiX,
               {
                 onClick: () => isHovering && onClose(),
@@ -26776,7 +26806,7 @@ var import_jsx_dev_runtime6 = __toESM(require_jsx_dev_runtime()), CountryModal =
               },
               this
             ),
-            /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
+            /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(
               FiMaximize,
               {
                 size: 24,
@@ -30076,7 +30106,7 @@ function transform2(node) {
 }
 
 // app/components/travel/geography/TravelledGeography.tsx
-var import_jsx_dev_runtime7 = __toESM(require_jsx_dev_runtime()), TravelledGeography = ({
+var import_jsx_dev_runtime8 = __toESM(require_jsx_dev_runtime()), TravelledGeography = ({
   geography,
   onSelect,
   isSelected
@@ -30091,7 +30121,7 @@ var import_jsx_dev_runtime7 = __toESM(require_jsx_dev_runtime()), TravelledGeogr
     ), setBox(geoSvg.current.getBBox()));
   }, [geoSvg]);
   let scaling = isSelected ? 0.1 : 0.05, calculateBaseTranslate = (position, size) => (position + size / 2) * scaling;
-  return /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(
+  return /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(
     import_react_simple_maps.Geography,
     {
       ref: geoSvg,
@@ -30103,7 +30133,7 @@ var import_jsx_dev_runtime7 = __toESM(require_jsx_dev_runtime()), TravelledGeogr
         box.height
       )}) scale(${scaling + 1})` : "",
       geography,
-      className: "transition-all duration-200 cursor-pointer" + (isSelected ? " fill-fuchsia-600 dark:fill-fuchsia-300" : " fill-slate-600 dark:fill-slate-300 hover:fill-slate-700 hover:dark:fill-slate-200"),
+      className: "transition-all duration-200 cursor-pointer" + (isSelected ? " fill-fuchsia-300" : " fill-slate-300 hover:fill-slate-200"),
       style: {
         default: { outline: "none" },
         hover: { outline: "none" },
@@ -30128,13 +30158,13 @@ var import_jsx_dev_runtime7 = __toESM(require_jsx_dev_runtime()), TravelledGeogr
 };
 
 // app/components/travel/geography/UntravelledGeography.tsx
-var import_react_simple_maps2 = __toESM(require_index_umd()), import_jsx_dev_runtime8 = __toESM(require_jsx_dev_runtime()), UntravelledGeography = ({
+var import_react_simple_maps2 = __toESM(require_index_umd()), import_jsx_dev_runtime9 = __toESM(require_jsx_dev_runtime()), UntravelledGeography = ({
   geography
-}) => /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(
+}) => /* @__PURE__ */ (0, import_jsx_dev_runtime9.jsxDEV)(
   import_react_simple_maps2.Geography,
   {
     geography,
-    className: "fill-slate-200 dark:fill-slate-600",
+    className: "fill-slate-600",
     style: {
       default: { outline: "none" },
       hover: { outline: "none" },
@@ -30152,7 +30182,7 @@ var import_react_simple_maps2 = __toESM(require_index_umd()), import_jsx_dev_run
 );
 
 // app/components/travel/TravelMap.tsx
-var import_jsx_dev_runtime9 = __toESM(require_jsx_dev_runtime()), geoUrl = "https://raw.githubusercontent.com/deldersveld/topojson/master/world-countries.json", TravelMap = ({
+var import_jsx_dev_runtime10 = __toESM(require_jsx_dev_runtime()), geoUrl = "https://raw.githubusercontent.com/deldersveld/topojson/master/world-countries.json", TravelMap = ({
   selectCountry,
   selectedCountry,
   imagesMetaData
@@ -30165,14 +30195,14 @@ var import_jsx_dev_runtime9 = __toESM(require_jsx_dev_runtime()), geoUrl = "http
   ) ? "travelled" : "untravelled", trySelectCountry = (geo) => {
     isTravelledCountry(geo) && selectCountry(getGeographyName(geo));
   };
-  return /* @__PURE__ */ (0, import_jsx_dev_runtime9.jsxDEV)(
+  return /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)(
     import_react_simple_maps3.ComposableMap,
     {
       projection: "geoMercator",
       className: "h-full w-full",
-      children: /* @__PURE__ */ (0, import_jsx_dev_runtime9.jsxDEV)(import_react_simple_maps3.ZoomableGroup, { children: /* @__PURE__ */ (0, import_jsx_dev_runtime9.jsxDEV)(import_react_simple_maps3.Geographies, { geography: geoUrl, children: ({ geographies }) => geographies.map((geography) => {
+      children: /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)(import_react_simple_maps3.ZoomableGroup, { children: /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)(import_react_simple_maps3.Geographies, { geography: geoUrl, children: ({ geographies }) => geographies.map((geography) => {
         let MyGeography = geographyMap[isTravelledCountry(geography)];
-        return /* @__PURE__ */ (0, import_jsx_dev_runtime9.jsxDEV)(
+        return /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)(
           MyGeography,
           {
             geography,
@@ -30210,11 +30240,11 @@ var import_jsx_dev_runtime9 = __toESM(require_jsx_dev_runtime()), geoUrl = "http
 };
 
 // app/routes/travel.tsx
-var import_jsx_dev_runtime10 = __toESM(require_jsx_dev_runtime());
+var import_jsx_dev_runtime11 = __toESM(require_jsx_dev_runtime());
 function Travel() {
   let [selectedCountry, setSelectedCountry] = (0, import_react35.useState)("Turkey"), mainRef = (0, import_react35.useRef)(null), imagesMetaData = useTravelMetaData();
-  return /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)("main", { className: "h-full relative", ref: mainRef, children: [
-    /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)("div", { className: "h-full", children: /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)(
+  return /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)("main", { className: "h-full relative", ref: mainRef, children: [
+    /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)("div", { className: "h-full", children: /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)(
       TravelMap,
       {
         selectCountry: setSelectedCountry,
@@ -30234,8 +30264,8 @@ function Travel() {
       lineNumber: 17,
       columnNumber: 7
     }, this),
-    /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)(AnimatePresence, { initial: !1, children: selectedCountry !== void 0 && /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)(CountryModal, { onClose: () => setSelectedCountry(void 0), children: [
-      /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)("div", { className: "w-28 md:w-48 lg:w-64", children: /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)(
+    /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)(AnimatePresence, { initial: !1, children: selectedCountry !== void 0 && /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)(CountryModal, { onClose: () => setSelectedCountry(void 0), children: [
+      /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)("div", { className: "w-28 md:w-48 lg:w-64", children: /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)(
         ImageCarousel,
         {
           images: [
@@ -30259,7 +30289,7 @@ function Travel() {
         lineNumber: 27,
         columnNumber: 13
       }, this),
-      /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)(AnimatePresence, { initial: !1, children: /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)(
+      /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)(AnimatePresence, { initial: !1, children: /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)(
         motion.div,
         {
           initial: { opacity: 0, x: -30 },
@@ -30297,41 +30327,11 @@ function Travel() {
   }, this);
 }
 
-// app/routes/_index.tsx
-var index_exports = {};
-__export(index_exports, {
-  default: () => _index3,
-  meta: () => meta
-});
-var import_jsx_dev_runtime11 = __toESM(require_jsx_dev_runtime()), meta = () => [{ title: "New Remix App" }];
-function _index3() {
-  return /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)("div", { style: { fontFamily: "system-ui, sans-serif", lineHeight: "1.4" }, children: [
-    /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)("h1", { className: "text-center mt-4", children: "Hi, I'm Enes" }, void 0, !1, {
-      fileName: "app/routes/_index.tsx",
-      lineNumber: 10,
-      columnNumber: 7
-    }, this),
-    /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)("div", { className: "mx-auto mt-16 max-w-7xl text-center", children: /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)("span", { children: "This is my personal page where I document things I'm doing (including this page)" }, void 0, !1, {
-      fileName: "app/routes/_index.tsx",
-      lineNumber: 12,
-      columnNumber: 9
-    }, this) }, void 0, !1, {
-      fileName: "app/routes/_index.tsx",
-      lineNumber: 11,
-      columnNumber: 7
-    }, this)
-  ] }, void 0, !0, {
-    fileName: "app/routes/_index.tsx",
-    lineNumber: 9,
-    columnNumber: 5
-  }, this);
-}
-
 // server-assets-manifest:@remix-run/dev/assets-manifest
-var assets_manifest_default = { version: "b6e3b6a6", entry: { module: "/build/entry.client-CBLAPYQN.js", imports: ["/build/_shared/chunk-RC2GTPBO.js", "/build/_shared/chunk-FN3KWL4V.js", "/build/_shared/chunk-4IYZMDEG.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-P7FYX3KN.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-OGJMYIRR.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-F37PFVDB.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel.$country": { id: "routes/travel.$country", parentId: "routes/travel", path: ":country", index: void 0, caseSensitive: void 0, module: "/build/routes/travel.$country-AHN5ZNAC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-B6E3B6A6.js" };
+var assets_manifest_default = { version: "9e3be3d9", entry: { module: "/build/entry.client-AGVP4QAJ.js", imports: ["/build/_shared/chunk-RC2GTPBO.js", "/build/_shared/chunk-FN3KWL4V.js", "/build/_shared/chunk-4IYZMDEG.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-ZNCWCUQK.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-7T7ERQCC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-LKIV7BWA.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel.$country": { id: "routes/travel.$country", parentId: "routes/travel", path: ":country", index: void 0, caseSensitive: void 0, module: "/build/routes/travel.$country-AHN5ZNAC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-9E3BE3D9.js" };
 
 // server-entry-module:@remix-run/dev/server-build
-var assetsBuildDirectory = "public\\build", future = { unstable_cssModules: !1, unstable_cssSideEffectImports: !1, unstable_dev: !1, unstable_postcss: !1, unstable_tailwind: !0, unstable_vanillaExtract: !1, v2_errorBoundary: !0, v2_meta: !0, v2_normalizeFormMethod: !0, v2_routeConvention: !0 }, publicPath = "/build/", entry = { module: entry_server_exports }, routes = {
+var assetsBuildDirectory = "public/build", future = { unstable_cssModules: !1, unstable_cssSideEffectImports: !1, unstable_dev: !1, unstable_postcss: !1, unstable_tailwind: !0, unstable_vanillaExtract: !1, v2_errorBoundary: !0, v2_meta: !0, v2_normalizeFormMethod: !0, v2_routeConvention: !0 }, publicPath = "/build/", entry = { module: entry_server_exports }, routes = {
   root: {
     id: "root",
     parentId: void 0,
@@ -30348,14 +30348,6 @@ var assetsBuildDirectory = "public\\build", future = { unstable_cssModules: !1, 
     caseSensitive: void 0,
     module: route1
   },
-  "routes/travel": {
-    id: "routes/travel",
-    parentId: "root",
-    path: "travel",
-    index: void 0,
-    caseSensitive: void 0,
-    module: travel_exports
-  },
   "routes/_index": {
     id: "routes/_index",
     parentId: "root",
@@ -30363,6 +30355,14 @@ var assetsBuildDirectory = "public\\build", future = { unstable_cssModules: !1, 
     index: !0,
     caseSensitive: void 0,
     module: index_exports
+  },
+  "routes/travel": {
+    id: "routes/travel",
+    parentId: "root",
+    path: "travel",
+    index: void 0,
+    caseSensitive: void 0,
+    module: travel_exports
   }
 };
 

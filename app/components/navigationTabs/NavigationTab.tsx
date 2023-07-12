@@ -13,13 +13,15 @@ export const NavigationTab: React.FC<NavigationTabProps> = ({
   const { pathname } = useLocation()
   const isSelected = sameRootPaths(pathname, to)
   const conditionalStyles = isSelected
-    ? 'text-fuchsia-600 dark:text-fuchsia-500 active'
-    : 'hover:text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 dark:hover:text-slate-300'
+    ? 'text-fuchsia-500 active'
+    : 'hover:bg-slate-800 hover:text-slate-300'
   return (
     <li className="mr-2">
       <Link
         to={to}
-        className={'inline-block p-4 rounded-t-lg ' + conditionalStyles}
+        className={
+          'inline-block p-4 rounded-t-lg ' + conditionalStyles
+        }
       >
         {displayString}
       </Link>
