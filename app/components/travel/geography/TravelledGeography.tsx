@@ -2,6 +2,7 @@ import { MyGeographyProps } from '~/components/travel/geography/MyGeographyProps
 import { Geography } from 'react-simple-maps'
 import { useEffect, useRef, useState } from 'react'
 import * as d3 from 'd3'
+import { Link } from '@remix-run/react'
 
 export const TravelledGeography = ({
   geography,
@@ -30,38 +31,40 @@ export const TravelledGeography = ({
     (position + size / 2) * scaling
 
   return (
-    <Geography
-      ref={geoSvg}
-      key={geography.rsmKey}
-      transform={
-        (isHovering || isSelected) && box
-          ? `translate(-${calculateBaseTranslate(
-              box.x,
-              box.width
-            )}, -${calculateBaseTranslate(
-              box.y,
-              box.height
-            )}) scale(${scaling + 1})`
-          : ''
-      }
-      geography={geography}
-      className={
-        'transition-all duration-200 cursor-pointer' +
-        (isSelected
-          ? ' fill-fuchsia-300'
-          : ' fill-slate-300 hover:fill-slate-200')
-      }
-      style={{
-        default: { outline: 'none' },
-        hover: { outline: 'none' },
-        pressed: { outline: 'none' },
-      }}
-      onClick={() => {
-        onSelect(geography)
-      }}
-      onTouchStart={() => {
-        onSelect(geography)
-      }}
-    />
+    <Link to={`/travel/${geography.properties.name}`}>
+      <Geography
+        ref={geoSvg}
+        key={geography.rsmKey}
+        transform={
+          (isHovering || isSelected) && box
+            ? `translate(-${calculateBaseTranslate(
+                box.x,
+                box.width
+              )}, -${calculateBaseTranslate(
+                box.y,
+                box.height
+              )}) scale(${scaling + 1})`
+            : ''
+        }
+        geography={geography}
+        className={
+          'transition-all duration-200 cursor-pointer' +
+          (isSelected
+            ? ' fill-fuchsia-300'
+            : ' fill-slate-300 hover:fill-slate-200')
+        }
+        style={{
+          default: { outline: 'none' },
+          hover: { outline: 'none' },
+          pressed: { outline: 'none' },
+        }}
+        onClick={() => {
+          onSelect(geography)
+        }}
+        onTouchStart={() => {
+          onSelect(geography)
+        }}
+      />
+    </Link>
   )
 }

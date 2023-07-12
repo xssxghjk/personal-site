@@ -22205,7 +22205,7 @@ var travel_exports = {};
 __export(travel_exports, {
   default: () => Travel
 });
-var import_react35 = __toESM(require_react());
+var import_react37 = __toESM(require_react());
 
 // app/hooks/useTravelMetaData.ts
 var import_react5 = __toESM(require_react()), nameMap = [
@@ -26623,7 +26623,7 @@ var AnimatePresence = ({ children: children4, custom, initial = !0, onExitComple
 };
 
 // app/components/general/ImageCarousel.tsx
-var import_react33 = __toESM(require_react());
+var import_react34 = __toESM(require_react());
 
 // app/components/travel/countryModal/CountryModal.tsx
 var import_react32 = __toESM(require_react());
@@ -26704,10 +26704,7 @@ function FiX(props) {
 }
 
 // app/components/travel/countryModal/CountryModal.tsx
-var import_jsx_dev_runtime6 = __toESM(require_jsx_dev_runtime()), CountryModalHoverContext = import_react32.default.createContext(!1), CountryModal = ({
-  children: children4,
-  onClose
-}) => {
+var import_jsx_dev_runtime6 = __toESM(require_jsx_dev_runtime()), CountryModalHoverContext = import_react32.default.createContext(!1), CountryModal = ({ children: children4 }) => {
   let modalRef = (0, import_react32.useRef)(null), [isHovering, setIsHovering] = (0, import_react32.useState)(!1);
   (0, import_react32.useEffect)(() => {
     !modalRef.current || (modalRef.current.addEventListener("mouseenter", () => {
@@ -26740,26 +26737,29 @@ var import_jsx_dev_runtime6 = __toESM(require_jsx_dev_runtime()), CountryModalHo
               !1,
               {
                 fileName: "app/components/travel/countryModal/CountryModal.tsx",
-                lineNumber: 47,
+                lineNumber: 44,
                 columnNumber: 9
               },
               this
             ),
-            /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
+            /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(Link2, { to: "/travel", children: /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
               FiX,
               {
-                onClick: () => isHovering && onClose(),
                 className: "absolute top-2 right-2 transition-all" + sharedIconStyles + (isHovering ? "opacity-100 cursor-pointer" : "opacity-0")
               },
               void 0,
               !1,
               {
                 fileName: "app/components/travel/countryModal/CountryModal.tsx",
-                lineNumber: 53,
-                columnNumber: 9
+                lineNumber: 51,
+                columnNumber: 11
               },
               this
-            ),
+            ) }, void 0, !1, {
+              fileName: "app/components/travel/countryModal/CountryModal.tsx",
+              lineNumber: 50,
+              columnNumber: 9
+            }, this),
             /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
               FiMaximize,
               {
@@ -26786,7 +26786,7 @@ var import_jsx_dev_runtime6 = __toESM(require_jsx_dev_runtime()), CountryModalHo
         !0,
         {
           fileName: "app/components/travel/countryModal/CountryModal.tsx",
-          lineNumber: 38,
+          lineNumber: 35,
           columnNumber: 7
         },
         this
@@ -26796,7 +26796,7 @@ var import_jsx_dev_runtime6 = __toESM(require_jsx_dev_runtime()), CountryModalHo
     !1,
     {
       fileName: "app/components/travel/countryModal/CountryModal.tsx",
-      lineNumber: 32,
+      lineNumber: 29,
       columnNumber: 5
     },
     this
@@ -26805,10 +26805,10 @@ var import_jsx_dev_runtime6 = __toESM(require_jsx_dev_runtime()), CountryModalHo
 
 // app/components/general/ImageCarousel.tsx
 var import_jsx_dev_runtime7 = __toESM(require_jsx_dev_runtime()), imageAspectRatio = 384 / 683, ImageCarousel = ({ images }) => {
-  let [imageLoading, setImageLoading] = (0, import_react33.useState)(!0), [imageIndex, setImageIndex] = (0, import_react33.useState)(0), isHovering = (0, import_react33.useContext)(CountryModalHoverContext), currentImage = images[imageIndex];
-  return (0, import_react33.useEffect)(() => {
+  let [imageLoading, setImageLoading] = (0, import_react34.useState)(!0), [imageIndex, setImageIndex] = (0, import_react34.useState)(0), isHovering = (0, import_react34.useContext)(CountryModalHoverContext), currentImage = images[imageIndex];
+  return (0, import_react34.useEffect)(() => {
     setImageLoading(!0);
-  }, [currentImage]), (0, import_react33.useEffect)(() => {
+  }, [currentImage]), (0, import_react34.useEffect)(() => {
     let interval3 = setInterval(() => {
       !isHovering && setImageIndex((prev) => (prev + 1) % images.length);
     }, 4e3);
@@ -26861,7 +26861,7 @@ var import_jsx_dev_runtime7 = __toESM(require_jsx_dev_runtime()), imageAspectRat
 var import_react_simple_maps3 = __toESM(require_index_umd());
 
 // app/components/travel/geography/TravelledGeography.tsx
-var import_react_simple_maps = __toESM(require_index_umd()), import_react34 = __toESM(require_react());
+var import_react_simple_maps = __toESM(require_index_umd()), import_react35 = __toESM(require_react());
 
 // node_modules/d3-brush/node_modules/d3-selection/src/namespaces.js
 var xhtml2 = "http://www.w3.org/1999/xhtml", namespaces_default2 = {
@@ -30123,8 +30123,8 @@ var import_jsx_dev_runtime8 = __toESM(require_jsx_dev_runtime()), TravelledGeogr
   onSelect,
   isSelected
 }) => {
-  let geoSvg = (0, import_react34.useRef)(null), [isHovering, setIsHovering] = (0, import_react34.useState)(!1), [box, setBox] = (0, import_react34.useState)(null);
-  (0, import_react34.useEffect)(() => {
+  let geoSvg = (0, import_react35.useRef)(null), [isHovering, setIsHovering] = (0, import_react35.useState)(!1), [box, setBox] = (0, import_react35.useState)(null);
+  (0, import_react35.useEffect)(() => {
     !geoSvg.current || (geoSvg.current.addEventListener("mouseenter", () => {
       select_default7(geoSvg.current).raise(), setIsHovering(() => !0);
     }), geoSvg.current.addEventListener(
@@ -30133,7 +30133,7 @@ var import_jsx_dev_runtime8 = __toESM(require_jsx_dev_runtime()), TravelledGeogr
     ), setBox(geoSvg.current.getBBox()));
   }, [geoSvg]);
   let scaling = isSelected ? 0.1 : 0.05, calculateBaseTranslate = (position, size) => (position + size / 2) * scaling;
-  return /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(
+  return /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(Link2, { to: `/travel/${geography.properties.name}`, children: /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(
     import_react_simple_maps.Geography,
     {
       ref: geoSvg,
@@ -30162,11 +30162,15 @@ var import_jsx_dev_runtime8 = __toESM(require_jsx_dev_runtime()), TravelledGeogr
     !1,
     {
       fileName: "app/components/travel/geography/TravelledGeography.tsx",
-      lineNumber: 33,
-      columnNumber: 5
+      lineNumber: 35,
+      columnNumber: 7
     },
     this
-  );
+  ) }, void 0, !1, {
+    fileName: "app/components/travel/geography/TravelledGeography.tsx",
+    lineNumber: 34,
+    columnNumber: 5
+  }, this);
 };
 
 // app/components/travel/geography/UntravelledGeography.tsx
@@ -30194,8 +30198,7 @@ var import_react_simple_maps2 = __toESM(require_index_umd()), import_jsx_dev_run
 );
 
 // app/components/travel/TravelMap.tsx
-var import_jsx_dev_runtime10 = __toESM(require_jsx_dev_runtime()), geoUrl = "./geomap.json", TravelMap = ({
-  selectCountry,
+var import_jsx_dev_runtime10 = __toESM(require_jsx_dev_runtime()), geoUrl = "/geomap.json", TravelMap = ({
   selectedCountry,
   mediaMetaData
 }) => {
@@ -30204,9 +30207,7 @@ var import_jsx_dev_runtime10 = __toESM(require_jsx_dev_runtime()), geoUrl = "./g
     untravelled: UntravelledGeography
   }, getGeographyName = (geo) => geo.properties.name, isTravelledCountry = (geo) => mediaMetaData && mediaMetaData.some(
     (imageMetaData) => imageMetaData.country.includes(geo.properties.name)
-  ) ? "travelled" : "untravelled", trySelectCountry = (geo) => {
-    isTravelledCountry(geo) && selectCountry(getGeographyName(geo));
-  };
+  ) ? "travelled" : "untravelled";
   return /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)(
     import_react_simple_maps3.ComposableMap,
     {
@@ -30218,25 +30219,25 @@ var import_jsx_dev_runtime10 = __toESM(require_jsx_dev_runtime()), geoUrl = "./g
           MyGeography,
           {
             geography,
-            onSelect: trySelectCountry,
+            onSelect: () => null,
             isSelected: selectedCountry === getGeographyName(geography)
           },
           geography.rsmKey,
           !1,
           {
             fileName: "app/components/travel/TravelMap.tsx",
-            lineNumber: 54,
+            lineNumber: 50,
             columnNumber: 17
           },
           this
         );
       }) }, void 0, !1, {
         fileName: "app/components/travel/TravelMap.tsx",
-        lineNumber: 48,
+        lineNumber: 44,
         columnNumber: 9
       }, this) }, void 0, !1, {
         fileName: "app/components/travel/TravelMap.tsx",
-        lineNumber: 47,
+        lineNumber: 43,
         columnNumber: 7
       }, this)
     },
@@ -30244,7 +30245,7 @@ var import_jsx_dev_runtime10 = __toESM(require_jsx_dev_runtime()), geoUrl = "./g
     !1,
     {
       fileName: "app/components/travel/TravelMap.tsx",
-      lineNumber: 43,
+      lineNumber: 39,
       columnNumber: 5
     },
     this
@@ -30254,12 +30255,11 @@ var import_jsx_dev_runtime10 = __toESM(require_jsx_dev_runtime()), geoUrl = "./g
 // app/routes/travel.tsx
 var import_jsx_dev_runtime11 = __toESM(require_jsx_dev_runtime());
 function Travel() {
-  let [selectedCountry, setSelectedCountry] = (0, import_react35.useState)(void 0), mainRef = (0, import_react35.useRef)(null), mediaMetaData = useTravelMetaData();
+  let mainRef = (0, import_react37.useRef)(null), mediaMetaData = useTravelMetaData(), selectedCountry = useParams().country;
   return /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)("main", { className: "h-full relative", ref: mainRef, children: [
     /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)("div", { className: "h-full", children: /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)(
       TravelMap,
       {
-        selectCountry: setSelectedCountry,
         selectedCountry,
         mediaMetaData
       },
@@ -30276,7 +30276,7 @@ function Travel() {
       lineNumber: 17,
       columnNumber: 7
     }, this),
-    /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)(AnimatePresence, { initial: !1, children: selectedCountry !== void 0 && /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)(CountryModal, { onClose: () => setSelectedCountry(void 0), children: [
+    /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)(AnimatePresence, { initial: !1, children: selectedCountry !== void 0 && /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)(CountryModal, { children: [
       /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)("div", { className: "w-28 md:w-48 lg:w-64", children: /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)(
         ImageCarousel,
         {
@@ -30290,13 +30290,13 @@ function Travel() {
         !1,
         {
           fileName: "app/routes/travel.tsx",
-          lineNumber: 28,
+          lineNumber: 27,
           columnNumber: 15
         },
         this
       ) }, void 0, !1, {
         fileName: "app/routes/travel.tsx",
-        lineNumber: 27,
+        lineNumber: 26,
         columnNumber: 13
       }, this),
       /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)(AnimatePresence, { initial: !1, children: /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)(
@@ -30312,22 +30312,22 @@ function Travel() {
         !1,
         {
           fileName: "app/routes/travel.tsx",
-          lineNumber: 45,
+          lineNumber: 44,
           columnNumber: 15
         },
         this
       ) }, void 0, !1, {
         fileName: "app/routes/travel.tsx",
-        lineNumber: 44,
+        lineNumber: 43,
         columnNumber: 13
       }, this)
     ] }, void 0, !0, {
       fileName: "app/routes/travel.tsx",
-      lineNumber: 26,
+      lineNumber: 25,
       columnNumber: 11
     }, this) }, void 0, !1, {
       fileName: "app/routes/travel.tsx",
-      lineNumber: 24,
+      lineNumber: 23,
       columnNumber: 7
     }, this)
   ] }, void 0, !0, {
@@ -30338,7 +30338,7 @@ function Travel() {
 }
 
 // server-assets-manifest:@remix-run/dev/assets-manifest
-var assets_manifest_default = { version: "02eb1e48", entry: { module: "/build/entry.client-AGVP4QAJ.js", imports: ["/build/_shared/chunk-RC2GTPBO.js", "/build/_shared/chunk-FN3KWL4V.js", "/build/_shared/chunk-4IYZMDEG.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-GDI2SC5G.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-7T7ERQCC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-D56O5R6D.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel.$country": { id: "routes/travel.$country", parentId: "routes/travel", path: ":country", index: void 0, caseSensitive: void 0, module: "/build/routes/travel.$country-AHN5ZNAC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-02EB1E48.js" };
+var assets_manifest_default = { version: "2ea71b70", entry: { module: "/build/entry.client-UDML3YPY.js", imports: ["/build/_shared/chunk-MHDGVYFL.js", "/build/_shared/chunk-FN3KWL4V.js", "/build/_shared/chunk-4IYZMDEG.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-ZDG36XUL.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-7T7ERQCC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-R2DANBWP.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel.$country": { id: "routes/travel.$country", parentId: "routes/travel", path: ":country", index: void 0, caseSensitive: void 0, module: "/build/routes/travel.$country-AHN5ZNAC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-2EA71B70.js" };
 
 // server-entry-module:@remix-run/dev/server-build
 var assetsBuildDirectory = "public/build", future = { unstable_cssModules: !1, unstable_cssSideEffectImports: !1, unstable_dev: !1, unstable_postcss: !1, unstable_tailwind: !0, unstable_vanillaExtract: !1, v2_errorBoundary: !0, v2_meta: !0, v2_normalizeFormMethod: !0, v2_routeConvention: !0 }, publicPath = "/build/", entry = { module: entry_server_exports }, routes = {

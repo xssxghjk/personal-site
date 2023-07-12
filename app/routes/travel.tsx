@@ -4,26 +4,25 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ImageCarousel } from '~/components/general/ImageCarousel'
 import { CountryModal } from '~/components/travel/countryModal/CountryModal'
 import { TravelMap } from '~/components/travel/TravelMap'
+import { useParams } from '@remix-run/react'
 
 export default function Travel() {
-  const [selectedCountry, setSelectedCountry] = useState<
-    string | undefined
-  >(undefined)
   const mainRef = useRef<HTMLElement>(null)
   const mediaMetaData = useTravelMetaData()
+  const params = useParams<{ country: string }>()
+  const selectedCountry = params.country
 
   return (
     <main className={'h-full relative'} ref={mainRef}>
       <div className={'h-full'}>
         <TravelMap
-          selectCountry={setSelectedCountry}
           selectedCountry={selectedCountry}
           mediaMetaData={mediaMetaData}
         />
       </div>
       <AnimatePresence initial={false}>
         {selectedCountry !== undefined && (
-          <CountryModal onClose={() => setSelectedCountry(undefined)}>
+          <CountryModal>
             <div className={'w-28 md:w-48 lg:w-64'}>
               <ImageCarousel
                 images={

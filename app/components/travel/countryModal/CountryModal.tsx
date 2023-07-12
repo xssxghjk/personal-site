@@ -1,19 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { FiX, FiMaximize } from 'react-icons/fi'
+import { Link } from '@remix-run/react'
 
 export interface CountryModalProps {
   children?: React.ReactNode
-  onClose: () => void
 }
 
 export const CountryModalHoverContext =
   React.createContext<boolean>(false)
 
-export const CountryModal = ({
-  children,
-  onClose,
-}: CountryModalProps) => {
+export const CountryModal = ({ children }: CountryModalProps) => {
   const modalRef = useRef<HTMLDivElement>(null)
 
   const [isHovering, setIsHovering] = useState(false)
@@ -50,14 +47,17 @@ export const CountryModal = ({
             (isHovering ? 'opacity-30' : 'opacity-0')
           }
         />
-        <FiX
-          onClick={() => isHovering && onClose()}
-          className={
-            'absolute top-2 right-2 transition-all' +
-            sharedIconStyles +
-            (isHovering ? 'opacity-100 cursor-pointer' : 'opacity-0')
-          }
-        />
+        <Link to={'/travel'}>
+          <FiX
+            className={
+              'absolute top-2 right-2 transition-all' +
+              sharedIconStyles +
+              (isHovering
+                ? 'opacity-100 cursor-pointer'
+                : 'opacity-0')
+            }
+          />
+        </Link>
         <FiMaximize
           size={24}
           className={

@@ -8,16 +8,14 @@ import { ImageMetaData } from '~/hooks/useTravelMetaData'
 import { TravelledGeography } from '~/components/travel/geography/TravelledGeography'
 import { UntravelledGeography } from '~/components/travel/geography/UntravelledGeography'
 
-const geoUrl = './geomap.json'
+const geoUrl = '/geomap.json'
 
 export interface TravelMapProps {
-  selectCountry: (country: string) => void
   selectedCountry?: string
   mediaMetaData?: ImageMetaData[]
 }
 
 export const TravelMap = ({
-  selectCountry,
   selectedCountry,
   mediaMetaData,
 }: TravelMapProps) => {
@@ -36,9 +34,7 @@ export const TravelMap = ({
     )
       ? 'travelled'
       : 'untravelled'
-  const trySelectCountry = (geo: IGeography) => {
-    if (isTravelledCountry(geo)) selectCountry(getGeographyName(geo))
-  }
+
   return (
     <ComposableMap
       projection={'geoMercator'}
@@ -54,7 +50,7 @@ export const TravelMap = ({
                 <MyGeography
                   key={geography.rsmKey}
                   geography={geography}
-                  onSelect={trySelectCountry}
+                  onSelect={() => null}
                   isSelected={
                     selectedCountry === getGeographyName(geography)
                   }
