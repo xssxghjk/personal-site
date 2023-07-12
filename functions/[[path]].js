@@ -22022,7 +22022,7 @@ __export(root_exports, {
 });
 
 // app/tailwind.css
-var tailwind_default = "/build/_assets/tailwind-MVAKHUKW.css";
+var tailwind_default = "/build/_assets/tailwind-Q7KQ6JFH.css";
 
 // app/components/navigationTabs/NavigationTabContainer.tsx
 var import_jsx_dev_runtime2 = __toESM(require_jsx_dev_runtime()), NavigationTabContainer = ({
@@ -26780,7 +26780,7 @@ var import_jsx_dev_runtime7 = __toESM(require_jsx_dev_runtime()), CountryModal =
             /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(
               "div",
               {
-                className: "z-10 h-full w-full absolute bg-slate-900 transition-all " + (isHovering ? "opacity-50" : "opacity-0")
+                className: "z-10 h-full w-full absolute bg-slate-900 transition-all " + (isHovering ? "opacity-30" : "opacity-0")
               },
               void 0,
               !1,
@@ -30328,7 +30328,7 @@ function Travel() {
 }
 
 // server-assets-manifest:@remix-run/dev/assets-manifest
-var assets_manifest_default = { version: "9e3be3d9", entry: { module: "/build/entry.client-AGVP4QAJ.js", imports: ["/build/_shared/chunk-RC2GTPBO.js", "/build/_shared/chunk-FN3KWL4V.js", "/build/_shared/chunk-4IYZMDEG.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-ZNCWCUQK.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-7T7ERQCC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-LKIV7BWA.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel.$country": { id: "routes/travel.$country", parentId: "routes/travel", path: ":country", index: void 0, caseSensitive: void 0, module: "/build/routes/travel.$country-AHN5ZNAC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-9E3BE3D9.js" };
+var assets_manifest_default = { version: "f2f7f6c0", entry: { module: "/build/entry.client-AGVP4QAJ.js", imports: ["/build/_shared/chunk-RC2GTPBO.js", "/build/_shared/chunk-FN3KWL4V.js", "/build/_shared/chunk-4IYZMDEG.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-GDI2SC5G.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-7T7ERQCC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-MFUWY7WM.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel.$country": { id: "routes/travel.$country", parentId: "routes/travel", path: ":country", index: void 0, caseSensitive: void 0, module: "/build/routes/travel.$country-AHN5ZNAC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-F2F7F6C0.js" };
 
 // server-entry-module:@remix-run/dev/server-build
 var assetsBuildDirectory = "public/build", future = { unstable_cssModules: !1, unstable_cssSideEffectImports: !1, unstable_dev: !1, unstable_postcss: !1, unstable_tailwind: !0, unstable_vanillaExtract: !1, v2_errorBoundary: !0, v2_meta: !0, v2_normalizeFormMethod: !0, v2_routeConvention: !0 }, publicPath = "/build/", entry = { module: entry_server_exports }, routes = {

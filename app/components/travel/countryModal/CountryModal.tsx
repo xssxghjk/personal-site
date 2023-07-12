@@ -44,7 +44,7 @@ export const CountryModal = ({
         <div
           className={
             'z-10 h-full w-full absolute bg-slate-900 transition-all ' +
-            (isHovering ? 'opacity-50' : 'opacity-0')
+            (isHovering ? 'opacity-30' : 'opacity-0')
           }
         />
         <FiX
