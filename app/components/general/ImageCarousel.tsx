@@ -1,4 +1,3 @@
-import { Logo } from '~/components/general/Logo'
 import { AnimatePresence, motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
 
@@ -13,7 +12,7 @@ export const ImageCarousel = ({ images }: ImageCarouselProps) => {
   useEffect(() => {
     setImageLoading(true)
   }, [images[0]])
-  console.log(imageLoading)
+
   return (
     <motion.div
       className={'w-full relative'}

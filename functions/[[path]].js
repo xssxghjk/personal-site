@@ -22022,7 +22022,7 @@ __export(root_exports, {
 });
 
 // app/tailwind.css
-var tailwind_default = "/build/_assets/tailwind-FSF7WCVZ.css";
+var tailwind_default = "/build/_assets/tailwind-E6Q3JKRY.css";
 
 // app/components/navigationTabs/NavigationTabContainer.tsx
 var import_jsx_dev_runtime2 = __toESM(require_jsx_dev_runtime()), NavigationTabContainer = ({
@@ -26597,7 +26597,7 @@ var import_react30 = __toESM(require_react()), import_jsx_dev_runtime5 = __toESM
   let [imageLoading, setImageLoading] = (0, import_react30.useState)(!0);
   return (0, import_react30.useEffect)(() => {
     setImageLoading(!0);
-  }, [images[0]]), console.log(imageLoading), /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(
+  }, [images[0]]), /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(
     motion.div,
     {
       className: "w-full relative",
@@ -26609,10 +26609,10 @@ var import_react30 = __toESM(require_react()), import_jsx_dev_runtime5 = __toESM
         {
           initial: { opacity: 0 },
           animate: {
-            opacity: imageLoading ? 0 : 1
+            opacity: 1
           },
           exit: { opacity: 0 },
-          src: images[0],
+          src: "sample.png",
           onLoad: () => setImageLoading(!1),
           className: "pointer-events-none select-none absolute"
         },
@@ -26620,13 +26620,13 @@ var import_react30 = __toESM(require_react()), import_jsx_dev_runtime5 = __toESM
         !1,
         {
           fileName: "app/components/general/ImageCarousel.tsx",
-          lineNumber: 25,
+          lineNumber: 24,
           columnNumber: 9
         },
         this
       ) }, void 0, !1, {
         fileName: "app/components/general/ImageCarousel.tsx",
-        lineNumber: 24,
+        lineNumber: 23,
         columnNumber: 7
       }, this)
     },
@@ -26634,7 +26634,7 @@ var import_react30 = __toESM(require_react()), import_jsx_dev_runtime5 = __toESM
     !1,
     {
       fileName: "app/components/general/ImageCarousel.tsx",
-      lineNumber: 18,
+      lineNumber: 17,
       columnNumber: 5
     },
     this
@@ -26733,7 +26733,7 @@ var import_jsx_dev_runtime6 = __toESM(require_jsx_dev_runtime()), CountryModal =
       () => setIsHovering(() => !1)
     ));
   }, [modalRef]);
-  let sharedIconStyles = " h-4 w-4 md:h-6 md:w-6 ";
+  let sharedIconStyles = " h-4 w-4 md:h-6 md:w-6 z-20 ";
   return /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
     "div",
     {
@@ -26748,10 +26748,9 @@ var import_jsx_dev_runtime6 = __toESM(require_jsx_dev_runtime()), CountryModal =
           className: "bg-slate-300 dark:bg-slate-700 rounded-xl overflow-hidden drop-shadow-2xl",
           children: [
             /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
-              FiX,
+              "div",
               {
-                onClick: () => isHovering && onClose(),
-                className: "absolute top-2 right-2 z-10 transition-all" + sharedIconStyles + (isHovering ? "opacity-100 cursor-pointer" : "opacity-0")
+                className: "z-10 h-full w-full absolute bg-slate-900 transition-all " + (isHovering ? "opacity-50" : "opacity-0")
               },
               void 0,
               !1,
@@ -26763,16 +26762,31 @@ var import_jsx_dev_runtime6 = __toESM(require_jsx_dev_runtime()), CountryModal =
               this
             ),
             /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
-              FiMaximize,
+              FiX,
               {
-                size: 24,
-                className: "absolute top-1/2 left-1/2 translate-x-[-50%] translate-y-[-50%] z-10 transition-all" + sharedIconStyles + (isHovering ? "opacity-100 cursor-pointer" : "opacity-0")
+                onClick: () => isHovering && onClose(),
+                className: "absolute top-2 right-2 transition-all" + sharedIconStyles + (isHovering ? "opacity-100 cursor-pointer" : "opacity-0")
               },
               void 0,
               !1,
               {
                 fileName: "app/components/travel/countryModal/CountryModal.tsx",
-                lineNumber: 52,
+                lineNumber: 50,
+                columnNumber: 9
+              },
+              this
+            ),
+            /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
+              FiMaximize,
+              {
+                size: 24,
+                className: "absolute top-1/2 left-1/2 translate-x-[-50%] translate-y-[-50%] transition-all" + sharedIconStyles + (isHovering ? "opacity-100 cursor-pointer" : "opacity-0")
+              },
+              void 0,
+              !1,
+              {
+                fileName: "app/components/travel/countryModal/CountryModal.tsx",
+                lineNumber: 58,
                 columnNumber: 9
               },
               this
@@ -30221,7 +30235,7 @@ function Travel() {
       columnNumber: 7
     }, this),
     /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)(AnimatePresence, { initial: !1, children: selectedCountry !== void 0 && /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)(CountryModal, { onClose: () => setSelectedCountry(void 0), children: [
-      /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)("div", { className: "w-28 md:w-48 lg:w-64 ", children: /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)(
+      /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)("div", { className: "w-28 md:w-48 lg:w-64", children: /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)(
         ImageCarousel,
         {
           images: [
@@ -30314,7 +30328,7 @@ function _index3() {
 }
 
 // server-assets-manifest:@remix-run/dev/assets-manifest
-var assets_manifest_default = { version: "51f64086", entry: { module: "/build/entry.client-CBLAPYQN.js", imports: ["/build/_shared/chunk-RC2GTPBO.js", "/build/_shared/chunk-FN3KWL4V.js", "/build/_shared/chunk-4IYZMDEG.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-IOOWPFAV.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-OGJMYIRR.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-UW3CWHZ2.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel.$country": { id: "routes/travel.$country", parentId: "routes/travel", path: ":country", index: void 0, caseSensitive: void 0, module: "/build/routes/travel.$country-AHN5ZNAC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-51F64086.js" };
+var assets_manifest_default = { version: "b6e3b6a6", entry: { module: "/build/entry.client-CBLAPYQN.js", imports: ["/build/_shared/chunk-RC2GTPBO.js", "/build/_shared/chunk-FN3KWL4V.js", "/build/_shared/chunk-4IYZMDEG.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-P7FYX3KN.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-OGJMYIRR.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-F37PFVDB.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel.$country": { id: "routes/travel.$country", parentId: "routes/travel", path: ":country", index: void 0, caseSensitive: void 0, module: "/build/routes/travel.$country-AHN5ZNAC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-B6E3B6A6.js" };
 
 // server-entry-module:@remix-run/dev/server-build
 var assetsBuildDirectory = "public\\build", future = { unstable_cssModules: !1, unstable_cssSideEffectImports: !1, unstable_dev: !1, unstable_postcss: !1, unstable_tailwind: !0, unstable_vanillaExtract: !1, v2_errorBoundary: !0, v2_meta: !0, v2_normalizeFormMethod: !0, v2_routeConvention: !0 }, publicPath = "/build/", entry = { module: entry_server_exports }, routes = {

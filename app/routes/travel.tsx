@@ -24,7 +24,7 @@ export default function Travel() {
       <AnimatePresence initial={false}>
         {selectedCountry !== undefined && (
           <CountryModal onClose={() => setSelectedCountry(undefined)}>
-            <div className={'w-28 md:w-48 lg:w-64 '}>
+            <div className={'w-28 md:w-48 lg:w-64'}>
               <ImageCarousel
                 images={[
                   imagesMetaData

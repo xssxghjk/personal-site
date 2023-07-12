@@ -24,7 +24,7 @@ export const CountryModal = ({
     )
   }, [modalRef])
 
-  const sharedIconStyles = ' h-4 w-4 md:h-6 md:w-6 '
+  const sharedIconStyles = ' h-4 w-4 md:h-6 md:w-6 z-20 '
   return (
     <div
       className={
@@ -41,10 +41,16 @@ export const CountryModal = ({
           'bg-slate-300 dark:bg-slate-700 rounded-xl overflow-hidden drop-shadow-2xl'
         }
       >
+        <div
+          className={
+            'z-10 h-full w-full absolute bg-slate-900 transition-all ' +
+            (isHovering ? 'opacity-50' : 'opacity-0')
+          }
+        />
         <FiX
           onClick={() => isHovering && onClose()}
           className={
-            'absolute top-2 right-2 z-10 transition-all' +
+            'absolute top-2 right-2 transition-all' +
             sharedIconStyles +
             (isHovering ? 'opacity-100 cursor-pointer' : 'opacity-0')
           }
@@ -52,7 +58,7 @@ export const CountryModal = ({
         <FiMaximize
           size={24}
           className={
-            'absolute top-1/2 left-1/2 translate-x-[-50%] translate-y-[-50%] z-10 transition-all' +
+            'absolute top-1/2 left-1/2 translate-x-[-50%] translate-y-[-50%] transition-all' +
             sharedIconStyles +
             (isHovering ? 'opacity-100 cursor-pointer' : 'opacity-0')
           }
