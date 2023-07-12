@@ -24,7 +24,8 @@ export const CountryModal = ({ children }: CountryModalProps) => {
     )
   }, [modalRef])
 
-  const sharedIconStyles = ' h-4 w-4 md:h-6 md:w-6 z-20 '
+  const sharedIconStyles =
+    ' h-4 w-4 md:h-6 md:w-6 z-20 stroke-slate-300 hover:stroke-slate-100 hover:scale-125 transition-all duration-200 '
   return (
     <div
       className={
@@ -35,8 +36,8 @@ export const CountryModal = ({ children }: CountryModalProps) => {
       <motion.div
         key={1}
         initial={{ opacity: 0, x: 30 }}
-        animate={{ opacity: 1, x: 0, scale: isHovering ? 1.05 : 1 }}
-        exit={{ opacity: 0 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: 30 }}
         className={
           'bg-slate-700 rounded-xl overflow-hidden drop-shadow-2xl'
         }

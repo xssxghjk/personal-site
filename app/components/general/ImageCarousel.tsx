@@ -6,7 +6,7 @@ export interface ImageCarouselProps {
   images: string[]
 }
 
-const imageAspectRatio = 384 / 683
+export const imageAspectRatio = 384 / 683
 
 export const ImageCarousel = ({ images }: ImageCarouselProps) => {
   const [imageLoading, setImageLoading] = useState(true)
@@ -38,6 +38,10 @@ export const ImageCarousel = ({ images }: ImageCarouselProps) => {
           initial={{ opacity: 0 }}
           animate={{
             opacity: imageLoading ? 0 : 1,
+            scale: isHovering ? 1.05 : 1,
+          }}
+          transition={{
+            duration: 0.3,
           }}
           exit={{ opacity: 0 }}
           src={currentImage}
