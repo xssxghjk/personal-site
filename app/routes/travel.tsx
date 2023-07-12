@@ -8,9 +8,9 @@ import { TravelMap } from '~/components/travel/TravelMap'
 export default function Travel() {
   const [selectedCountry, setSelectedCountry] = useState<
     string | undefined
-  >('Turkey')
+  >(undefined)
   const mainRef = useRef<HTMLElement>(null)
-  const imagesMetaData = useTravelMetaData()
+  const mediaMetaData = useTravelMetaData()
 
   return (
     <main className={'h-full relative'} ref={mainRef}>
@@ -18,7 +18,7 @@ export default function Travel() {
         <TravelMap
           selectCountry={setSelectedCountry}
           selectedCountry={selectedCountry}
-          imagesMetaData={imagesMetaData}
+          mediaMetaData={mediaMetaData}
         />
       </div>
       <AnimatePresence initial={false}>
@@ -27,7 +27,7 @@ export default function Travel() {
             <div className={'w-28 md:w-48 lg:w-64'}>
               <ImageCarousel
                 images={
-                  imagesMetaData
+                  mediaMetaData
                     ?.filter(
                       (imageMetaData) =>
                         imageMetaData.country === selectedCountry

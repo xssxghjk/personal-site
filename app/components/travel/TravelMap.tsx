@@ -8,19 +8,18 @@ import { ImageMetaData } from '~/hooks/useTravelMetaData'
 import { TravelledGeography } from '~/components/travel/geography/TravelledGeography'
 import { UntravelledGeography } from '~/components/travel/geography/UntravelledGeography'
 
-const geoUrl =
-  'https://raw.githubusercontent.com/deldersveld/topojson/master/world-countries.json'
+const geoUrl = './geomap.json'
 
 export interface TravelMapProps {
   selectCountry: (country: string) => void
   selectedCountry?: string
-  imagesMetaData?: ImageMetaData[]
+  mediaMetaData?: ImageMetaData[]
 }
 
 export const TravelMap = ({
   selectCountry,
   selectedCountry,
-  imagesMetaData,
+  mediaMetaData,
 }: TravelMapProps) => {
   const geographyMap = {
     travelled: TravelledGeography,
@@ -31,8 +30,8 @@ export const TravelMap = ({
   const isTravelledCountry = (
     geo: IGeography
   ): 'travelled' | 'untravelled' =>
-    imagesMetaData &&
-    imagesMetaData.some((imageMetaData) =>
+    mediaMetaData &&
+    mediaMetaData.some((imageMetaData) =>
       imageMetaData.country.includes(geo.properties.name)
     )
       ? 'travelled'
@@ -53,6 +52,7 @@ export const TravelMap = ({
                 geographyMap[isTravelledCountry(geography)]
               return (
                 <MyGeography
+                  key={geography.rsmKey}
                   geography={geography}
                   onSelect={trySelectCountry}
                   isSelected={
