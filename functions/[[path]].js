@@ -4322,7 +4322,7 @@ Your code should look like:
 3. You might have more than one copy of React in the same app
 See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.`), dispatcher;
       }
-      function useContext12(Context) {
+      function useContext13(Context) {
         var dispatcher = resolveDispatcher();
         if (Context._context !== void 0) {
           var realContext = Context._context;
@@ -4869,7 +4869,7 @@ Check the top-level render call using <` + parentName + ">.");
         toArray,
         only: onlyChild
       };
-      exports.Children = Children3, exports.Component = Component3, exports.Fragment = REACT_FRAGMENT_TYPE, exports.Profiler = REACT_PROFILER_TYPE, exports.PureComponent = PureComponent, exports.StrictMode = REACT_STRICT_MODE_TYPE, exports.Suspense = REACT_SUSPENSE_TYPE, exports.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = ReactSharedInternals, exports.cloneElement = cloneElement$1, exports.createContext = createContext9, exports.createElement = createElement$1, exports.createFactory = createFactory, exports.createRef = createRef, exports.forwardRef = forwardRef4, exports.isValidElement = isValidElement3, exports.lazy = lazy, exports.memo = memo, exports.startTransition = startTransition, exports.unstable_act = act, exports.useCallback = useCallback5, exports.useContext = useContext12, exports.useDebugValue = useDebugValue2, exports.useDeferredValue = useDeferredValue, exports.useEffect = useEffect14, exports.useId = useId4, exports.useImperativeHandle = useImperativeHandle, exports.useInsertionEffect = useInsertionEffect3, exports.useLayoutEffect = useLayoutEffect5, exports.useMemo = useMemo10, exports.useReducer = useReducer, exports.useRef = useRef11, exports.useState = useState11, exports.useSyncExternalStore = useSyncExternalStore2, exports.useTransition = useTransition2, exports.version = ReactVersion, typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ < "u" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop == "function" && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(new Error());
+      exports.Children = Children3, exports.Component = Component3, exports.Fragment = REACT_FRAGMENT_TYPE, exports.Profiler = REACT_PROFILER_TYPE, exports.PureComponent = PureComponent, exports.StrictMode = REACT_STRICT_MODE_TYPE, exports.Suspense = REACT_SUSPENSE_TYPE, exports.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = ReactSharedInternals, exports.cloneElement = cloneElement$1, exports.createContext = createContext9, exports.createElement = createElement$1, exports.createFactory = createFactory, exports.createRef = createRef, exports.forwardRef = forwardRef4, exports.isValidElement = isValidElement3, exports.lazy = lazy, exports.memo = memo, exports.startTransition = startTransition, exports.unstable_act = act, exports.useCallback = useCallback5, exports.useContext = useContext13, exports.useDebugValue = useDebugValue2, exports.useDeferredValue = useDeferredValue, exports.useEffect = useEffect14, exports.useId = useId4, exports.useImperativeHandle = useImperativeHandle, exports.useInsertionEffect = useInsertionEffect3, exports.useLayoutEffect = useLayoutEffect5, exports.useMemo = useMemo10, exports.useReducer = useReducer, exports.useRef = useRef11, exports.useState = useState11, exports.useSyncExternalStore = useSyncExternalStore2, exports.useTransition = useTransition2, exports.version = ReactVersion, typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ < "u" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop == "function" && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(new Error());
     })();
   }
 });
@@ -8944,7 +8944,7 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
       function readContext$1(context) {
         return isInHookUserCodeInDev && error("Context can only be read while React is rendering. In classes, you can read it in the render method or getDerivedStateFromProps. In function components, you can read it directly in the function body, but not inside Hooks like useReducer() or useMemo()."), readContext(context);
       }
-      function useContext12(context) {
+      function useContext13(context) {
         return currentHookNameInDev = "useContext", resolveCurrentlyRenderingComponent(), readContext(context);
       }
       function basicStateReducer(state, action) {
@@ -9065,7 +9065,7 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
       }
       var Dispatcher = {
         readContext: readContext$1,
-        useContext: useContext12,
+        useContext: useContext13,
         useMemo: useMemo10,
         useReducer,
         useRef: useRef11,
@@ -12379,7 +12379,7 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
       function readContext$1(context) {
         return isInHookUserCodeInDev && error("Context can only be read while React is rendering. In classes, you can read it in the render method or getDerivedStateFromProps. In function components, you can read it directly in the function body, but not inside Hooks like useReducer() or useMemo()."), readContext(context);
       }
-      function useContext12(context) {
+      function useContext13(context) {
         return currentHookNameInDev = "useContext", resolveCurrentlyRenderingComponent(), readContext(context);
       }
       function basicStateReducer(state, action) {
@@ -12500,7 +12500,7 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
       }
       var Dispatcher = {
         readContext: readContext$1,
-        useContext: useContext12,
+        useContext: useContext13,
         useMemo: useMemo10,
         useReducer,
         useRef: useRef11,
@@ -26623,73 +26623,22 @@ var AnimatePresence = ({ children: children4, custom, initial = !0, onExitComple
 };
 
 // app/components/general/ImageCarousel.tsx
-var import_react30 = __toESM(require_react()), import_jsx_dev_runtime6 = __toESM(require_jsx_dev_runtime()), imageAspectRatio = 384 / 683, ImageCarousel = ({ images }) => {
-  let [imageLoading, setImageLoading] = (0, import_react30.useState)(!0), [imageIndex, setImageIndex] = (0, import_react30.useState)(0), currentImage = images[imageIndex];
-  return (0, import_react30.useEffect)(() => {
-    setImageLoading(!0);
-  }, [currentImage]), (0, import_react30.useEffect)(() => {
-    let interval3 = setInterval(() => {
-      setImageIndex((prev) => (prev + 1) % images.length);
-    }, 5e3);
-    return () => clearInterval(interval3);
-  }), /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
-    motion.div,
-    {
-      className: "w-full relative",
-      style: {
-        aspectRatio: imageAspectRatio
-      },
-      children: /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(AnimatePresence, { initial: !1, children: /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
-        motion.img,
-        {
-          initial: { opacity: 0 },
-          animate: {
-            opacity: imageLoading ? 0 : 1
-          },
-          exit: { opacity: 0 },
-          src: currentImage,
-          onLoad: () => setImageLoading(!1),
-          className: "pointer-events-none select-none absolute"
-        },
-        currentImage,
-        !1,
-        {
-          fileName: "app/components/general/ImageCarousel.tsx",
-          lineNumber: 33,
-          columnNumber: 9
-        },
-        this
-      ) }, void 0, !1, {
-        fileName: "app/components/general/ImageCarousel.tsx",
-        lineNumber: 32,
-        columnNumber: 7
-      }, this)
-    },
-    void 0,
-    !1,
-    {
-      fileName: "app/components/general/ImageCarousel.tsx",
-      lineNumber: 26,
-      columnNumber: 5
-    },
-    this
-  );
-};
-
-// app/components/travel/countryModal/CountryModal.tsx
 var import_react33 = __toESM(require_react());
 
-// node_modules/react-icons/lib/esm/iconBase.js
+// app/components/travel/countryModal/CountryModal.tsx
 var import_react32 = __toESM(require_react());
 
+// node_modules/react-icons/lib/esm/iconBase.js
+var import_react31 = __toESM(require_react());
+
 // node_modules/react-icons/lib/esm/iconContext.js
-var import_react31 = __toESM(require_react()), DefaultContext = {
+var import_react30 = __toESM(require_react()), DefaultContext = {
   color: void 0,
   size: void 0,
   className: void 0,
   style: void 0,
   attr: void 0
-}, IconContext = import_react31.default.createContext && import_react31.default.createContext(DefaultContext);
+}, IconContext = import_react30.default.createContext && import_react30.default.createContext(DefaultContext);
 
 // node_modules/react-icons/lib/esm/iconBase.js
 var __assign = function() {
@@ -26712,14 +26661,14 @@ var __assign = function() {
 };
 function Tree2Element(tree) {
   return tree && tree.map(function(node, i) {
-    return import_react32.default.createElement(node.tag, __assign({
+    return import_react31.default.createElement(node.tag, __assign({
       key: i
     }, node.attr), Tree2Element(node.child));
   });
 }
 function GenIcon(data) {
   return function(props) {
-    return import_react32.default.createElement(IconBase, __assign({
+    return import_react31.default.createElement(IconBase, __assign({
       attr: __assign({}, data.attr)
     }, props), Tree2Element(data.child));
   };
@@ -26727,7 +26676,7 @@ function GenIcon(data) {
 function IconBase(props) {
   var elem = function(conf) {
     var attr = props.attr, size = props.size, title = props.title, svgProps = __rest(props, ["attr", "size", "title"]), computedSize = size || conf.size || "1em", className;
-    return conf.className && (className = conf.className), props.className && (className = (className ? className + " " : "") + props.className), import_react32.default.createElement("svg", __assign({
+    return conf.className && (className = conf.className), props.className && (className = (className ? className + " " : "") + props.className), import_react31.default.createElement("svg", __assign({
       stroke: "currentColor",
       fill: "currentColor",
       strokeWidth: "0"
@@ -26739,9 +26688,9 @@ function IconBase(props) {
       height: computedSize,
       width: computedSize,
       xmlns: "http://www.w3.org/2000/svg"
-    }), title && import_react32.default.createElement("title", null, title), props.children);
+    }), title && import_react31.default.createElement("title", null, title), props.children);
   };
-  return IconContext !== void 0 ? import_react32.default.createElement(IconContext.Consumer, null, function(conf) {
+  return IconContext !== void 0 ? import_react31.default.createElement(IconContext.Consumer, null, function(conf) {
     return elem(conf);
   }) : elem(DefaultContext);
 }
@@ -26755,12 +26704,12 @@ function FiX(props) {
 }
 
 // app/components/travel/countryModal/CountryModal.tsx
-var import_jsx_dev_runtime7 = __toESM(require_jsx_dev_runtime()), CountryModal = ({
+var import_jsx_dev_runtime6 = __toESM(require_jsx_dev_runtime()), CountryModalHoverContext = import_react32.default.createContext(!1), CountryModal = ({
   children: children4,
   onClose
 }) => {
-  let modalRef = (0, import_react33.useRef)(null), [isHovering, setIsHovering] = (0, import_react33.useState)(!1);
-  (0, import_react33.useEffect)(() => {
+  let modalRef = (0, import_react32.useRef)(null), [isHovering, setIsHovering] = (0, import_react32.useState)(!1);
+  (0, import_react32.useEffect)(() => {
     !modalRef.current || (modalRef.current.addEventListener("mouseenter", () => {
       setIsHovering(() => !0);
     }), modalRef.current.addEventListener(
@@ -26769,12 +26718,12 @@ var import_jsx_dev_runtime7 = __toESM(require_jsx_dev_runtime()), CountryModal =
     ));
   }, [modalRef]);
   let sharedIconStyles = " h-4 w-4 md:h-6 md:w-6 z-20 ";
-  return /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(
+  return /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
     "div",
     {
       className: "transition-all fixed bottom-3 right-3 md:bottom-4 md:right-4 lg:right-6 lg:bottom-6",
       ref: modalRef,
-      children: /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(
+      children: /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
         motion.div,
         {
           initial: { opacity: 0, x: 30 },
@@ -26782,7 +26731,7 @@ var import_jsx_dev_runtime7 = __toESM(require_jsx_dev_runtime()), CountryModal =
           exit: { opacity: 0 },
           className: "bg-slate-700 rounded-xl overflow-hidden drop-shadow-2xl",
           children: [
-            /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(
+            /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
               "div",
               {
                 className: "z-10 h-full w-full absolute bg-slate-900 transition-all " + (isHovering ? "opacity-30" : "opacity-0")
@@ -26791,12 +26740,12 @@ var import_jsx_dev_runtime7 = __toESM(require_jsx_dev_runtime()), CountryModal =
               !1,
               {
                 fileName: "app/components/travel/countryModal/CountryModal.tsx",
-                lineNumber: 44,
+                lineNumber: 47,
                 columnNumber: 9
               },
               this
             ),
-            /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(
+            /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
               FiX,
               {
                 onClick: () => isHovering && onClose(),
@@ -26806,12 +26755,12 @@ var import_jsx_dev_runtime7 = __toESM(require_jsx_dev_runtime()), CountryModal =
               !1,
               {
                 fileName: "app/components/travel/countryModal/CountryModal.tsx",
-                lineNumber: 50,
+                lineNumber: 53,
                 columnNumber: 9
               },
               this
             ),
-            /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(
+            /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
               FiMaximize,
               {
                 size: 24,
@@ -26821,19 +26770,23 @@ var import_jsx_dev_runtime7 = __toESM(require_jsx_dev_runtime()), CountryModal =
               !1,
               {
                 fileName: "app/components/travel/countryModal/CountryModal.tsx",
-                lineNumber: 58,
+                lineNumber: 61,
                 columnNumber: 9
               },
               this
             ),
-            children4
+            /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(CountryModalHoverContext.Provider, { value: isHovering, children: children4 }, void 0, !1, {
+              fileName: "app/components/travel/countryModal/CountryModal.tsx",
+              lineNumber: 69,
+              columnNumber: 9
+            }, this)
           ]
         },
         1,
         !0,
         {
           fileName: "app/components/travel/countryModal/CountryModal.tsx",
-          lineNumber: 35,
+          lineNumber: 38,
           columnNumber: 7
         },
         this
@@ -26843,6 +26796,60 @@ var import_jsx_dev_runtime7 = __toESM(require_jsx_dev_runtime()), CountryModal =
     !1,
     {
       fileName: "app/components/travel/countryModal/CountryModal.tsx",
+      lineNumber: 32,
+      columnNumber: 5
+    },
+    this
+  );
+};
+
+// app/components/general/ImageCarousel.tsx
+var import_jsx_dev_runtime7 = __toESM(require_jsx_dev_runtime()), imageAspectRatio = 384 / 683, ImageCarousel = ({ images }) => {
+  let [imageLoading, setImageLoading] = (0, import_react33.useState)(!0), [imageIndex, setImageIndex] = (0, import_react33.useState)(0), isHovering = (0, import_react33.useContext)(CountryModalHoverContext), currentImage = images[imageIndex];
+  return (0, import_react33.useEffect)(() => {
+    setImageLoading(!0);
+  }, [currentImage]), (0, import_react33.useEffect)(() => {
+    let interval3 = setInterval(() => {
+      !isHovering && setImageIndex((prev) => (prev + 1) % images.length);
+    }, 4e3);
+    return () => clearInterval(interval3);
+  }), /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(
+    motion.div,
+    {
+      className: "w-full relative",
+      style: {
+        aspectRatio: imageAspectRatio
+      },
+      children: /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(AnimatePresence, { initial: !1, children: /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(
+        motion.img,
+        {
+          initial: { opacity: 0 },
+          animate: {
+            opacity: imageLoading ? 0 : 1
+          },
+          exit: { opacity: 0 },
+          src: currentImage,
+          onLoad: () => setImageLoading(!1),
+          className: "pointer-events-none select-none absolute"
+        },
+        currentImage,
+        !1,
+        {
+          fileName: "app/components/general/ImageCarousel.tsx",
+          lineNumber: 36,
+          columnNumber: 9
+        },
+        this
+      ) }, void 0, !1, {
+        fileName: "app/components/general/ImageCarousel.tsx",
+        lineNumber: 35,
+        columnNumber: 7
+      }, this)
+    },
+    void 0,
+    !1,
+    {
+      fileName: "app/components/general/ImageCarousel.tsx",
       lineNumber: 29,
       columnNumber: 5
     },
@@ -30187,15 +30194,15 @@ var import_react_simple_maps2 = __toESM(require_index_umd()), import_jsx_dev_run
 );
 
 // app/components/travel/TravelMap.tsx
-var import_jsx_dev_runtime10 = __toESM(require_jsx_dev_runtime()), geoUrl = "https://raw.githubusercontent.com/deldersveld/topojson/master/world-countries.json", TravelMap = ({
+var import_jsx_dev_runtime10 = __toESM(require_jsx_dev_runtime()), geoUrl = "./geomap.json", TravelMap = ({
   selectCountry,
   selectedCountry,
-  imagesMetaData
+  mediaMetaData
 }) => {
   let geographyMap = {
     travelled: TravelledGeography,
     untravelled: UntravelledGeography
-  }, getGeographyName = (geo) => geo.properties.name, isTravelledCountry = (geo) => imagesMetaData && imagesMetaData.some(
+  }, getGeographyName = (geo) => geo.properties.name, isTravelledCountry = (geo) => mediaMetaData && mediaMetaData.some(
     (imageMetaData) => imageMetaData.country.includes(geo.properties.name)
   ) ? "travelled" : "untravelled", trySelectCountry = (geo) => {
     isTravelledCountry(geo) && selectCountry(getGeographyName(geo));
@@ -30214,22 +30221,22 @@ var import_jsx_dev_runtime10 = __toESM(require_jsx_dev_runtime()), geoUrl = "htt
             onSelect: trySelectCountry,
             isSelected: selectedCountry === getGeographyName(geography)
           },
-          void 0,
+          geography.rsmKey,
           !1,
           {
             fileName: "app/components/travel/TravelMap.tsx",
-            lineNumber: 55,
+            lineNumber: 54,
             columnNumber: 17
           },
           this
         );
       }) }, void 0, !1, {
         fileName: "app/components/travel/TravelMap.tsx",
-        lineNumber: 49,
+        lineNumber: 48,
         columnNumber: 9
       }, this) }, void 0, !1, {
         fileName: "app/components/travel/TravelMap.tsx",
-        lineNumber: 48,
+        lineNumber: 47,
         columnNumber: 7
       }, this)
     },
@@ -30237,7 +30244,7 @@ var import_jsx_dev_runtime10 = __toESM(require_jsx_dev_runtime()), geoUrl = "htt
     !1,
     {
       fileName: "app/components/travel/TravelMap.tsx",
-      lineNumber: 44,
+      lineNumber: 43,
       columnNumber: 5
     },
     this
@@ -30247,14 +30254,14 @@ var import_jsx_dev_runtime10 = __toESM(require_jsx_dev_runtime()), geoUrl = "htt
 // app/routes/travel.tsx
 var import_jsx_dev_runtime11 = __toESM(require_jsx_dev_runtime());
 function Travel() {
-  let [selectedCountry, setSelectedCountry] = (0, import_react35.useState)("Turkey"), mainRef = (0, import_react35.useRef)(null), imagesMetaData = useTravelMetaData();
+  let [selectedCountry, setSelectedCountry] = (0, import_react35.useState)(void 0), mainRef = (0, import_react35.useRef)(null), mediaMetaData = useTravelMetaData();
   return /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)("main", { className: "h-full relative", ref: mainRef, children: [
     /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)("div", { className: "h-full", children: /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)(
       TravelMap,
       {
         selectCountry: setSelectedCountry,
         selectedCountry,
-        imagesMetaData
+        mediaMetaData
       },
       void 0,
       !1,
@@ -30273,7 +30280,7 @@ function Travel() {
       /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)("div", { className: "w-28 md:w-48 lg:w-64", children: /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)(
         ImageCarousel,
         {
-          images: (imagesMetaData == null ? void 0 : imagesMetaData.filter(
+          images: (mediaMetaData == null ? void 0 : mediaMetaData.filter(
             (imageMetaData) => imageMetaData.country === selectedCountry
           ).filter((_, index2) => index2 < 5).filter(
             (imageMetaData) => imageMetaData.type === "image"
@@ -30331,7 +30338,7 @@ function Travel() {
 }
 
 // server-assets-manifest:@remix-run/dev/assets-manifest
-var assets_manifest_default = { version: "944d10b3", entry: { module: "/build/entry.client-AGVP4QAJ.js", imports: ["/build/_shared/chunk-RC2GTPBO.js", "/build/_shared/chunk-FN3KWL4V.js", "/build/_shared/chunk-4IYZMDEG.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-GDI2SC5G.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-7T7ERQCC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-ARNKLGIV.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel.$country": { id: "routes/travel.$country", parentId: "routes/travel", path: ":country", index: void 0, caseSensitive: void 0, module: "/build/routes/travel.$country-AHN5ZNAC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-944D10B3.js" };
+var assets_manifest_default = { version: "02eb1e48", entry: { module: "/build/entry.client-AGVP4QAJ.js", imports: ["/build/_shared/chunk-RC2GTPBO.js", "/build/_shared/chunk-FN3KWL4V.js", "/build/_shared/chunk-4IYZMDEG.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-GDI2SC5G.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-7T7ERQCC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-D56O5R6D.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel.$country": { id: "routes/travel.$country", parentId: "routes/travel", path: ":country", index: void 0, caseSensitive: void 0, module: "/build/routes/travel.$country-AHN5ZNAC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-02EB1E48.js" };
 
 // server-entry-module:@remix-run/dev/server-build
 var assetsBuildDirectory = "public/build", future = { unstable_cssModules: !1, unstable_cssSideEffectImports: !1, unstable_dev: !1, unstable_postcss: !1, unstable_tailwind: !0, unstable_vanillaExtract: !1, v2_errorBoundary: !0, v2_meta: !0, v2_normalizeFormMethod: !0, v2_routeConvention: !0 }, publicPath = "/build/", entry = { module: entry_server_exports }, routes = {

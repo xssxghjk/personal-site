@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import React, { useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
+import { CountryModalHoverContext } from '../travel/countryModal/CountryModal'
 
 export interface ImageCarouselProps {
   images: string[]
@@ -10,6 +11,7 @@ const imageAspectRatio = 384 / 683
 export const ImageCarousel = ({ images }: ImageCarouselProps) => {
   const [imageLoading, setImageLoading] = useState(true)
   const [imageIndex, setImageIndex] = useState(0)
+  const isHovering = useContext(CountryModalHoverContext)
   const currentImage = images[imageIndex]
 
   useEffect(() => {
@@ -18,8 +20,9 @@ export const ImageCarousel = ({ images }: ImageCarouselProps) => {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setImageIndex((prev) => (prev + 1) % images.length)
-    }, 5000)
+      !isHovering &&
+        setImageIndex((prev) => (prev + 1) % images.length)
+    }, 4000)
     return () => clearInterval(interval)
   })
   return (

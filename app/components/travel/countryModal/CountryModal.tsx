@@ -7,6 +7,9 @@ export interface CountryModalProps {
   onClose: () => void
 }
 
+export const CountryModalHoverContext =
+  React.createContext<boolean>(false)
+
 export const CountryModal = ({
   children,
   onClose,
@@ -63,7 +66,9 @@ export const CountryModal = ({
             (isHovering ? 'opacity-100 cursor-pointer' : 'opacity-0')
           }
         />
-        {children}
+        <CountryModalHoverContext.Provider value={isHovering}>
+          {children}
+        </CountryModalHoverContext.Provider>
       </motion.div>
     </div>
   )
