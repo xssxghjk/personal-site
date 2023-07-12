@@ -9,10 +9,19 @@ const imageAspectRatio = 384 / 683
 
 export const ImageCarousel = ({ images }: ImageCarouselProps) => {
   const [imageLoading, setImageLoading] = useState(true)
+  const [imageIndex, setImageIndex] = useState(0)
+  const currentImage = images[imageIndex]
+
   useEffect(() => {
     setImageLoading(true)
-  }, [images[0]])
+  }, [currentImage])
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setImageIndex((prev) => (prev + 1) % images.length)
+    }, 5000)
+    return () => clearInterval(interval)
+  })
   return (
     <motion.div
       className={'w-full relative'}
@@ -22,13 +31,13 @@ export const ImageCarousel = ({ images }: ImageCarouselProps) => {
     >
       <AnimatePresence initial={false}>
         <motion.img
-          key={images[0]}
+          key={currentImage}
           initial={{ opacity: 0 }}
           animate={{
             opacity: imageLoading ? 0 : 1,
           }}
           exit={{ opacity: 0 }}
-          src={images[0]}
+          src={currentImage}
           onLoad={() => setImageLoading(false)}
           className={'pointer-events-none select-none absolute'}
         />

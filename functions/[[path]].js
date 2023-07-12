@@ -26624,10 +26624,15 @@ var AnimatePresence = ({ children: children4, custom, initial = !0, onExitComple
 
 // app/components/general/ImageCarousel.tsx
 var import_react30 = __toESM(require_react()), import_jsx_dev_runtime6 = __toESM(require_jsx_dev_runtime()), imageAspectRatio = 384 / 683, ImageCarousel = ({ images }) => {
-  let [imageLoading, setImageLoading] = (0, import_react30.useState)(!0);
+  let [imageLoading, setImageLoading] = (0, import_react30.useState)(!0), [imageIndex, setImageIndex] = (0, import_react30.useState)(0), currentImage = images[imageIndex];
   return (0, import_react30.useEffect)(() => {
     setImageLoading(!0);
-  }, [images[0]]), /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
+  }, [currentImage]), (0, import_react30.useEffect)(() => {
+    let interval3 = setInterval(() => {
+      setImageIndex((prev) => (prev + 1) % images.length);
+    }, 5e3);
+    return () => clearInterval(interval3);
+  }), /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
     motion.div,
     {
       className: "w-full relative",
@@ -26642,21 +26647,21 @@ var import_react30 = __toESM(require_react()), import_jsx_dev_runtime6 = __toESM
             opacity: imageLoading ? 0 : 1
           },
           exit: { opacity: 0 },
-          src: images[0],
+          src: currentImage,
           onLoad: () => setImageLoading(!1),
           className: "pointer-events-none select-none absolute"
         },
-        images[0],
+        currentImage,
         !1,
         {
           fileName: "app/components/general/ImageCarousel.tsx",
-          lineNumber: 24,
+          lineNumber: 33,
           columnNumber: 9
         },
         this
       ) }, void 0, !1, {
         fileName: "app/components/general/ImageCarousel.tsx",
-        lineNumber: 23,
+        lineNumber: 32,
         columnNumber: 7
       }, this)
     },
@@ -26664,7 +26669,7 @@ var import_react30 = __toESM(require_react()), import_jsx_dev_runtime6 = __toESM
     !1,
     {
       fileName: "app/components/general/ImageCarousel.tsx",
-      lineNumber: 17,
+      lineNumber: 26,
       columnNumber: 5
     },
     this
@@ -30268,13 +30273,11 @@ function Travel() {
       /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)("div", { className: "w-28 md:w-48 lg:w-64", children: /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)(
         ImageCarousel,
         {
-          images: [
-            (imagesMetaData == null ? void 0 : imagesMetaData.filter(
-              (imageMetaData) => imageMetaData.country === selectedCountry
-            ).filter((_, index2) => index2 < 5).filter(
-              (imageMetaData) => imageMetaData.type === "image"
-            )[0].url) || ""
-          ]
+          images: (imagesMetaData == null ? void 0 : imagesMetaData.filter(
+            (imageMetaData) => imageMetaData.country === selectedCountry
+          ).filter((_, index2) => index2 < 5).filter(
+            (imageMetaData) => imageMetaData.type === "image"
+          ).map((image) => image.url)) || [""]
         },
         void 0,
         !1,
@@ -30302,13 +30305,13 @@ function Travel() {
         !1,
         {
           fileName: "app/routes/travel.tsx",
-          lineNumber: 44,
+          lineNumber: 45,
           columnNumber: 15
         },
         this
       ) }, void 0, !1, {
         fileName: "app/routes/travel.tsx",
-        lineNumber: 43,
+        lineNumber: 44,
         columnNumber: 13
       }, this)
     ] }, void 0, !0, {
@@ -30328,7 +30331,7 @@ function Travel() {
 }
 
 // server-assets-manifest:@remix-run/dev/assets-manifest
-var assets_manifest_default = { version: "f2f7f6c0", entry: { module: "/build/entry.client-AGVP4QAJ.js", imports: ["/build/_shared/chunk-RC2GTPBO.js", "/build/_shared/chunk-FN3KWL4V.js", "/build/_shared/chunk-4IYZMDEG.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-GDI2SC5G.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-7T7ERQCC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-MFUWY7WM.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel.$country": { id: "routes/travel.$country", parentId: "routes/travel", path: ":country", index: void 0, caseSensitive: void 0, module: "/build/routes/travel.$country-AHN5ZNAC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-F2F7F6C0.js" };
+var assets_manifest_default = { version: "944d10b3", entry: { module: "/build/entry.client-AGVP4QAJ.js", imports: ["/build/_shared/chunk-RC2GTPBO.js", "/build/_shared/chunk-FN3KWL4V.js", "/build/_shared/chunk-4IYZMDEG.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-GDI2SC5G.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-7T7ERQCC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-ARNKLGIV.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel.$country": { id: "routes/travel.$country", parentId: "routes/travel", path: ":country", index: void 0, caseSensitive: void 0, module: "/build/routes/travel.$country-AHN5ZNAC.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-944D10B3.js" };
 
 // server-entry-module:@remix-run/dev/server-build
 var assetsBuildDirectory = "public/build", future = { unstable_cssModules: !1, unstable_cssSideEffectImports: !1, unstable_dev: !1, unstable_postcss: !1, unstable_tailwind: !0, unstable_vanillaExtract: !1, v2_errorBoundary: !0, v2_meta: !0, v2_normalizeFormMethod: !0, v2_routeConvention: !0 }, publicPath = "/build/", entry = { module: entry_server_exports }, routes = {

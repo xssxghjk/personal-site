@@ -26,7 +26,7 @@ export default function Travel() {
           <CountryModal onClose={() => setSelectedCountry(undefined)}>
             <div className={'w-28 md:w-48 lg:w-64'}>
               <ImageCarousel
-                images={[
+                images={
                   imagesMetaData
                     ?.filter(
                       (imageMetaData) =>
@@ -36,8 +36,9 @@ export default function Travel() {
                     .filter(
                       (imageMetaData) =>
                         imageMetaData.type === 'image'
-                    )[0].url || '',
-                ]}
+                    )
+                    .map((image) => image.url) || ['']
+                }
               />
             </div>
             <AnimatePresence initial={false}>
