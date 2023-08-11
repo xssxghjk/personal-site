@@ -11,7 +11,7 @@ export default function Travel() {
   const mediaMetaData = useTravelMetaData()
   const params = useParams<{ country: string }>()
   const selectedCountry = params.country
-  console.log(selectedCountry)
+
   return (
     <main className={'h-full relative'} ref={mainRef}>
       <div className={'h-full'}>
@@ -24,7 +24,7 @@ export default function Travel() {
         {selectedCountry && (
           <CountryModal>
             <div
-              className={'w-28 md:w-48 lg:w-64'}
+              className={'w-28 md:w-48 lg:w-64 transition-all'}
               style={{ aspectRatio: imageAspectRatio }}
             >
               <Outlet />

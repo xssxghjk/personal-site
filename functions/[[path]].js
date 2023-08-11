@@ -22015,7 +22015,7 @@ __export(root_exports, {
 });
 
 // app/tailwind.css
-var tailwind_default = "/build/_assets/tailwind-OHGXVQTQ.css";
+var tailwind_default = "/build/_assets/tailwind-DYSDWR2J.css";
 
 // app/components/navigationTabs/NavigationTabContainer.tsx
 var import_jsx_dev_runtime2 = __toESM(require_jsx_dev_runtime()), NavigationTabContainer = ({
@@ -26847,7 +26847,7 @@ function TravelCountry() {
         initial: { opacity: 0, x: -30 },
         animate: { opacity: 1, x: 0 },
         exit: { opacity: 0, x: 30 },
-        className: "m-2 text-sm md:m-3 md:text-base lg:m-4 lg:text-2xl absolute bottom-0 bg-auto drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,0.8)] ",
+        className: "z-20 m-2 text-sm md:m-3 md:text-base lg:m-4 lg:text-2xl absolute bottom-0 bg-auto drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,0.8)] ",
         children: selectedCountry
       },
       selectedCountry,
@@ -30306,7 +30306,7 @@ var import_jsx_dev_runtime11 = __toESM(require_jsx_dev_runtime()), geoUrl = "/ge
 var import_jsx_dev_runtime12 = __toESM(require_jsx_dev_runtime());
 function Travel() {
   let mainRef = (0, import_react38.useRef)(null), mediaMetaData = useTravelMetaData(), selectedCountry = useParams().country;
-  return console.log(selectedCountry), /* @__PURE__ */ (0, import_jsx_dev_runtime12.jsxDEV)("main", { className: "h-full relative", ref: mainRef, children: [
+  return /* @__PURE__ */ (0, import_jsx_dev_runtime12.jsxDEV)("main", { className: "h-full relative", ref: mainRef, children: [
     /* @__PURE__ */ (0, import_jsx_dev_runtime12.jsxDEV)("div", { className: "h-full", children: /* @__PURE__ */ (0, import_jsx_dev_runtime12.jsxDEV)(
       TravelMap,
       {
@@ -30329,7 +30329,7 @@ function Travel() {
     /* @__PURE__ */ (0, import_jsx_dev_runtime12.jsxDEV)(AnimatePresence, { initial: !1, children: selectedCountry && /* @__PURE__ */ (0, import_jsx_dev_runtime12.jsxDEV)(CountryModal, { children: /* @__PURE__ */ (0, import_jsx_dev_runtime12.jsxDEV)(
       "div",
       {
-        className: "w-28 md:w-48 lg:w-64",
+        className: "w-28 md:w-48 lg:w-64 transition-all",
         style: { aspectRatio: imageAspectRatio },
         children: /* @__PURE__ */ (0, import_jsx_dev_runtime12.jsxDEV)(Outlet, {}, void 0, !1, {
           fileName: "app/routes/travel.tsx",
@@ -30362,7 +30362,7 @@ function Travel() {
 }
 
 // server-assets-manifest:@remix-run/dev/assets-manifest
-var assets_manifest_default = { version: "5e552171", entry: { module: "/build/entry.client-UOW4UBTR.js", imports: ["/build/_shared/chunk-GT2VJRAR.js", "/build/_shared/chunk-56THQXCK.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-TQN7ZT3L.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-WMMM33TT.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-SQ7LBTZM.js", imports: ["/build/_shared/chunk-25KMZGLN.js"], hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel.$country": { id: "routes/travel.$country", parentId: "routes/travel", path: ":country", index: void 0, caseSensitive: void 0, module: "/build/routes/travel.$country-AOQCGHDV.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-5E552171.js" };
+var assets_manifest_default = { version: "2d4b2de5", entry: { module: "/build/entry.client-UOW4UBTR.js", imports: ["/build/_shared/chunk-GT2VJRAR.js", "/build/_shared/chunk-56THQXCK.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-PF6UNOJM.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-WMMM33TT.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-JLIKYGFI.js", imports: ["/build/_shared/chunk-25KMZGLN.js"], hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel.$country": { id: "routes/travel.$country", parentId: "routes/travel", path: ":country", index: void 0, caseSensitive: void 0, module: "/build/routes/travel.$country-4PXLXLTD.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-2D4B2DE5.js" };
 
 // server-entry-module:@remix-run/dev/server-build
 var assetsBuildDirectory = "public/build", future = { unstable_cssModules: !1, unstable_cssSideEffectImports: !1, unstable_dev: !1, unstable_postcss: !1, unstable_tailwind: !0, unstable_vanillaExtract: !1, v2_errorBoundary: !0, v2_meta: !0, v2_normalizeFormMethod: !0, v2_routeConvention: !0 }, publicPath = "/build/", entry = { module: entry_server_exports }, routes = {
