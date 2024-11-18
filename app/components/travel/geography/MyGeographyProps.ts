@@ -8,6 +8,5 @@ export interface IGeography {
 
 export interface MyGeographyProps {
   geography: IGeography
-  onSelect: (geography: IGeography) => void
   isSelected: boolean
 }

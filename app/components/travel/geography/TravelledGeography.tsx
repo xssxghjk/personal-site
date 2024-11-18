@@ -6,7 +6,6 @@ import { Link } from '@remix-run/react'
 
 export const TravelledGeography = ({
   geography,
-  onSelect,
   isSelected,
 }: MyGeographyProps) => {
   const geoSvg = useRef<SVGPathElement>(null)
@@ -57,12 +56,6 @@ export const TravelledGeography = ({
           default: { outline: 'none' },
           hover: { outline: 'none' },
           pressed: { outline: 'none' },
-        }}
-        onClick={() => {
-          onSelect(geography)
-        }}
-        onTouchStart={() => {
-          onSelect(geography)
         }}
       />
     </Link>

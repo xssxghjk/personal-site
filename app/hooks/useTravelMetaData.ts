@@ -36,7 +36,7 @@ export const useTravelMetaData = () => {
           })
         )
       )
-      .then((r) => setImagesMetaData(r as ImageMetaData[]))
+      .then((r) => setImagesMetaData(r))
   }, [])
 
   return imagesMetaData

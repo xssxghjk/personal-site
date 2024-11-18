@@ -19,9 +19,29 @@ var __export = (target, all) => {
   return to;
 };
 var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
   isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: !0 }) : target,
   mod
 )), __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: !0 }), mod);
+var __accessCheck = (obj, member, msg) => {
+  if (!member.has(obj))
+    throw TypeError("Cannot " + msg);
+};
+var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj)), __privateAdd = (obj, member, value) => {
+  if (member.has(obj))
+    throw TypeError("Cannot add the same private member more than once");
+  member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
+}, __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value), __privateWrapper = (obj, member, setter, getter) => ({
+  set _(value) {
+    __privateSet(obj, member, value, setter);
+  },
+  get _() {
+    return __privateGet(obj, member, getter);
+  }
+}), __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
 
 // node_modules/cookie/index.js
 var require_cookie = __commonJS({
@@ -185,10 +205,9 @@ var import_cookie, createCookieFactory, isCookie, init_cookies = __esm({
       unsign
     }) => (name, cookieOptions = {}) => {
       let {
-        secrets,
+        secrets = [],
         ...options
       } = {
-        secrets: [],
         path: "/",
         sameSite: "lax",
         ...cookieOptions
@@ -712,6 +731,7 @@ function createBrowserHistory(options) {
         search,
         hash
       },
+      // state defaults to `null` because `window.history.state` does
       globalHistory.state && globalHistory.state.usr || null,
       globalHistory.state && globalHistory.state.key || "default"
     );
@@ -736,6 +756,7 @@ function createHashHistory(options) {
         search,
         hash
       },
+      // state defaults to `null` because `window.history.state` does
       globalHistory.state && globalHistory.state.usr || null,
       globalHistory.state && globalHistory.state.key || "default"
     );
@@ -783,6 +804,10 @@ function createLocation(current, to, state, key) {
     hash: ""
   }, typeof to == "string" ? parsePath(to) : to, {
     state,
+    // TODO: This could be cleaned up.  push/replace should probably just take
+    // full Locations now and avoid the need to run through this flow at all
+    // But that's a pretty big refactor to the current test suite so going to
+    // keep as is for the time being and just let any incoming keys take precedence
     key: to && to.key || key || createKey()
   });
 }
@@ -834,7 +859,9 @@ function getUrlBasedHistory(getLocation, createHref, validateLocation, options) 
     let historyState = getHistoryState(location, index2), url = history.createHref(location);
     try {
       globalHistory.pushState(historyState, "", url);
-    } catch {
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "DataCloneError")
+        throw error;
       window2.location.assign(url);
     }
     v5Compat && listener && listener({
@@ -895,22 +922,20 @@ function getUrlBasedHistory(getLocation, createHref, validateLocation, options) 
 function isIndexRoute(route) {
   return route.index === !0;
 }
-function convertRoutesToDataRoutes(routes2, detectErrorBoundary2, parentPath, manifest) {
+function convertRoutesToDataRoutes(routes2, mapRouteProperties2, parentPath, manifest) {
   return parentPath === void 0 && (parentPath = []), manifest === void 0 && (manifest = {}), routes2.map((route, index2) => {
     let treePath = [...parentPath, index2], id6 = typeof route.id == "string" ? route.id : treePath.join("-");
     if (invariant(route.index !== !0 || !route.children, "Cannot specify children on an index route"), invariant(!manifest[id6], 'Found a route id collision on id "' + id6 + `".  Route id's must be globally unique within Data Router usages`), isIndexRoute(route)) {
-      let indexRoute = _extends({}, route, {
-        hasErrorBoundary: detectErrorBoundary2(route),
+      let indexRoute = _extends({}, route, mapRouteProperties2(route), {
         id: id6
       });
       return manifest[id6] = indexRoute, indexRoute;
     } else {
-      let pathOrLayoutRoute = _extends({}, route, {
+      let pathOrLayoutRoute = _extends({}, route, mapRouteProperties2(route), {
         id: id6,
-        hasErrorBoundary: detectErrorBoundary2(route),
         children: void 0
       });
-      return manifest[id6] = pathOrLayoutRoute, route.children && (pathOrLayoutRoute.children = convertRoutesToDataRoutes(route.children, detectErrorBoundary2, treePath, manifest)), pathOrLayoutRoute;
+      return manifest[id6] = pathOrLayoutRoute, route.children && (pathOrLayoutRoute.children = convertRoutesToDataRoutes(route.children, mapRouteProperties2, treePath, manifest)), pathOrLayoutRoute;
     }
   });
 }
@@ -925,6 +950,12 @@ function matchRoutes(routes2, locationArg, basename) {
   for (let i = 0; matches == null && i < branches.length; ++i)
     matches = matchRouteBranch(
       branches[i],
+      // Incoming pathnames are generally encoded from either window.location
+      // or from router.navigate, but we want to match against the unencoded
+      // paths in the route definitions.  Memory router locations won't be
+      // encoded here but there also shouldn't be anything to decode so this
+      // should be a safe operation.  This avoids needing matchRoutes to be
+      // history-aware.
       safelyDecodeURI(pathname)
     );
   return matches;
@@ -941,6 +972,8 @@ function flattenRoutes(routes2, branches, parentsMeta, parentPath) {
     meta2.relativePath.startsWith("/") && (invariant(meta2.relativePath.startsWith(parentPath), 'Absolute route path "' + meta2.relativePath + '" nested under path ' + ('"' + parentPath + '" is not valid. An absolute child route path ') + "must start with the combined path of all its parent routes."), meta2.relativePath = meta2.relativePath.slice(parentPath.length));
     let path = joinPaths([parentPath, meta2.relativePath]), routesMeta = parentsMeta.concat(meta2);
     route.children && route.children.length > 0 && (invariant(
+      // Our types know better, but runtime JS may not!
+      // @ts-expect-error
       route.index !== !0,
       "Index routes must not have child routes. Please remove " + ('all child routes from route path "' + path + '".')
     ), flattenRoutes(route.children, branches, routesMeta, path)), !(route.path == null && !route.index) && branches.push({
@@ -976,7 +1009,17 @@ function computeScore(path, index2) {
   return segments.some(isSplat) && (initialScore += splatPenalty), index2 && (initialScore += indexRouteValue), segments.filter((s) => !isSplat(s)).reduce((score, segment) => score + (paramRe.test(segment) ? dynamicSegmentValue : segment === "" ? emptySegmentValue : staticSegmentValue), initialScore);
 }
 function compareIndexes(a, b) {
-  return a.length === b.length && a.slice(0, -1).every((n, i) => n === b[i]) ? a[a.length - 1] - b[b.length - 1] : 0;
+  return a.length === b.length && a.slice(0, -1).every((n, i) => n === b[i]) ? (
+    // If two routes are siblings, we should try to match the earlier sibling
+    // first. This allows people to have fine-grained control over the matching
+    // behavior by simply putting routes with identical paths in the order they
+    // want them tried.
+    a[a.length - 1] - b[b.length - 1]
+  ) : (
+    // Otherwise, it doesn't really make sense to rank non-siblings by index,
+    // so they sort equally.
+    0
+  );
 }
 function matchRouteBranch(branch, pathname) {
   let {
@@ -993,6 +1036,7 @@ function matchRouteBranch(branch, pathname) {
     Object.assign(matchedParams, match.params);
     let route = meta2.route;
     matches.push({
+      // TODO: Can this as be avoided?
       params: matchedParams,
       pathname: joinPaths([matchedPathname, match.pathname]),
       pathnameBase: normalizePathname(joinPaths([matchedPathname, match.pathnameBase])),
@@ -1005,13 +1049,13 @@ function generatePath(originalPath, params) {
   params === void 0 && (params = {});
   let path = originalPath;
   path.endsWith("*") && path !== "*" && !path.endsWith("/*") && (warning(!1, 'Route path "' + path + '" will be treated as if it were ' + ('"' + path.replace(/\*$/, "/*") + '" because the `*` character must ') + "always follow a `/` in the pattern. To get rid of this warning, " + ('please change the route path to "' + path.replace(/\*$/, "/*") + '".')), path = path.replace(/\*$/, "/*"));
-  let prefix = path.startsWith("/") ? "/" : "", segments = path.split(/\/+/).map((segment, index2, array3) => {
+  let prefix = path.startsWith("/") ? "/" : "", stringify = (p) => p == null ? "" : typeof p == "string" ? p : String(p), segments = path.split(/\/+/).map((segment, index2, array3) => {
     if (index2 === array3.length - 1 && segment === "*")
-      return params["*"];
+      return stringify(params["*"]);
     let keyMatch = segment.match(/^:(\w+)(\??)$/);
     if (keyMatch) {
       let [, key, optional] = keyMatch, param = params[key];
-      return optional === "?" ? param ?? "" : (param == null && invariant(!1, 'Missing ":' + key + '" param'), param);
+      return invariant(optional === "?" || param != null, 'Missing ":' + key + '" param'), stringify(param);
     }
     return segment.replace(/\?$/g, "");
   }).filter((segment) => !!segment);
@@ -1028,12 +1072,12 @@ function matchPath(pattern, pathname) {
     return null;
   let matchedPathname = match[0], pathnameBase = matchedPathname.replace(/(.)\/+$/, "$1"), captureGroups = match.slice(1);
   return {
-    params: paramNames.reduce((memo, paramName, index2) => {
+    params: paramNames.reduce((memo2, paramName, index2) => {
       if (paramName === "*") {
         let splatValue = captureGroups[index2] || "";
         pathnameBase = matchedPathname.slice(0, matchedPathname.length - splatValue.length).replace(/(.)\/+$/, "$1");
       }
-      return memo[paramName] = safelyDecodeURIComponent(captureGroups[index2] || "", paramName), memo;
+      return memo2[paramName] = safelyDecodeURIComponent(captureGroups[index2] || "", paramName), memo2;
     }, {}),
     pathname: matchedPathname,
     pathnameBase,
@@ -1129,10 +1173,22 @@ function isRouteErrorResponse(error) {
   return error != null && typeof error.status == "number" && typeof error.statusText == "string" && typeof error.internal == "boolean" && "data" in error;
 }
 function createRouter(init4) {
+  let routerWindow = init4.window ? init4.window : typeof window < "u" ? window : void 0, isBrowser3 = typeof routerWindow < "u" && typeof routerWindow.document < "u" && typeof routerWindow.document.createElement < "u", isServer2 = !isBrowser3;
   invariant(init4.routes.length > 0, "You must provide a non-empty routes array to createRouter");
-  let detectErrorBoundary2 = init4.detectErrorBoundary || defaultDetectErrorBoundary, manifest = {}, dataRoutes = convertRoutesToDataRoutes(init4.routes, detectErrorBoundary2, void 0, manifest), inFlightDataRoutes, future2 = _extends({
-    v7_normalizeFormMethod: !1
-  }, init4.future), unlistenHistory = null, subscribers = /* @__PURE__ */ new Set(), savedScrollPositions2 = null, getScrollRestorationKey = null, getScrollPosition = null, initialScrollRestored = init4.hydrationData != null, initialMatches = matchRoutes(dataRoutes, init4.history.location, init4.basename), initialErrors = null;
+  let mapRouteProperties2;
+  if (init4.mapRouteProperties)
+    mapRouteProperties2 = init4.mapRouteProperties;
+  else if (init4.detectErrorBoundary) {
+    let detectErrorBoundary = init4.detectErrorBoundary;
+    mapRouteProperties2 = (route) => ({
+      hasErrorBoundary: detectErrorBoundary(route)
+    });
+  } else
+    mapRouteProperties2 = defaultMapRouteProperties;
+  let manifest = {}, dataRoutes = convertRoutesToDataRoutes(init4.routes, mapRouteProperties2, void 0, manifest), inFlightDataRoutes, basename = init4.basename || "/", future2 = _extends({
+    v7_normalizeFormMethod: !1,
+    v7_prependBasename: !1
+  }, init4.future), unlistenHistory = null, subscribers = /* @__PURE__ */ new Set(), savedScrollPositions2 = null, getScrollRestorationKey = null, getScrollPosition = null, initialScrollRestored = init4.hydrationData != null, initialMatches = matchRoutes(dataRoutes, init4.history.location, basename), initialErrors = null;
   if (initialMatches == null) {
     let error = getInternalRouterError(404, {
       pathname: init4.history.location.pathname
@@ -1144,12 +1200,18 @@ function createRouter(init4) {
       [route.id]: error
     };
   }
-  let initialized = !initialMatches.some((m) => m.route.lazy) && (!initialMatches.some((m) => m.route.loader) || init4.hydrationData != null), router, state = {
+  let initialized = (
+    // All initialMatches need to be loaded before we're ready.  If we have lazy
+    // functions around still then we'll need to run them in initialize()
+    !initialMatches.some((m) => m.route.lazy) && // And we have to either have no loaders or have been provided hydrationData
+    (!initialMatches.some((m) => m.route.loader) || init4.hydrationData != null)
+  ), router, state = {
     historyAction: init4.history.action,
     location: init4.history.location,
     matches: initialMatches,
     initialized,
     navigation: IDLE_NAVIGATION,
+    // Don't restore on initial updateState() if we were SSR'd
     restoreScrollPosition: init4.hydrationData != null ? !1 : null,
     preventScrollReset: !1,
     revalidation: "idle",
@@ -1189,8 +1251,9 @@ function createRouter(init4) {
             }), init4.history.go(delta);
           },
           reset() {
-            deleteBlocker(blockerKey), updateState({
-              blockers: new Map(router.state.blockers)
+            let blockers = new Map(state.blockers);
+            blockers.set(blockerKey, IDLE_BLOCKER), updateState({
+              blockers
             });
           }
         });
@@ -1212,11 +1275,10 @@ function createRouter(init4) {
     var _location$state, _location$state2;
     let isActionReload = state.actionData != null && state.navigation.formMethod != null && isMutationMethod(state.navigation.formMethod) && state.navigation.state === "loading" && ((_location$state = location.state) == null ? void 0 : _location$state._isRedirect) !== !0, actionData;
     newState.actionData ? Object.keys(newState.actionData).length > 0 ? actionData = newState.actionData : actionData = null : isActionReload ? actionData = state.actionData : actionData = null;
-    let loaderData = newState.loaderData ? mergeLoaderData(state.loaderData, newState.loaderData, newState.matches || [], newState.errors) : state.loaderData;
-    for (let [key] of blockerFunctions)
-      deleteBlocker(key);
+    let loaderData = newState.loaderData ? mergeLoaderData(state.loaderData, newState.loaderData, newState.matches || [], newState.errors) : state.loaderData, blockers = state.blockers;
+    blockers.size > 0 && (blockers = new Map(blockers), blockers.forEach((_, k) => blockers.set(k, IDLE_BLOCKER)));
     let preventScrollReset = pendingPreventScrollReset === !0 || state.navigation.formMethod != null && isMutationMethod(state.navigation.formMethod) && ((_location$state2 = location.state) == null ? void 0 : _location$state2._isRedirect) !== !0;
-    inFlightDataRoutes && (dataRoutes = inFlightDataRoutes, inFlightDataRoutes = void 0), updateState(_extends({}, newState, {
+    inFlightDataRoutes && (dataRoutes = inFlightDataRoutes, inFlightDataRoutes = void 0), isUninterruptedRevalidation || pendingAction === Action.Pop || (pendingAction === Action.Push ? init4.history.push(location, location.state) : pendingAction === Action.Replace && init4.history.replace(location, location.state)), updateState(_extends({}, newState, {
       actionData,
       loaderData,
       historyAction: pendingAction,
@@ -1226,19 +1288,19 @@ function createRouter(init4) {
       revalidation: "idle",
       restoreScrollPosition: getSavedScrollPosition(location, newState.matches || state.matches),
       preventScrollReset,
-      blockers: new Map(state.blockers)
-    })), isUninterruptedRevalidation || pendingAction === Action.Pop || (pendingAction === Action.Push ? init4.history.push(location, location.state) : pendingAction === Action.Replace && init4.history.replace(location, location.state)), pendingAction = Action.Pop, pendingPreventScrollReset = !1, isUninterruptedRevalidation = !1, isRevalidationRequired = !1, cancelledDeferredRoutes = [], cancelledFetcherLoads = [];
+      blockers
+    })), pendingAction = Action.Pop, pendingPreventScrollReset = !1, isUninterruptedRevalidation = !1, isRevalidationRequired = !1, cancelledDeferredRoutes = [], cancelledFetcherLoads = [];
   }
   async function navigate(to, opts) {
     if (typeof to == "number") {
       init4.history.go(to);
       return;
     }
-    let {
+    let normalizedPath = normalizeTo(state.location, state.matches, basename, future2.v7_prependBasename, to, opts == null ? void 0 : opts.fromRouteId, opts == null ? void 0 : opts.relative), {
       path,
       submission,
       error
-    } = normalizeNavigateOptions(to, future2, opts), currentLocation = state.location, nextLocation = createLocation(state.location, path, opts && opts.state);
+    } = normalizeNavigateOptions(future2.v7_normalizeFormMethod, !1, normalizedPath, opts), currentLocation = state.location, nextLocation = createLocation(state.location, path, opts && opts.state);
     nextLocation = _extends({}, nextLocation, init4.history.encodeLocation(nextLocation));
     let userReplace = opts && opts.replace != null ? opts.replace : void 0, historyAction = Action.Push;
     userReplace === !0 ? historyAction = Action.Replace : userReplace === !1 || submission != null && isMutationMethod(submission.formMethod) && submission.formAction === state.location.pathname + state.location.search && (historyAction = Action.Replace);
@@ -1260,8 +1322,9 @@ function createRouter(init4) {
           }), navigate(to, opts);
         },
         reset() {
-          deleteBlocker(blockerKey), updateState({
-            blockers: new Map(state.blockers)
+          let blockers = new Map(state.blockers);
+          blockers.set(blockerKey, IDLE_BLOCKER), updateState({
+            blockers
           });
         }
       });
@@ -1269,6 +1332,8 @@ function createRouter(init4) {
     }
     return await startNavigation(historyAction, nextLocation, {
       submission,
+      // Send through the formData serialization error if we have one so we can
+      // render at the right error boundary after we match routes
       pendingError: error,
       preventScrollReset,
       replace: opts && opts.replace
@@ -1291,7 +1356,7 @@ function createRouter(init4) {
   }
   async function startNavigation(historyAction, location, opts) {
     pendingNavigationController && pendingNavigationController.abort(), pendingNavigationController = null, pendingAction = historyAction, isUninterruptedRevalidation = (opts && opts.startUninterruptedRevalidation) === !0, saveScrollPosition(state.location, state.matches), pendingPreventScrollReset = (opts && opts.preventScrollReset) === !0;
-    let routesToUse = inFlightDataRoutes || dataRoutes, loadingNavigation = opts && opts.overrideNavigation, matches = matchRoutes(routesToUse, location, init4.basename);
+    let routesToUse = inFlightDataRoutes || dataRoutes, loadingNavigation = opts && opts.overrideNavigation, matches = matchRoutes(routesToUse, location, basename);
     if (!matches) {
       let error = getInternalRouterError(404, {
         pathname: location.pathname
@@ -1308,7 +1373,7 @@ function createRouter(init4) {
       });
       return;
     }
-    if (isHashChangeOnly(state.location, location) && !(opts && opts.submission && isMutationMethod(opts.submission.formMethod))) {
+    if (state.initialized && !isRevalidationRequired && isHashChangeOnly(state.location, location) && !(opts && opts.submission && isMutationMethod(opts.submission.formMethod))) {
       completeNavigation(location, {
         matches
       });
@@ -1326,10 +1391,7 @@ function createRouter(init4) {
       });
       if (actionOutput.shortCircuited)
         return;
-      pendingActionData = actionOutput.pendingActionData, pendingError = actionOutput.pendingActionError, loadingNavigation = _extends({
-        state: "loading",
-        location
-      }, opts.submission), request = new Request(request.url, {
+      pendingActionData = actionOutput.pendingActionData, pendingError = actionOutput.pendingActionError, loadingNavigation = getLoadingNavigation(location, opts.submission), request = new Request(request.url, {
         signal: request.signal
       });
     }
@@ -1348,11 +1410,8 @@ function createRouter(init4) {
     })));
   }
   async function handleAction(request, location, submission, matches, opts) {
-    interruptActiveLoads();
-    let navigation = _extends({
-      state: "submitting",
-      location
-    }, submission);
+    opts === void 0 && (opts = {}), interruptActiveLoads();
+    let navigation = getSubmittingNavigation(location, submission);
     updateState({
       navigation
     });
@@ -1366,7 +1425,7 @@ function createRouter(init4) {
           routeId: actionMatch.route.id
         })
       };
-    else if (result = await callLoaderOrAction("action", request, actionMatch, matches, manifest, detectErrorBoundary2, router.basename), request.signal.aborted)
+    else if (result = await callLoaderOrAction("action", request, actionMatch, matches, manifest, mapRouteProperties2, basename), request.signal.aborted)
       return {
         shortCircuited: !0
       };
@@ -1382,6 +1441,7 @@ function createRouter(init4) {
     if (isErrorResult(result)) {
       let boundaryMatch = findNearestBoundary(matches, actionMatch.route.id);
       return (opts && opts.replace) !== !0 && (pendingAction = Action.Push), {
+        // Send back an empty object we can use to clear out any prior actionData
         pendingActionData: {},
         pendingActionError: {
           [boundaryMatch.route.id]: result.error
@@ -1399,42 +1459,25 @@ function createRouter(init4) {
     };
   }
   async function handleLoaders(request, location, matches, overrideNavigation, submission, fetcherSubmission, replace, pendingActionData, pendingError) {
-    let loadingNavigation = overrideNavigation;
-    loadingNavigation || (loadingNavigation = _extends({
-      state: "loading",
-      location,
-      formMethod: void 0,
-      formAction: void 0,
-      formEncType: void 0,
-      formData: void 0
-    }, submission));
-    let activeSubmission = submission || fetcherSubmission ? submission || fetcherSubmission : loadingNavigation.formMethod && loadingNavigation.formAction && loadingNavigation.formData && loadingNavigation.formEncType ? {
-      formMethod: loadingNavigation.formMethod,
-      formAction: loadingNavigation.formAction,
-      formData: loadingNavigation.formData,
-      formEncType: loadingNavigation.formEncType
-    } : void 0, routesToUse = inFlightDataRoutes || dataRoutes, [matchesToLoad, revalidatingFetchers] = getMatchesToLoad(init4.history, state, matches, activeSubmission, location, isRevalidationRequired, cancelledDeferredRoutes, cancelledFetcherLoads, fetchLoadMatches, routesToUse, init4.basename, pendingActionData, pendingError);
-    if (cancelActiveDeferreds((routeId) => !(matches && matches.some((m) => m.route.id === routeId)) || matchesToLoad && matchesToLoad.some((m) => m.route.id === routeId)), matchesToLoad.length === 0 && revalidatingFetchers.length === 0)
+    let loadingNavigation = overrideNavigation || getLoadingNavigation(location, submission), activeSubmission = submission || fetcherSubmission || getSubmissionFromNavigation(loadingNavigation), routesToUse = inFlightDataRoutes || dataRoutes, [matchesToLoad, revalidatingFetchers] = getMatchesToLoad(init4.history, state, matches, activeSubmission, location, isRevalidationRequired, cancelledDeferredRoutes, cancelledFetcherLoads, fetchLoadMatches, fetchRedirectIds, routesToUse, basename, pendingActionData, pendingError);
+    if (cancelActiveDeferreds((routeId) => !(matches && matches.some((m) => m.route.id === routeId)) || matchesToLoad && matchesToLoad.some((m) => m.route.id === routeId)), pendingNavigationLoadId = ++incrementingLoadId, matchesToLoad.length === 0 && revalidatingFetchers.length === 0) {
+      let updatedFetchers2 = markFetchRedirectsDone();
       return completeNavigation(location, _extends({
         matches,
         loaderData: {},
+        // Commit pending error if we're short circuiting
         errors: pendingError || null
       }, pendingActionData ? {
         actionData: pendingActionData
+      } : {}, updatedFetchers2 ? {
+        fetchers: new Map(state.fetchers)
       } : {})), {
         shortCircuited: !0
       };
+    }
     if (!isUninterruptedRevalidation) {
       revalidatingFetchers.forEach((rf) => {
-        let fetcher = state.fetchers.get(rf.key), revalidatingFetcher = {
-          state: "loading",
-          data: fetcher && fetcher.data,
-          formMethod: void 0,
-          formAction: void 0,
-          formEncType: void 0,
-          formData: void 0,
-          " _hasFetcherDoneAnything ": !0
-        };
+        let fetcher = state.fetchers.get(rf.key), revalidatingFetcher = getLoadingFetcher(void 0, fetcher ? fetcher.data : void 0);
         state.fetchers.set(rf.key, revalidatingFetcher);
       });
       let actionData = pendingActionData || state.actionData;
@@ -1448,9 +1491,13 @@ function createRouter(init4) {
         fetchers: new Map(state.fetchers)
       } : {}));
     }
-    pendingNavigationLoadId = ++incrementingLoadId, revalidatingFetchers.forEach((rf) => fetchControllers.set(rf.key, pendingNavigationController));
+    revalidatingFetchers.forEach((rf) => {
+      fetchControllers.has(rf.key) && abortFetcher(rf.key), rf.controller && fetchControllers.set(rf.key, rf.controller);
+    });
+    let abortPendingFetchRevalidations = () => revalidatingFetchers.forEach((f) => abortFetcher(f.key));
+    pendingNavigationController && pendingNavigationController.signal.addEventListener("abort", abortPendingFetchRevalidations);
     let {
-      results: results2,
+      results,
       loaderResults,
       fetcherResults
     } = await callLoadersAndMaybeResolveData(state.matches, matches, matchesToLoad, revalidatingFetchers, request);
@@ -1458,14 +1505,19 @@ function createRouter(init4) {
       return {
         shortCircuited: !0
       };
-    revalidatingFetchers.forEach((rf) => fetchControllers.delete(rf.key));
-    let redirect4 = findRedirect(results2);
-    if (redirect4)
-      return await startRedirectNavigation(state, redirect4, {
+    pendingNavigationController && pendingNavigationController.signal.removeEventListener("abort", abortPendingFetchRevalidations), revalidatingFetchers.forEach((rf) => fetchControllers.delete(rf.key));
+    let redirect4 = findRedirect(results);
+    if (redirect4) {
+      if (redirect4.idx >= matchesToLoad.length) {
+        let fetcherKey = revalidatingFetchers[redirect4.idx - matchesToLoad.length].key;
+        fetchRedirectIds.add(fetcherKey);
+      }
+      return await startRedirectNavigation(state, redirect4.result, {
         replace
       }), {
         shortCircuited: !0
       };
+    }
     let {
       loaderData,
       errors
@@ -1474,12 +1526,12 @@ function createRouter(init4) {
       deferredData.subscribe((aborted) => {
         (aborted || deferredData.done) && activeDeferreds.delete(routeId);
       });
-    }), markFetchRedirectsDone();
-    let didAbortFetchLoads = abortStaleFetchLoads(pendingNavigationLoadId);
+    });
+    let updatedFetchers = markFetchRedirectsDone(), didAbortFetchLoads = abortStaleFetchLoads(pendingNavigationLoadId), shouldUpdateFetchers = updatedFetchers || didAbortFetchLoads || revalidatingFetchers.length > 0;
     return _extends({
       loaderData,
       errors
-    }, didAbortFetchLoads || revalidatingFetchers.length > 0 ? {
+    }, shouldUpdateFetchers ? {
       fetchers: new Map(state.fetchers)
     } : {});
   }
@@ -1487,20 +1539,26 @@ function createRouter(init4) {
     return state.fetchers.get(key) || IDLE_FETCHER;
   }
   function fetch2(key, routeId, href, opts) {
-    if (isServer)
+    if (isServer2)
       throw new Error("router.fetch() was called during the server render, but it shouldn't be. You are likely calling a useFetcher() method in the body of your component. Try moving it to a useEffect or a callback.");
     fetchControllers.has(key) && abortFetcher(key);
-    let matches = matchRoutes(inFlightDataRoutes || dataRoutes, href, init4.basename);
+    let routesToUse = inFlightDataRoutes || dataRoutes, normalizedPath = normalizeTo(state.location, state.matches, basename, future2.v7_prependBasename, href, routeId, opts == null ? void 0 : opts.relative), matches = matchRoutes(routesToUse, normalizedPath, basename);
     if (!matches) {
       setFetcherError(key, routeId, getInternalRouterError(404, {
-        pathname: href
+        pathname: normalizedPath
       }));
       return;
     }
     let {
       path,
-      submission
-    } = normalizeNavigateOptions(href, future2, opts, !0), match = getTargetMatch(matches, path);
+      submission,
+      error
+    } = normalizeNavigateOptions(future2.v7_normalizeFormMethod, !0, normalizedPath, opts);
+    if (error) {
+      setFetcherError(key, routeId, error);
+      return;
+    }
+    let match = getTargetMatch(matches, path);
     if (pendingPreventScrollReset = (opts && opts.preventScrollReset) === !0, submission && isMutationMethod(submission.formMethod)) {
       handleFetcherAction(key, routeId, path, match, matches, submission);
       return;
@@ -1520,37 +1578,34 @@ function createRouter(init4) {
       setFetcherError(key, routeId, error);
       return;
     }
-    let existingFetcher = state.fetchers.get(key), fetcher = _extends({
-      state: "submitting"
-    }, submission, {
-      data: existingFetcher && existingFetcher.data,
-      " _hasFetcherDoneAnything ": !0
-    });
+    let existingFetcher = state.fetchers.get(key), fetcher = getSubmittingFetcher(submission, existingFetcher);
     state.fetchers.set(key, fetcher), updateState({
       fetchers: new Map(state.fetchers)
     });
     let abortController = new AbortController(), fetchRequest = createClientSideRequest(init4.history, path, abortController.signal, submission);
     fetchControllers.set(key, abortController);
-    let actionResult = await callLoaderOrAction("action", fetchRequest, match, requestMatches, manifest, detectErrorBoundary2, router.basename);
+    let originatingLoadId = incrementingLoadId, actionResult = await callLoaderOrAction("action", fetchRequest, match, requestMatches, manifest, mapRouteProperties2, basename);
     if (fetchRequest.signal.aborted) {
       fetchControllers.get(key) === abortController && fetchControllers.delete(key);
       return;
     }
-    if (isRedirectResult(actionResult)) {
-      fetchControllers.delete(key), fetchRedirectIds.add(key);
-      let loadingFetcher = _extends({
-        state: "loading"
-      }, submission, {
-        data: void 0,
-        " _hasFetcherDoneAnything ": !0
-      });
-      return state.fetchers.set(key, loadingFetcher), updateState({
-        fetchers: new Map(state.fetchers)
-      }), startRedirectNavigation(state, actionResult, {
-        submission,
-        isFetchActionRedirect: !0
-      });
-    }
+    if (isRedirectResult(actionResult))
+      if (fetchControllers.delete(key), pendingNavigationLoadId > originatingLoadId) {
+        let doneFetcher = getDoneFetcher(void 0);
+        state.fetchers.set(key, doneFetcher), updateState({
+          fetchers: new Map(state.fetchers)
+        });
+        return;
+      } else {
+        fetchRedirectIds.add(key);
+        let loadingFetcher = getLoadingFetcher(submission);
+        return state.fetchers.set(key, loadingFetcher), updateState({
+          fetchers: new Map(state.fetchers)
+        }), startRedirectNavigation(state, actionResult, {
+          submission,
+          isFetchActionRedirect: !0
+        });
+      }
     if (isErrorResult(actionResult)) {
       setFetcherError(key, routeId, actionResult.error);
       return;
@@ -1559,16 +1614,11 @@ function createRouter(init4) {
       throw getInternalRouterError(400, {
         type: "defer-action"
       });
-    let nextLocation = state.navigation.location || state.location, revalidationRequest = createClientSideRequest(init4.history, nextLocation, abortController.signal), routesToUse = inFlightDataRoutes || dataRoutes, matches = state.navigation.state !== "idle" ? matchRoutes(routesToUse, state.navigation.location, init4.basename) : state.matches;
+    let nextLocation = state.navigation.location || state.location, revalidationRequest = createClientSideRequest(init4.history, nextLocation, abortController.signal), routesToUse = inFlightDataRoutes || dataRoutes, matches = state.navigation.state !== "idle" ? matchRoutes(routesToUse, state.navigation.location, basename) : state.matches;
     invariant(matches, "Didn't find any matches after fetcher action");
     let loadId = ++incrementingLoadId;
     fetchReloadIds.set(key, loadId);
-    let loadFetcher = _extends({
-      state: "loading",
-      data: actionResult.data
-    }, submission, {
-      " _hasFetcherDoneAnything ": !0
-    });
+    let loadFetcher = getLoadingFetcher(submission, actionResult.data);
     state.fetchers.set(key, loadFetcher);
     let [matchesToLoad, revalidatingFetchers] = getMatchesToLoad(
       init4.history,
@@ -1580,51 +1630,47 @@ function createRouter(init4) {
       cancelledDeferredRoutes,
       cancelledFetcherLoads,
       fetchLoadMatches,
+      fetchRedirectIds,
       routesToUse,
-      init4.basename,
+      basename,
       {
         [match.route.id]: actionResult.data
       },
       void 0
+      // No need to send through errors since we short circuit above
     );
     revalidatingFetchers.filter((rf) => rf.key !== key).forEach((rf) => {
-      let staleKey = rf.key, existingFetcher2 = state.fetchers.get(staleKey), revalidatingFetcher = {
-        state: "loading",
-        data: existingFetcher2 && existingFetcher2.data,
-        formMethod: void 0,
-        formAction: void 0,
-        formEncType: void 0,
-        formData: void 0,
-        " _hasFetcherDoneAnything ": !0
-      };
-      state.fetchers.set(staleKey, revalidatingFetcher), fetchControllers.set(staleKey, abortController);
+      let staleKey = rf.key, existingFetcher2 = state.fetchers.get(staleKey), revalidatingFetcher = getLoadingFetcher(void 0, existingFetcher2 ? existingFetcher2.data : void 0);
+      state.fetchers.set(staleKey, revalidatingFetcher), fetchControllers.has(staleKey) && abortFetcher(staleKey), rf.controller && fetchControllers.set(staleKey, rf.controller);
     }), updateState({
       fetchers: new Map(state.fetchers)
     });
+    let abortPendingFetchRevalidations = () => revalidatingFetchers.forEach((rf) => abortFetcher(rf.key));
+    abortController.signal.addEventListener("abort", abortPendingFetchRevalidations);
     let {
-      results: results2,
+      results,
       loaderResults,
       fetcherResults
     } = await callLoadersAndMaybeResolveData(state.matches, matches, matchesToLoad, revalidatingFetchers, revalidationRequest);
     if (abortController.signal.aborted)
       return;
-    fetchReloadIds.delete(key), fetchControllers.delete(key), revalidatingFetchers.forEach((r) => fetchControllers.delete(r.key));
-    let redirect4 = findRedirect(results2);
-    if (redirect4)
-      return startRedirectNavigation(state, redirect4);
+    abortController.signal.removeEventListener("abort", abortPendingFetchRevalidations), fetchReloadIds.delete(key), fetchControllers.delete(key), revalidatingFetchers.forEach((r) => fetchControllers.delete(r.key));
+    let redirect4 = findRedirect(results);
+    if (redirect4) {
+      if (redirect4.idx >= matchesToLoad.length) {
+        let fetcherKey = revalidatingFetchers[redirect4.idx - matchesToLoad.length].key;
+        fetchRedirectIds.add(fetcherKey);
+      }
+      return startRedirectNavigation(state, redirect4.result);
+    }
     let {
       loaderData,
       errors
-    } = processLoaderData(state, state.matches, matchesToLoad, loaderResults, void 0, revalidatingFetchers, fetcherResults, activeDeferreds), doneFetcher = {
-      state: "idle",
-      data: actionResult.data,
-      formMethod: void 0,
-      formAction: void 0,
-      formEncType: void 0,
-      formData: void 0,
-      " _hasFetcherDoneAnything ": !0
-    };
-    state.fetchers.set(key, doneFetcher);
+    } = processLoaderData(state, state.matches, matchesToLoad, loaderResults, void 0, revalidatingFetchers, fetcherResults, activeDeferreds);
+    if (state.fetchers.has(key)) {
+      let doneFetcher = getDoneFetcher(actionResult.data);
+      state.fetchers.set(key, doneFetcher);
+    }
     let didAbortFetchLoads = abortStaleFetchLoads(loadId);
     state.navigation.state === "loading" && loadId > pendingNavigationLoadId ? (invariant(pendingAction, "Expected pending action"), pendingNavigationController && pendingNavigationController.abort(), completeNavigation(state.navigation.location, {
       matches,
@@ -1634,33 +1680,31 @@ function createRouter(init4) {
     })) : (updateState(_extends({
       errors,
       loaderData: mergeLoaderData(state.loaderData, loaderData, matches, errors)
-    }, didAbortFetchLoads ? {
+    }, didAbortFetchLoads || revalidatingFetchers.length > 0 ? {
       fetchers: new Map(state.fetchers)
     } : {})), isRevalidationRequired = !1);
   }
   async function handleFetcherLoader(key, routeId, path, match, matches, submission) {
-    let existingFetcher = state.fetchers.get(key), loadingFetcher = _extends({
-      state: "loading",
-      formMethod: void 0,
-      formAction: void 0,
-      formEncType: void 0,
-      formData: void 0
-    }, submission, {
-      data: existingFetcher && existingFetcher.data,
-      " _hasFetcherDoneAnything ": !0
-    });
+    let existingFetcher = state.fetchers.get(key), loadingFetcher = getLoadingFetcher(submission, existingFetcher ? existingFetcher.data : void 0);
     state.fetchers.set(key, loadingFetcher), updateState({
       fetchers: new Map(state.fetchers)
     });
     let abortController = new AbortController(), fetchRequest = createClientSideRequest(init4.history, path, abortController.signal);
     fetchControllers.set(key, abortController);
-    let result = await callLoaderOrAction("loader", fetchRequest, match, matches, manifest, detectErrorBoundary2, router.basename);
+    let originatingLoadId = incrementingLoadId, result = await callLoaderOrAction("loader", fetchRequest, match, matches, manifest, mapRouteProperties2, basename);
     if (isDeferredResult(result) && (result = await resolveDeferredData(result, fetchRequest.signal, !0) || result), fetchControllers.get(key) === abortController && fetchControllers.delete(key), fetchRequest.signal.aborted)
       return;
-    if (isRedirectResult(result)) {
-      await startRedirectNavigation(state, result);
-      return;
-    }
+    if (isRedirectResult(result))
+      if (pendingNavigationLoadId > originatingLoadId) {
+        let doneFetcher2 = getDoneFetcher(void 0);
+        state.fetchers.set(key, doneFetcher2), updateState({
+          fetchers: new Map(state.fetchers)
+        });
+        return;
+      } else {
+        fetchRedirectIds.add(key), await startRedirectNavigation(state, result);
+        return;
+      }
     if (isErrorResult(result)) {
       let boundaryMatch = findNearestBoundary(state.matches, routeId);
       state.fetchers.delete(key), updateState({
@@ -1672,21 +1716,12 @@ function createRouter(init4) {
       return;
     }
     invariant(!isDeferredResult(result), "Unhandled fetcher deferred data");
-    let doneFetcher = {
-      state: "idle",
-      data: result.data,
-      formMethod: void 0,
-      formAction: void 0,
-      formEncType: void 0,
-      formData: void 0,
-      " _hasFetcherDoneAnything ": !0
-    };
+    let doneFetcher = getDoneFetcher(result.data);
     state.fetchers.set(key, doneFetcher), updateState({
       fetchers: new Map(state.fetchers)
     });
   }
   async function startRedirectNavigation(state2, redirect4, _temp) {
-    var _window;
     let {
       submission,
       replace,
@@ -1696,68 +1731,55 @@ function createRouter(init4) {
     let redirectLocation = createLocation(
       state2.location,
       redirect4.location,
+      // TODO: This can be removed once we get rid of useTransition in Remix v2
       _extends({
         _isRedirect: !0
       }, isFetchActionRedirect ? {
         _isFetchActionRedirect: !0
       } : {})
     );
-    if (invariant(redirectLocation, "Expected a location on the redirect navigation"), ABSOLUTE_URL_REGEX.test(redirect4.location) && isBrowser && typeof ((_window = window) == null ? void 0 : _window.location) < "u") {
-      let url = init4.history.createURL(redirect4.location), isDifferentBasename = stripBasename(url.pathname, init4.basename || "/") == null;
-      if (window.location.origin !== url.origin || isDifferentBasename) {
-        replace ? window.location.replace(redirect4.location) : window.location.assign(redirect4.location);
+    if (invariant(redirectLocation, "Expected a location on the redirect navigation"), ABSOLUTE_URL_REGEX.test(redirect4.location) && isBrowser3) {
+      let url = init4.history.createURL(redirect4.location), isDifferentBasename = stripBasename(url.pathname, basename) == null;
+      if (routerWindow.location.origin !== url.origin || isDifferentBasename) {
+        replace ? routerWindow.location.replace(redirect4.location) : routerWindow.location.assign(redirect4.location);
         return;
       }
     }
     pendingNavigationController = null;
-    let redirectHistoryAction = replace === !0 ? Action.Replace : Action.Push, {
-      formMethod,
-      formAction,
-      formEncType,
-      formData
-    } = state2.navigation;
-    !submission && formMethod && formAction && formData && formEncType && (submission = {
-      formMethod,
-      formAction,
-      formEncType,
-      formData
-    }), redirectPreserveMethodStatusCodes.has(redirect4.status) && submission && isMutationMethod(submission.formMethod) ? await startNavigation(redirectHistoryAction, redirectLocation, {
-      submission: _extends({}, submission, {
-        formAction: redirect4.location
-      }),
-      preventScrollReset: pendingPreventScrollReset
-    }) : isFetchActionRedirect ? await startNavigation(redirectHistoryAction, redirectLocation, {
-      overrideNavigation: {
-        state: "loading",
-        location: redirectLocation,
-        formMethod: void 0,
-        formAction: void 0,
-        formEncType: void 0,
-        formData: void 0
-      },
-      fetcherSubmission: submission,
-      preventScrollReset: pendingPreventScrollReset
-    }) : await startNavigation(redirectHistoryAction, redirectLocation, {
-      overrideNavigation: {
-        state: "loading",
-        location: redirectLocation,
-        formMethod: submission ? submission.formMethod : void 0,
-        formAction: submission ? submission.formAction : void 0,
-        formEncType: submission ? submission.formEncType : void 0,
-        formData: submission ? submission.formData : void 0
-      },
-      preventScrollReset: pendingPreventScrollReset
-    });
+    let redirectHistoryAction = replace === !0 ? Action.Replace : Action.Push, activeSubmission = submission || getSubmissionFromNavigation(state2.navigation);
+    if (redirectPreserveMethodStatusCodes.has(redirect4.status) && activeSubmission && isMutationMethod(activeSubmission.formMethod))
+      await startNavigation(redirectHistoryAction, redirectLocation, {
+        submission: _extends({}, activeSubmission, {
+          formAction: redirect4.location
+        }),
+        // Preserve this flag across redirects
+        preventScrollReset: pendingPreventScrollReset
+      });
+    else if (isFetchActionRedirect)
+      await startNavigation(redirectHistoryAction, redirectLocation, {
+        overrideNavigation: getLoadingNavigation(redirectLocation),
+        fetcherSubmission: activeSubmission,
+        // Preserve this flag across redirects
+        preventScrollReset: pendingPreventScrollReset
+      });
+    else {
+      let overrideNavigation = getLoadingNavigation(redirectLocation, activeSubmission);
+      await startNavigation(redirectHistoryAction, redirectLocation, {
+        overrideNavigation,
+        // Preserve this flag across redirects
+        preventScrollReset: pendingPreventScrollReset
+      });
+    }
   }
   async function callLoadersAndMaybeResolveData(currentMatches, matches, matchesToLoad, fetchersToLoad, request) {
-    let results2 = await Promise.all([...matchesToLoad.map((match) => callLoaderOrAction("loader", request, match, matches, manifest, detectErrorBoundary2, router.basename)), ...fetchersToLoad.map((f) => f.matches && f.match ? callLoaderOrAction("loader", createClientSideRequest(init4.history, f.path, request.signal), f.match, f.matches, manifest, detectErrorBoundary2, router.basename) : {
+    let results = await Promise.all([...matchesToLoad.map((match) => callLoaderOrAction("loader", request, match, matches, manifest, mapRouteProperties2, basename)), ...fetchersToLoad.map((f) => f.matches && f.match && f.controller ? callLoaderOrAction("loader", createClientSideRequest(init4.history, f.path, f.controller.signal), f.match, f.matches, manifest, mapRouteProperties2, basename) : {
       type: ResultType.error,
       error: getInternalRouterError(404, {
         pathname: f.path
       })
-    })]), loaderResults = results2.slice(0, matchesToLoad.length), fetcherResults = results2.slice(matchesToLoad.length);
-    return await Promise.all([resolveDeferredResults(currentMatches, matchesToLoad, loaderResults, request.signal, !1, state.loaderData), resolveDeferredResults(currentMatches, fetchersToLoad.map((f) => f.match), fetcherResults, request.signal, !0)]), {
-      results: results2,
+    })]), loaderResults = results.slice(0, matchesToLoad.length), fetcherResults = results.slice(matchesToLoad.length);
+    return await Promise.all([resolveDeferredResults(currentMatches, matchesToLoad, loaderResults, loaderResults.map(() => request.signal), !1, state.loaderData), resolveDeferredResults(currentMatches, fetchersToLoad.map((f) => f.match), fetcherResults, fetchersToLoad.map((f) => f.controller ? f.controller.signal : null), !0)]), {
+      results,
       loaderResults,
       fetcherResults
     };
@@ -1777,7 +1799,8 @@ function createRouter(init4) {
     });
   }
   function deleteFetcher(key) {
-    fetchControllers.has(key) && abortFetcher(key), fetchLoadMatches.delete(key), fetchReloadIds.delete(key), fetchRedirectIds.delete(key), state.fetchers.delete(key);
+    let fetcher = state.fetchers.get(key);
+    fetchControllers.has(key) && !(fetcher && fetcher.state === "loading" && fetchReloadIds.has(key)) && abortFetcher(key), fetchLoadMatches.delete(key), fetchReloadIds.delete(key), fetchRedirectIds.delete(key), state.fetchers.delete(key);
   }
   function abortFetcher(key) {
     let controller = fetchControllers.get(key);
@@ -1785,25 +1808,17 @@ function createRouter(init4) {
   }
   function markFetchersDone(keys) {
     for (let key of keys) {
-      let doneFetcher = {
-        state: "idle",
-        data: getFetcher(key).data,
-        formMethod: void 0,
-        formAction: void 0,
-        formEncType: void 0,
-        formData: void 0,
-        " _hasFetcherDoneAnything ": !0
-      };
+      let fetcher = getFetcher(key), doneFetcher = getDoneFetcher(fetcher.data);
       state.fetchers.set(key, doneFetcher);
     }
   }
   function markFetchRedirectsDone() {
-    let doneKeys = [];
+    let doneKeys = [], updatedFetchers = !1;
     for (let key of fetchRedirectIds) {
       let fetcher = state.fetchers.get(key);
-      invariant(fetcher, "Expected fetcher: " + key), fetcher.state === "loading" && (fetchRedirectIds.delete(key), doneKeys.push(key));
+      invariant(fetcher, "Expected fetcher: " + key), fetcher.state === "loading" && (fetchRedirectIds.delete(key), doneKeys.push(key), updatedFetchers = !0);
     }
-    markFetchersDone(doneKeys);
+    return markFetchersDone(doneKeys), updatedFetchers;
   }
   function abortStaleFetchLoads(landedId) {
     let yeetedKeys = [];
@@ -1823,8 +1838,10 @@ function createRouter(init4) {
   }
   function updateBlocker(key, newBlocker) {
     let blocker = state.blockers.get(key) || IDLE_BLOCKER;
-    invariant(blocker.state === "unblocked" && newBlocker.state === "blocked" || blocker.state === "blocked" && newBlocker.state === "blocked" || blocker.state === "blocked" && newBlocker.state === "proceeding" || blocker.state === "blocked" && newBlocker.state === "unblocked" || blocker.state === "proceeding" && newBlocker.state === "unblocked", "Invalid blocker state transition: " + blocker.state + " -> " + newBlocker.state), state.blockers.set(key, newBlocker), updateState({
-      blockers: new Map(state.blockers)
+    invariant(blocker.state === "unblocked" && newBlocker.state === "blocked" || blocker.state === "blocked" && newBlocker.state === "blocked" || blocker.state === "blocked" && newBlocker.state === "proceeding" || blocker.state === "blocked" && newBlocker.state === "unblocked" || blocker.state === "proceeding" && newBlocker.state === "unblocked", "Invalid blocker state transition: " + blocker.state + " -> " + newBlocker.state);
+    let blockers = new Map(state.blockers);
+    blockers.set(key, newBlocker), updateState({
+      blockers
     });
   }
   function shouldBlockNavigation(_ref2) {
@@ -1851,7 +1868,7 @@ function createRouter(init4) {
     }), cancelledRouteIds;
   }
   function enableScrollRestoration(positions, getPosition, getKey) {
-    if (savedScrollPositions2 = positions, getScrollPosition = getPosition, getScrollRestorationKey = getKey || ((location) => location.key), !initialScrollRestored && state.navigation === IDLE_NAVIGATION) {
+    if (savedScrollPositions2 = positions, getScrollPosition = getPosition, getScrollRestorationKey = getKey || null, !initialScrollRestored && state.navigation === IDLE_NAVIGATION) {
       initialScrollRestored = !0;
       let y = getSavedScrollPosition(state.location, state.matches);
       y != null && updateState({
@@ -1862,26 +1879,29 @@ function createRouter(init4) {
       savedScrollPositions2 = null, getScrollPosition = null, getScrollRestorationKey = null;
     };
   }
+  function getScrollKey(location, matches) {
+    return getScrollRestorationKey && getScrollRestorationKey(location, matches.map((m) => createUseMatchesMatch(m, state.loaderData))) || location.key;
+  }
   function saveScrollPosition(location, matches) {
-    if (savedScrollPositions2 && getScrollRestorationKey && getScrollPosition) {
-      let userMatches = matches.map((m) => createUseMatchesMatch(m, state.loaderData)), key = getScrollRestorationKey(location, userMatches) || location.key;
+    if (savedScrollPositions2 && getScrollPosition) {
+      let key = getScrollKey(location, matches);
       savedScrollPositions2[key] = getScrollPosition();
     }
   }
   function getSavedScrollPosition(location, matches) {
-    if (savedScrollPositions2 && getScrollRestorationKey && getScrollPosition) {
-      let userMatches = matches.map((m) => createUseMatchesMatch(m, state.loaderData)), key = getScrollRestorationKey(location, userMatches) || location.key, y = savedScrollPositions2[key];
+    if (savedScrollPositions2) {
+      let key = getScrollKey(location, matches), y = savedScrollPositions2[key];
       if (typeof y == "number")
         return y;
     }
     return null;
   }
   function _internalSetRoutes(newRoutes) {
-    inFlightDataRoutes = newRoutes;
+    manifest = {}, inFlightDataRoutes = convertRoutesToDataRoutes(newRoutes, mapRouteProperties2, void 0, manifest);
   }
   return router = {
     get basename() {
-      return init4.basename;
+      return basename;
     },
     get state() {
       return state;
@@ -1895,6 +1915,8 @@ function createRouter(init4) {
     navigate,
     fetch: fetch2,
     revalidate,
+    // Passthrough to history-aware createHref used by useHref so we get proper
+    // hash-aware URLs in DOM paths
     createHref: (to) => init4.history.createHref(to),
     encodeLocation: (to) => init4.history.encodeLocation(to),
     getFetcher,
@@ -1904,12 +1926,24 @@ function createRouter(init4) {
     deleteBlocker,
     _internalFetchControllers: fetchControllers,
     _internalActiveDeferreds: activeDeferreds,
+    // TODO: Remove setRoutes, it's temporary to avoid dealing with
+    // updating the tree while validating the update algorithm.
     _internalSetRoutes
   }, router;
 }
 function createStaticHandler(routes2, opts) {
   invariant(routes2.length > 0, "You must provide a non-empty routes array to createStaticHandler");
-  let manifest = {}, detectErrorBoundary2 = (opts == null ? void 0 : opts.detectErrorBoundary) || defaultDetectErrorBoundary, dataRoutes = convertRoutesToDataRoutes(routes2, detectErrorBoundary2, void 0, manifest), basename = (opts ? opts.basename : null) || "/";
+  let manifest = {}, basename = (opts ? opts.basename : null) || "/", mapRouteProperties2;
+  if (opts != null && opts.mapRouteProperties)
+    mapRouteProperties2 = opts.mapRouteProperties;
+  else if (opts != null && opts.detectErrorBoundary) {
+    let detectErrorBoundary = opts.detectErrorBoundary;
+    mapRouteProperties2 = (route) => ({
+      hasErrorBoundary: detectErrorBoundary(route)
+    });
+  } else
+    mapRouteProperties2 = defaultMapRouteProperties;
+  let dataRoutes = convertRoutesToDataRoutes(routes2, mapRouteProperties2, void 0, manifest);
   async function query(request, _temp2) {
     let {
       requestContext
@@ -2035,7 +2069,11 @@ function createStaticHandler(routes2, opts) {
         type: ResultType.error,
         error
       };
-    } else if (result = await callLoaderOrAction("action", request, actionMatch, matches, manifest, detectErrorBoundary2, basename, !0, isRouteRequest, requestContext), request.signal.aborted) {
+    } else if (result = await callLoaderOrAction("action", request, actionMatch, matches, manifest, mapRouteProperties2, basename, {
+      isStaticRequest: !0,
+      isRouteRequest,
+      requestContext
+    }), request.signal.aborted) {
       let method = isRouteRequest ? "queryRoute" : "query";
       throw new Error(method + "() call aborted");
     }
@@ -2067,6 +2105,8 @@ function createStaticHandler(routes2, opts) {
           [actionMatch.route.id]: result.data
         },
         errors: null,
+        // Note: statusCode + headers are unused here since queryRoute will
+        // return the raw Response or value
         statusCode: 200,
         loaderHeaders: {},
         actionHeaders: {},
@@ -2113,6 +2153,7 @@ function createStaticHandler(routes2, opts) {
     if (matchesToLoad.length === 0)
       return {
         matches,
+        // Add a null for all matched routes for proper revalidation on the client
         loaderData: matches.reduce((acc, m) => Object.assign(acc, {
           [m.route.id]: null
         }), {}),
@@ -2121,12 +2162,16 @@ function createStaticHandler(routes2, opts) {
         loaderHeaders: {},
         activeDeferreds: null
       };
-    let results2 = await Promise.all([...matchesToLoad.map((match) => callLoaderOrAction("loader", request, match, matches, manifest, detectErrorBoundary2, basename, !0, isRouteRequest, requestContext))]);
+    let results = await Promise.all([...matchesToLoad.map((match) => callLoaderOrAction("loader", request, match, matches, manifest, mapRouteProperties2, basename, {
+      isStaticRequest: !0,
+      isRouteRequest,
+      requestContext
+    }))]);
     if (request.signal.aborted) {
       let method = isRouteRequest ? "queryRoute" : "query";
       throw new Error(method + "() call aborted");
     }
-    let activeDeferreds = /* @__PURE__ */ new Map(), context = processRouteLoaderData(matches, matchesToLoad, results2, pendingActionError, activeDeferreds), executedLoaders = new Set(matchesToLoad.map((match) => match.route.id));
+    let activeDeferreds = /* @__PURE__ */ new Map(), context = processRouteLoaderData(matches, matchesToLoad, results, pendingActionError, activeDeferreds), executedLoaders = new Set(matchesToLoad.map((match) => match.route.id));
     return matches.forEach((match) => {
       executedLoaders.has(match.route.id) || (context.loaderData[match.route.id] = null);
     }), _extends({}, context, {
@@ -2149,11 +2194,23 @@ function getStaticContextFromError(routes2, context, error) {
   });
 }
 function isSubmissionNavigation(opts) {
-  return opts != null && "formData" in opts;
+  return opts != null && ("formData" in opts && opts.formData != null || "body" in opts && opts.body !== void 0);
 }
-function normalizeNavigateOptions(to, future2, opts, isFetcher) {
-  isFetcher === void 0 && (isFetcher = !1);
-  let path = typeof to == "string" ? to : createPath(to);
+function normalizeTo(location, matches, basename, prependBasename, to, fromRouteId, relative) {
+  let contextualMatches, activeRouteMatch;
+  if (fromRouteId != null && relative !== "path") {
+    contextualMatches = [];
+    for (let match of matches)
+      if (contextualMatches.push(match), match.route.id === fromRouteId) {
+        activeRouteMatch = match;
+        break;
+      }
+  } else
+    contextualMatches = matches, activeRouteMatch = matches[matches.length - 1];
+  let path = resolveTo(to || ".", getPathContributingMatches(contextualMatches).map((m) => m.pathnameBase), stripBasename(location.pathname, basename) || location.pathname, relative === "path");
+  return to == null && (path.search = location.search, path.hash = location.hash), (to == null || to === "" || to === ".") && activeRouteMatch && activeRouteMatch.route.index && !hasNakedIndexQuery(path.search) && (path.search = path.search ? path.search.replace(/^\?/, "?index&") : "?index"), prependBasename && basename !== "/" && (path.pathname = path.pathname === "/" ? basename : joinPaths([basename, path.pathname])), createPath(path);
+}
+function normalizeNavigateOptions(normalizeFormMethod, isFetcher, path, opts) {
   if (!opts || !isSubmissionNavigation(opts))
     return {
       path
@@ -2165,21 +2222,86 @@ function normalizeNavigateOptions(to, future2, opts, isFetcher) {
         method: opts.formMethod
       })
     };
-  let submission;
-  if (opts.formData) {
-    let formMethod = opts.formMethod || "get";
-    if (submission = {
-      formMethod: future2.v7_normalizeFormMethod ? formMethod.toUpperCase() : formMethod.toLowerCase(),
-      formAction: stripHashFromPath(path),
-      formEncType: opts && opts.formEncType || "application/x-www-form-urlencoded",
-      formData: opts.formData
-    }, isMutationMethod(submission.formMethod))
+  let getInvalidBodyError = () => ({
+    path,
+    error: getInternalRouterError(400, {
+      type: "invalid-body"
+    })
+  }), rawFormMethod = opts.formMethod || "get", formMethod = normalizeFormMethod ? rawFormMethod.toUpperCase() : rawFormMethod.toLowerCase(), formAction = stripHashFromPath(path);
+  if (opts.body !== void 0) {
+    if (opts.formEncType === "text/plain") {
+      if (!isMutationMethod(formMethod))
+        return getInvalidBodyError();
+      let text = typeof opts.body == "string" ? opts.body : opts.body instanceof FormData || opts.body instanceof URLSearchParams ? (
+        // https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#plain-text-form-data
+        Array.from(opts.body.entries()).reduce((acc, _ref3) => {
+          let [name, value] = _ref3;
+          return "" + acc + name + "=" + value + `
+`;
+        }, "")
+      ) : String(opts.body);
       return {
         path,
-        submission
+        submission: {
+          formMethod,
+          formAction,
+          formEncType: opts.formEncType,
+          formData: void 0,
+          json: void 0,
+          text
+        }
       };
+    } else if (opts.formEncType === "application/json") {
+      if (!isMutationMethod(formMethod))
+        return getInvalidBodyError();
+      try {
+        let json5 = typeof opts.body == "string" ? JSON.parse(opts.body) : opts.body;
+        return {
+          path,
+          submission: {
+            formMethod,
+            formAction,
+            formEncType: opts.formEncType,
+            formData: void 0,
+            json: json5,
+            text: void 0
+          }
+        };
+      } catch {
+        return getInvalidBodyError();
+      }
+    }
   }
-  let parsedPath = parsePath(path), searchParams = convertFormDataToSearchParams(opts.formData);
+  invariant(typeof FormData == "function", "FormData is not available in this environment");
+  let searchParams, formData;
+  if (opts.formData)
+    searchParams = convertFormDataToSearchParams(opts.formData), formData = opts.formData;
+  else if (opts.body instanceof FormData)
+    searchParams = convertFormDataToSearchParams(opts.body), formData = opts.body;
+  else if (opts.body instanceof URLSearchParams)
+    searchParams = opts.body, formData = convertSearchParamsToFormData(searchParams);
+  else if (opts.body == null)
+    searchParams = new URLSearchParams(), formData = new FormData();
+  else
+    try {
+      searchParams = new URLSearchParams(opts.body), formData = convertSearchParamsToFormData(searchParams);
+    } catch {
+      return getInvalidBodyError();
+    }
+  let submission = {
+    formMethod,
+    formAction,
+    formEncType: opts && opts.formEncType || "application/x-www-form-urlencoded",
+    formData,
+    json: void 0,
+    text: void 0
+  };
+  if (isMutationMethod(submission.formMethod))
+    return {
+      path,
+      submission
+    };
+  let parsedPath = parsePath(path);
   return isFetcher && parsedPath.search && hasNakedIndexQuery(parsedPath.search) && searchParams.append("index", ""), parsedPath.search = "?" + searchParams, {
     path: createPath(parsedPath),
     submission
@@ -2193,8 +2315,8 @@ function getLoaderMatchesUntilBoundary(matches, boundaryId) {
   }
   return boundaryMatches;
 }
-function getMatchesToLoad(history, state, matches, submission, location, isRevalidationRequired, cancelledDeferredRoutes, cancelledFetcherLoads, fetchLoadMatches, routesToUse, basename, pendingActionData, pendingError) {
-  let actionResult = pendingError ? Object.values(pendingError)[0] : pendingActionData ? Object.values(pendingActionData)[0] : void 0, currentUrl = history.createURL(state.location), nextUrl = history.createURL(location), defaultShouldRevalidate = isRevalidationRequired || currentUrl.toString() === nextUrl.toString() || currentUrl.search !== nextUrl.search, boundaryId = pendingError ? Object.keys(pendingError)[0] : void 0, navigationMatches = getLoaderMatchesUntilBoundary(matches, boundaryId).filter((match, index2) => {
+function getMatchesToLoad(history, state, matches, submission, location, isRevalidationRequired, cancelledDeferredRoutes, cancelledFetcherLoads, fetchLoadMatches, fetchRedirectIds, routesToUse, basename, pendingActionData, pendingError) {
+  let actionResult = pendingError ? Object.values(pendingError)[0] : pendingActionData ? Object.values(pendingActionData)[0] : void 0, currentUrl = history.createURL(state.location), nextUrl = history.createURL(location), boundaryId = pendingError ? Object.keys(pendingError)[0] : void 0, navigationMatches = getLoaderMatchesUntilBoundary(matches, boundaryId).filter((match, index2) => {
     if (match.route.lazy)
       return !0;
     if (match.route.loader == null)
@@ -2209,7 +2331,12 @@ function getMatchesToLoad(history, state, matches, submission, location, isReval
       nextParams: nextRouteMatch.params
     }, submission, {
       actionResult,
-      defaultShouldRevalidate: defaultShouldRevalidate || isNewRouteInstance(currentRouteMatch, nextRouteMatch)
+      defaultShouldRevalidate: (
+        // Forced revalidation due to submission, useRevalidator, or X-Remix-Revalidate
+        isRevalidationRequired || // Clicked the same link, resubmitted a GET form
+        currentUrl.pathname + currentUrl.search === nextUrl.pathname + nextUrl.search || // Search params affect all loaders
+        currentUrl.search !== nextUrl.search || isNewRouteInstance(currentRouteMatch, nextRouteMatch)
+      )
     }));
   }), revalidatingFetchers = [];
   return fetchLoadMatches.forEach((f, key) => {
@@ -2217,45 +2344,51 @@ function getMatchesToLoad(history, state, matches, submission, location, isReval
       return;
     let fetcherMatches = matchRoutes(routesToUse, f.path, basename);
     if (!fetcherMatches) {
-      revalidatingFetchers.push(_extends({
-        key
-      }, f, {
-        matches: null,
-        match: null
-      }));
-      return;
-    }
-    let fetcherMatch = getTargetMatch(fetcherMatches, f.path);
-    if (cancelledFetcherLoads.includes(key)) {
-      revalidatingFetchers.push(_extends({
+      revalidatingFetchers.push({
         key,
-        matches: fetcherMatches,
-        match: fetcherMatch
-      }, f));
+        routeId: f.routeId,
+        path: f.path,
+        matches: null,
+        match: null,
+        controller: null
+      });
       return;
     }
-    shouldRevalidateLoader(fetcherMatch, _extends({
+    let fetcher = state.fetchers.get(key), fetcherMatch = getTargetMatch(fetcherMatches, f.path), shouldRevalidate = !1;
+    fetchRedirectIds.has(key) ? shouldRevalidate = !1 : cancelledFetcherLoads.includes(key) ? shouldRevalidate = !0 : fetcher && fetcher.state !== "idle" && fetcher.data === void 0 ? shouldRevalidate = isRevalidationRequired : shouldRevalidate = shouldRevalidateLoader(fetcherMatch, _extends({
       currentUrl,
       currentParams: state.matches[state.matches.length - 1].params,
       nextUrl,
       nextParams: matches[matches.length - 1].params
     }, submission, {
       actionResult,
-      defaultShouldRevalidate
-    })) && revalidatingFetchers.push(_extends({
+      defaultShouldRevalidate: isRevalidationRequired
+    })), shouldRevalidate && revalidatingFetchers.push({
       key,
+      routeId: f.routeId,
+      path: f.path,
       matches: fetcherMatches,
-      match: fetcherMatch
-    }, f));
+      match: fetcherMatch,
+      controller: new AbortController()
+    });
   }), [navigationMatches, revalidatingFetchers];
 }
 function isNewLoader(currentLoaderData, currentMatch, match) {
-  let isNew = !currentMatch || match.route.id !== currentMatch.route.id, isMissingData = currentLoaderData[match.route.id] === void 0;
+  let isNew = (
+    // [a] -> [a, b]
+    !currentMatch || // [a, b] -> [a, c]
+    match.route.id !== currentMatch.route.id
+  ), isMissingData = currentLoaderData[match.route.id] === void 0;
   return isNew || isMissingData;
 }
 function isNewRouteInstance(currentMatch, match) {
   let currentPath = currentMatch.route.path;
-  return currentMatch.pathname !== match.pathname || currentPath != null && currentPath.endsWith("*") && currentMatch.params["*"] !== match.params["*"];
+  return (
+    // param change for this match, /users/123 -> /users/456
+    currentMatch.pathname !== match.pathname || // splat param changed, which is not present in match.path
+    // e.g. /files/images/avatar.jpg -> files/finances.xls
+    currentPath != null && currentPath.endsWith("*") && currentMatch.params["*"] !== match.params["*"]
+  );
 }
 function shouldRevalidateLoader(loaderMatch, arg) {
   if (loaderMatch.route.shouldRevalidate) {
@@ -2265,7 +2398,7 @@ function shouldRevalidateLoader(loaderMatch, arg) {
   }
   return arg.defaultShouldRevalidate;
 }
-async function loadLazyRouteModule(route, detectErrorBoundary2, manifest) {
+async function loadLazyRouteModule(route, mapRouteProperties2, manifest) {
   if (!route.lazy)
     return;
   let lazyRoute = await route.lazy();
@@ -2275,45 +2408,52 @@ async function loadLazyRouteModule(route, detectErrorBoundary2, manifest) {
   invariant(routeToUpdate, "No route found in manifest");
   let routeUpdates = {};
   for (let lazyRouteProperty in lazyRoute) {
-    let isPropertyStaticallyDefined = routeToUpdate[lazyRouteProperty] !== void 0 && lazyRouteProperty !== "hasErrorBoundary";
+    let isPropertyStaticallyDefined = routeToUpdate[lazyRouteProperty] !== void 0 && // This property isn't static since it should always be updated based
+    // on the route updates
+    lazyRouteProperty !== "hasErrorBoundary";
     warning(!isPropertyStaticallyDefined, 'Route "' + routeToUpdate.id + '" has a static property "' + lazyRouteProperty + '" defined but its lazy function is also returning a value for this property. ' + ('The lazy route property "' + lazyRouteProperty + '" will be ignored.')), !isPropertyStaticallyDefined && !immutableRouteKeys.has(lazyRouteProperty) && (routeUpdates[lazyRouteProperty] = lazyRoute[lazyRouteProperty]);
   }
-  Object.assign(routeToUpdate, routeUpdates), Object.assign(routeToUpdate, {
-    hasErrorBoundary: detectErrorBoundary2(_extends({}, routeToUpdate)),
+  Object.assign(routeToUpdate, routeUpdates), Object.assign(routeToUpdate, _extends({}, mapRouteProperties2(routeToUpdate), {
     lazy: void 0
-  });
+  }));
 }
-async function callLoaderOrAction(type2, request, match, matches, manifest, detectErrorBoundary2, basename, isStaticRequest, isRouteRequest, requestContext) {
-  basename === void 0 && (basename = "/"), isStaticRequest === void 0 && (isStaticRequest = !1), isRouteRequest === void 0 && (isRouteRequest = !1);
+async function callLoaderOrAction(type2, request, match, matches, manifest, mapRouteProperties2, basename, opts) {
+  opts === void 0 && (opts = {});
   let resultType, result, onReject, runHandler = (handler) => {
     let reject, abortPromise = new Promise((_, r) => reject = r);
     return onReject = () => reject(), request.signal.addEventListener("abort", onReject), Promise.race([handler({
       request,
       params: match.params,
-      context: requestContext
+      context: opts.requestContext
     }), abortPromise]);
   };
   try {
     let handler = match.route[type2];
     if (match.route.lazy)
       if (handler)
-        result = (await Promise.all([runHandler(handler), loadLazyRouteModule(match.route, detectErrorBoundary2, manifest)]))[0];
-      else if (await loadLazyRouteModule(match.route, detectErrorBoundary2, manifest), handler = match.route[type2], handler)
+        result = (await Promise.all([runHandler(handler), loadLazyRouteModule(match.route, mapRouteProperties2, manifest)]))[0];
+      else if (await loadLazyRouteModule(match.route, mapRouteProperties2, manifest), handler = match.route[type2], handler)
         result = await runHandler(handler);
-      else {
-        if (type2 === "action")
-          throw getInternalRouterError(405, {
-            method: request.method,
-            pathname: new URL(request.url).pathname,
-            routeId: match.route.id
-          });
+      else if (type2 === "action") {
+        let url = new URL(request.url), pathname = url.pathname + url.search;
+        throw getInternalRouterError(405, {
+          method: request.method,
+          pathname,
+          routeId: match.route.id
+        });
+      } else
         return {
           type: ResultType.data,
           data: void 0
         };
-      }
-    else
-      invariant(handler, "Could not find the " + type2 + ' to run on the "' + match.route.id + '" route'), result = await runHandler(handler);
+    else if (handler)
+      result = await runHandler(handler);
+    else {
+      let url = new URL(request.url), pathname = url.pathname + url.search;
+      throw getInternalRouterError(404, {
+        pathname
+      });
+    }
     invariant(result !== void 0, "You defined " + (type2 === "action" ? "an action" : "a loader") + " for route " + ('"' + match.route.id + "\" but didn't return anything from your `" + type2 + "` ") + "function. Please return a value or `null`.");
   } catch (e) {
     resultType = ResultType.error, result = e;
@@ -2324,20 +2464,13 @@ async function callLoaderOrAction(type2, request, match, matches, manifest, dete
     let status = result.status;
     if (redirectStatusCodes.has(status)) {
       let location = result.headers.get("Location");
-      if (invariant(location, "Redirects returned/thrown from loaders/actions must have a Location header"), ABSOLUTE_URL_REGEX.test(location)) {
-        if (!isStaticRequest) {
-          let currentUrl = new URL(request.url), url = location.startsWith("//") ? new URL(currentUrl.protocol + location) : new URL(location), isSameBasename = stripBasename(url.pathname, basename) != null;
-          url.origin === currentUrl.origin && isSameBasename && (location = url.pathname + url.search + url.hash);
-        }
-      } else {
-        let activeMatches = matches.slice(0, matches.indexOf(match) + 1), routePathnames = getPathContributingMatches(activeMatches).map((match2) => match2.pathnameBase), resolvedLocation = resolveTo(location, routePathnames, new URL(request.url).pathname);
-        if (invariant(createPath(resolvedLocation), "Unable to resolve redirect location: " + location), basename) {
-          let path = resolvedLocation.pathname;
-          resolvedLocation.pathname = path === "/" ? basename : joinPaths([basename, path]);
-        }
-        location = createPath(resolvedLocation);
+      if (invariant(location, "Redirects returned/thrown from loaders/actions must have a Location header"), !ABSOLUTE_URL_REGEX.test(location))
+        location = normalizeTo(new URL(request.url), matches.slice(0, matches.indexOf(match) + 1), basename, !0, location);
+      else if (!opts.isStaticRequest) {
+        let currentUrl = new URL(request.url), url = location.startsWith("//") ? new URL(currentUrl.protocol + location) : new URL(location), isSameBasename = stripBasename(url.pathname, basename) != null;
+        url.origin === currentUrl.origin && isSameBasename && (location = url.pathname + url.search + url.hash);
       }
-      if (isStaticRequest)
+      if (opts.isStaticRequest)
         throw result.headers.set("Location", location), result;
       return {
         type: ResultType.redirect,
@@ -2346,7 +2479,7 @@ async function callLoaderOrAction(type2, request, match, matches, manifest, dete
         revalidate: result.headers.get("X-Remix-Revalidate") !== null
       };
     }
-    if (isRouteRequest)
+    if (opts.isRouteRequest)
       throw {
         type: resultType || ResultType.data,
         response: result
@@ -2389,22 +2522,29 @@ function createClientSideRequest(history, location, signal, submission) {
   if (submission && isMutationMethod(submission.formMethod)) {
     let {
       formMethod,
-      formEncType,
-      formData
+      formEncType
     } = submission;
-    init4.method = formMethod.toUpperCase(), init4.body = formEncType === "application/x-www-form-urlencoded" ? convertFormDataToSearchParams(formData) : formData;
+    init4.method = formMethod.toUpperCase(), formEncType === "application/json" ? (init4.headers = new Headers({
+      "Content-Type": formEncType
+    }), init4.body = JSON.stringify(submission.json)) : formEncType === "text/plain" ? init4.body = submission.text : formEncType === "application/x-www-form-urlencoded" && submission.formData ? init4.body = convertFormDataToSearchParams(submission.formData) : init4.body = submission.formData;
   }
   return new Request(url, init4);
 }
 function convertFormDataToSearchParams(formData) {
   let searchParams = new URLSearchParams();
   for (let [key, value] of formData.entries())
-    searchParams.append(key, value instanceof File ? value.name : value);
+    searchParams.append(key, typeof value == "string" ? value : value.name);
   return searchParams;
 }
-function processRouteLoaderData(matches, matchesToLoad, results2, pendingError, activeDeferreds) {
+function convertSearchParamsToFormData(searchParams) {
+  let formData = new FormData();
+  for (let [key, value] of searchParams.entries())
+    formData.append(key, value);
+  return formData;
+}
+function processRouteLoaderData(matches, matchesToLoad, results, pendingError, activeDeferreds) {
   let loaderData = {}, errors = null, statusCode, foundError = !1, loaderHeaders = {};
-  return results2.forEach((result, index2) => {
+  return results.forEach((result, index2) => {
     let id6 = matchesToLoad[index2].route.id;
     if (invariant(!isRedirectResult(result), "Cannot handle redirect results in processLoaderData"), isErrorResult(result)) {
       let boundaryMatch = findNearestBoundary(matches, id6), error = result.error;
@@ -2418,39 +2558,33 @@ function processRouteLoaderData(matches, matchesToLoad, results2, pendingError, 
     loaderHeaders
   };
 }
-function processLoaderData(state, matches, matchesToLoad, results2, pendingError, revalidatingFetchers, fetcherResults, activeDeferreds) {
+function processLoaderData(state, matches, matchesToLoad, results, pendingError, revalidatingFetchers, fetcherResults, activeDeferreds) {
   let {
     loaderData,
     errors
-  } = processRouteLoaderData(matches, matchesToLoad, results2, pendingError, activeDeferreds);
+  } = processRouteLoaderData(matches, matchesToLoad, results, pendingError, activeDeferreds);
   for (let index2 = 0; index2 < revalidatingFetchers.length; index2++) {
     let {
       key,
-      match
+      match,
+      controller
     } = revalidatingFetchers[index2];
     invariant(fetcherResults !== void 0 && fetcherResults[index2] !== void 0, "Did not find corresponding fetcher result");
     let result = fetcherResults[index2];
-    if (isErrorResult(result)) {
-      let boundaryMatch = findNearestBoundary(state.matches, match == null ? void 0 : match.route.id);
-      errors && errors[boundaryMatch.route.id] || (errors = _extends({}, errors, {
-        [boundaryMatch.route.id]: result.error
-      })), state.fetchers.delete(key);
-    } else if (isRedirectResult(result))
-      invariant(!1, "Unhandled fetcher revalidation redirect");
-    else if (isDeferredResult(result))
-      invariant(!1, "Unhandled fetcher deferred data");
-    else {
-      let doneFetcher = {
-        state: "idle",
-        data: result.data,
-        formMethod: void 0,
-        formAction: void 0,
-        formEncType: void 0,
-        formData: void 0,
-        " _hasFetcherDoneAnything ": !0
-      };
-      state.fetchers.set(key, doneFetcher);
-    }
+    if (!(controller && controller.signal.aborted))
+      if (isErrorResult(result)) {
+        let boundaryMatch = findNearestBoundary(state.matches, match == null ? void 0 : match.route.id);
+        errors && errors[boundaryMatch.route.id] || (errors = _extends({}, errors, {
+          [boundaryMatch.route.id]: result.error
+        })), state.fetchers.delete(key);
+      } else if (isRedirectResult(result))
+        invariant(!1, "Unhandled fetcher revalidation redirect");
+      else if (isDeferredResult(result))
+        invariant(!1, "Unhandled fetcher deferred data");
+      else {
+        let doneFetcher = getDoneFetcher(result.data);
+        state.fetchers.set(key, doneFetcher);
+      }
   }
   return {
     loaderData,
@@ -2490,13 +2624,16 @@ function getInternalRouterError(status, _temp4) {
     method,
     type: type2
   } = _temp4 === void 0 ? {} : _temp4, statusText = "Unknown Server Error", errorMessage = "Unknown @remix-run/router error";
-  return status === 400 ? (statusText = "Bad Request", method && pathname && routeId ? errorMessage = "You made a " + method + ' request to "' + pathname + '" but ' + ('did not provide a `loader` for route "' + routeId + '", ') + "so there is no way to handle the request." : type2 === "defer-action" && (errorMessage = "defer() is not supported in actions")) : status === 403 ? (statusText = "Forbidden", errorMessage = 'Route "' + routeId + '" does not match URL "' + pathname + '"') : status === 404 ? (statusText = "Not Found", errorMessage = 'No route matches URL "' + pathname + '"') : status === 405 && (statusText = "Method Not Allowed", method && pathname && routeId ? errorMessage = "You made a " + method.toUpperCase() + ' request to "' + pathname + '" but ' + ('did not provide an `action` for route "' + routeId + '", ') + "so there is no way to handle the request." : method && (errorMessage = 'Invalid request method "' + method.toUpperCase() + '"')), new ErrorResponse(status || 500, statusText, new Error(errorMessage), !0);
+  return status === 400 ? (statusText = "Bad Request", method && pathname && routeId ? errorMessage = "You made a " + method + ' request to "' + pathname + '" but ' + ('did not provide a `loader` for route "' + routeId + '", ') + "so there is no way to handle the request." : type2 === "defer-action" ? errorMessage = "defer() is not supported in actions" : type2 === "invalid-body" && (errorMessage = "Unable to encode submission body")) : status === 403 ? (statusText = "Forbidden", errorMessage = 'Route "' + routeId + '" does not match URL "' + pathname + '"') : status === 404 ? (statusText = "Not Found", errorMessage = 'No route matches URL "' + pathname + '"') : status === 405 && (statusText = "Method Not Allowed", method && pathname && routeId ? errorMessage = "You made a " + method.toUpperCase() + ' request to "' + pathname + '" but ' + ('did not provide an `action` for route "' + routeId + '", ') + "so there is no way to handle the request." : method && (errorMessage = 'Invalid request method "' + method.toUpperCase() + '"')), new ErrorResponse(status || 500, statusText, new Error(errorMessage), !0);
 }
-function findRedirect(results2) {
-  for (let i = results2.length - 1; i >= 0; i--) {
-    let result = results2[i];
+function findRedirect(results) {
+  for (let i = results.length - 1; i >= 0; i--) {
+    let result = results[i];
     if (isRedirectResult(result))
-      return result;
+      return {
+        result,
+        idx: i
+      };
   }
 }
 function stripHashFromPath(path) {
@@ -2506,7 +2643,7 @@ function stripHashFromPath(path) {
   }));
 }
 function isHashChangeOnly(a, b) {
-  return a.pathname === b.pathname && a.search === b.search && a.hash !== b.hash;
+  return a.pathname !== b.pathname || a.search !== b.search ? !1 : a.hash === "" ? b.hash !== "" : a.hash === b.hash ? !0 : b.hash !== "";
 }
 function isDeferredResult(result) {
   return result.type === ResultType.deferred;
@@ -2539,15 +2676,18 @@ function isValidMethod(method) {
 function isMutationMethod(method) {
   return validMutationMethods.has(method.toLowerCase());
 }
-async function resolveDeferredResults(currentMatches, matchesToLoad, results2, signal, isFetcher, currentLoaderData) {
-  for (let index2 = 0; index2 < results2.length; index2++) {
-    let result = results2[index2], match = matchesToLoad[index2];
+async function resolveDeferredResults(currentMatches, matchesToLoad, results, signals, isFetcher, currentLoaderData) {
+  for (let index2 = 0; index2 < results.length; index2++) {
+    let result = results[index2], match = matchesToLoad[index2];
     if (!match)
       continue;
     let currentMatch = currentMatches.find((m) => m.route.id === match.route.id), isRevalidatingLoader = currentMatch != null && !isNewRouteInstance(currentMatch, match) && (currentLoaderData && currentLoaderData[match.route.id]) !== void 0;
-    isDeferredResult(result) && (isFetcher || isRevalidatingLoader) && await resolveDeferredData(result, signal, isFetcher).then((result2) => {
-      result2 && (results2[index2] = result2 || results2[index2]);
-    });
+    if (isDeferredResult(result) && (isFetcher || isRevalidatingLoader)) {
+      let signal = signals[index2];
+      invariant(signal, "Expected an AbortSignal for revalidating fetcher deferred result"), await resolveDeferredData(result, signal, isFetcher).then((result2) => {
+        result2 && (results[index2] = result2 || results[index2]);
+      });
+    }
   }
 }
 async function resolveDeferredData(result, signal, unwrap) {
@@ -2594,7 +2734,128 @@ function getTargetMatch(matches, location) {
   let pathMatches = getPathContributingMatches(matches);
   return pathMatches[pathMatches.length - 1];
 }
-var Action, PopStateEventType, ResultType, immutableRouteKeys, paramRe, dynamicSegmentValue, indexRouteValue, emptySegmentValue, staticSegmentValue, splatPenalty, isSplat, joinPaths, normalizePathname, normalizeSearch, normalizeHash, json, AbortedDeferredError, DeferredData, defer, redirect, ErrorResponse, validMutationMethodsArr, validMutationMethods, validRequestMethodsArr, validRequestMethods, redirectStatusCodes, redirectPreserveMethodStatusCodes, IDLE_NAVIGATION, IDLE_FETCHER, IDLE_BLOCKER, ABSOLUTE_URL_REGEX, isBrowser, isServer, defaultDetectErrorBoundary, UNSAFE_DEFERRED_SYMBOL, init_router = __esm({
+function getSubmissionFromNavigation(navigation) {
+  let {
+    formMethod,
+    formAction,
+    formEncType,
+    text,
+    formData,
+    json: json5
+  } = navigation;
+  if (!(!formMethod || !formAction || !formEncType)) {
+    if (text != null)
+      return {
+        formMethod,
+        formAction,
+        formEncType,
+        formData: void 0,
+        json: void 0,
+        text
+      };
+    if (formData != null)
+      return {
+        formMethod,
+        formAction,
+        formEncType,
+        formData,
+        json: void 0,
+        text: void 0
+      };
+    if (json5 !== void 0)
+      return {
+        formMethod,
+        formAction,
+        formEncType,
+        formData: void 0,
+        json: json5,
+        text: void 0
+      };
+  }
+}
+function getLoadingNavigation(location, submission) {
+  return submission ? {
+    state: "loading",
+    location,
+    formMethod: submission.formMethod,
+    formAction: submission.formAction,
+    formEncType: submission.formEncType,
+    formData: submission.formData,
+    json: submission.json,
+    text: submission.text
+  } : {
+    state: "loading",
+    location,
+    formMethod: void 0,
+    formAction: void 0,
+    formEncType: void 0,
+    formData: void 0,
+    json: void 0,
+    text: void 0
+  };
+}
+function getSubmittingNavigation(location, submission) {
+  return {
+    state: "submitting",
+    location,
+    formMethod: submission.formMethod,
+    formAction: submission.formAction,
+    formEncType: submission.formEncType,
+    formData: submission.formData,
+    json: submission.json,
+    text: submission.text
+  };
+}
+function getLoadingFetcher(submission, data) {
+  return submission ? {
+    state: "loading",
+    formMethod: submission.formMethod,
+    formAction: submission.formAction,
+    formEncType: submission.formEncType,
+    formData: submission.formData,
+    json: submission.json,
+    text: submission.text,
+    data,
+    " _hasFetcherDoneAnything ": !0
+  } : {
+    state: "loading",
+    formMethod: void 0,
+    formAction: void 0,
+    formEncType: void 0,
+    formData: void 0,
+    json: void 0,
+    text: void 0,
+    data,
+    " _hasFetcherDoneAnything ": !0
+  };
+}
+function getSubmittingFetcher(submission, existingFetcher) {
+  return {
+    state: "submitting",
+    formMethod: submission.formMethod,
+    formAction: submission.formAction,
+    formEncType: submission.formEncType,
+    formData: submission.formData,
+    json: submission.json,
+    text: submission.text,
+    data: existingFetcher ? existingFetcher.data : void 0,
+    " _hasFetcherDoneAnything ": !0
+  };
+}
+function getDoneFetcher(data) {
+  return {
+    state: "idle",
+    formMethod: void 0,
+    formAction: void 0,
+    formEncType: void 0,
+    formData: void 0,
+    json: void 0,
+    text: void 0,
+    data,
+    " _hasFetcherDoneAnything ": !0
+  };
+}
+var Action, PopStateEventType, ResultType, immutableRouteKeys, paramRe, dynamicSegmentValue, indexRouteValue, emptySegmentValue, staticSegmentValue, splatPenalty, isSplat, joinPaths, normalizePathname, normalizeSearch, normalizeHash, json, AbortedDeferredError, DeferredData, defer, redirect, ErrorResponse, validMutationMethodsArr, validMutationMethods, validRequestMethodsArr, validRequestMethods, redirectStatusCodes, redirectPreserveMethodStatusCodes, IDLE_NAVIGATION, IDLE_FETCHER, IDLE_BLOCKER, ABSOLUTE_URL_REGEX, defaultMapRouteProperties, UNSAFE_DEFERRED_SYMBOL, init_router = __esm({
   "node_modules/@remix-run/router/dist/router.js"() {
     (function(Action2) {
       Action2.Pop = "POP", Action2.Push = "PUSH", Action2.Replace = "REPLACE";
@@ -2631,20 +2892,28 @@ var Action, PopStateEventType, ResultType, immutableRouteKeys, paramRe, dynamicS
         if (!(value instanceof Promise))
           return value;
         this.deferredKeys.push(key), this.pendingKeysSet.add(key);
-        let promise = Promise.race([value, this.abortPromise]).then((data) => this.onSettle(promise, key, null, data), (error) => this.onSettle(promise, key, error));
+        let promise = Promise.race([value, this.abortPromise]).then((data) => this.onSettle(promise, key, void 0, data), (error) => this.onSettle(promise, key, error));
         return promise.catch(() => {
         }), Object.defineProperty(promise, "_tracked", {
           get: () => !0
         }), promise;
       }
       onSettle(promise, key, error, data) {
-        return this.controller.signal.aborted && error instanceof AbortedDeferredError ? (this.unlistenAbortSignal(), Object.defineProperty(promise, "_error", {
-          get: () => error
-        }), Promise.reject(error)) : (this.pendingKeysSet.delete(key), this.done && this.unlistenAbortSignal(), error ? (Object.defineProperty(promise, "_error", {
+        if (this.controller.signal.aborted && error instanceof AbortedDeferredError)
+          return this.unlistenAbortSignal(), Object.defineProperty(promise, "_error", {
+            get: () => error
+          }), Promise.reject(error);
+        if (this.pendingKeysSet.delete(key), this.done && this.unlistenAbortSignal(), error === void 0 && data === void 0) {
+          let undefinedError = new Error('Deferred data for key "' + key + '" resolved/rejected with `undefined`, you must resolve/reject with a value or `null`.');
+          return Object.defineProperty(promise, "_error", {
+            get: () => undefinedError
+          }), this.emit(!1, key), Promise.reject(undefinedError);
+        }
+        return data === void 0 ? (Object.defineProperty(promise, "_error", {
           get: () => error
         }), this.emit(!1, key), Promise.reject(error)) : (Object.defineProperty(promise, "_data", {
           get: () => data
-        }), this.emit(!1, key), data));
+        }), this.emit(!1, key), data);
       }
       emit(aborted, settledKey) {
         this.subscribers.forEach((subscriber) => subscriber(aborted, settledKey));
@@ -2709,20 +2978,26 @@ var Action, PopStateEventType, ResultType, immutableRouteKeys, paramRe, dynamicS
       formMethod: void 0,
       formAction: void 0,
       formEncType: void 0,
-      formData: void 0
+      formData: void 0,
+      json: void 0,
+      text: void 0
     }, IDLE_FETCHER = {
       state: "idle",
       data: void 0,
       formMethod: void 0,
       formAction: void 0,
       formEncType: void 0,
-      formData: void 0
+      formData: void 0,
+      json: void 0,
+      text: void 0
     }, IDLE_BLOCKER = {
       state: "unblocked",
       proceed: void 0,
       reset: void 0,
       location: void 0
-    }, ABSOLUTE_URL_REGEX = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i, isBrowser = typeof window < "u" && typeof window.document < "u" && typeof window.document.createElement < "u", isServer = !isBrowser, defaultDetectErrorBoundary = (route) => Boolean(route.hasErrorBoundary);
+    }, ABSOLUTE_URL_REGEX = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i, defaultMapRouteProperties = (route) => ({
+      hasErrorBoundary: Boolean(route.hasErrorBoundary)
+    });
     UNSAFE_DEFERRED_SYMBOL = Symbol("deferred");
   }
 });
@@ -2733,9 +3008,9 @@ function isServerMode(value) {
 }
 var ServerMode, init_mode = __esm({
   "node_modules/@remix-run/server-runtime/dist/esm/mode.js"() {
-    (function(ServerMode2) {
-      ServerMode2.Development = "development", ServerMode2.Production = "production", ServerMode2.Test = "test";
-    })(ServerMode || (ServerMode = {}));
+    ServerMode = /* @__PURE__ */ function(ServerMode2) {
+      return ServerMode2.Development = "development", ServerMode2.Production = "production", ServerMode2.Test = "test", ServerMode2;
+    }({});
   }
 });
 
@@ -2774,7 +3049,14 @@ function serializeErrors(errors, serverMode) {
       serialized[key] = {
         message: sanitized.message,
         stack: sanitized.stack,
-        __type: "Error"
+        __type: "Error",
+        // If this is a subclass (i.e., ReferenceError), send up the type so we
+        // can re-create the same type during hydration.  This will only apply
+        // in dev mode since all production errors are sanitized to normal
+        // Error instances
+        ...sanitized.name !== "Error" ? {
+          __subType: sanitized.name
+        } : {}
       };
     } else
       serialized[key] = val;
@@ -2846,7 +3128,7 @@ var json3, defer3, redirect3, redirectStatusCodes2, DEFERRED_VALUE_PLACEHOLDER_P
 
 // node_modules/@remix-run/server-runtime/dist/esm/entry.js
 function createEntryRouteModules(manifest) {
-  return Object.keys(manifest).reduce((memo, routeId) => (memo[routeId] = manifest[routeId].module, memo), {});
+  return Object.keys(manifest).reduce((memo2, routeId) => (memo2[routeId] = manifest[routeId].module, memo2), {});
 }
 var init_entry = __esm({
   "node_modules/@remix-run/server-runtime/dist/esm/entry.js"() {
@@ -2882,7 +3164,7 @@ var require_set_cookie = __commonJS({
       };
       return parts.forEach(function(part) {
         var sides = part.split("="), key = sides.shift().trimLeft().toLowerCase(), value2 = sides.join("=");
-        key === "expires" ? cookie.expires = new Date(value2) : key === "max-age" ? cookie.maxAge = parseInt(value2, 10) : key === "secure" ? cookie.secure = !0 : key === "httponly" ? cookie.httpOnly = !0 : key === "samesite" ? cookie.sameSite = value2 : cookie[key] = value2;
+        key === "expires" ? cookie.expires = new Date(value2) : key === "max-age" ? cookie.maxAge = parseInt(value2, 10) : key === "secure" ? cookie.secure = !0 : key === "httponly" ? cookie.httpOnly = !0 : key === "samesite" ? cookie.sameSite = value2 : key === "partitioned" ? cookie.partitioned = !0 : cookie[key] = value2;
       }), cookie;
     }
     function parseNameValuePair(nameValuePairStr) {
@@ -2905,7 +3187,7 @@ var require_set_cookie = __commonJS({
             "Warning: set-cookie-parser appears to have been called on a request object. It is designed to parse Set-Cookie headers from responses, not Cookie headers from requests. Set the option {silent: true} to suppress this warning."
           ), input = sch;
         }
-      if (Array.isArray(input) || (input = [input]), options = options ? Object.assign({}, defaultParseOptions, options) : defaultParseOptions, options.map) {
+      if (Array.isArray(input) || (input = [input]), options.map) {
         var cookies = {};
         return input.filter(isNonEmptyString).reduce(function(cookies2, str) {
           var cookie = parseString(str, options);
@@ -2951,15 +3233,34 @@ var require_set_cookie = __commonJS({
 
 // node_modules/@remix-run/server-runtime/dist/esm/headers.js
 function getDocumentHeadersRR(build, context) {
-  return (context.errors ? context.matches.slice(0, context.matches.findIndex((m) => context.errors[m.route.id]) + 1) : context.matches).reduce((parentHeaders, match) => {
+  let boundaryIdx = context.errors ? context.matches.findIndex((m) => context.errors[m.route.id]) : -1, matches = boundaryIdx >= 0 ? context.matches.slice(0, boundaryIdx + 1) : context.matches, errorHeaders;
+  if (boundaryIdx >= 0) {
+    let {
+      actionHeaders,
+      actionData,
+      loaderHeaders,
+      loaderData
+    } = context;
+    context.matches.slice(boundaryIdx).some((match) => {
+      let id6 = match.route.id;
+      return actionHeaders[id6] && (!actionData || actionData[id6] === void 0) ? errorHeaders = actionHeaders[id6] : loaderHeaders[id6] && loaderData[id6] === void 0 && (errorHeaders = loaderHeaders[id6]), errorHeaders != null;
+    });
+  }
+  return matches.reduce((parentHeaders, match, idx) => {
     let {
       id: id6
-    } = match.route, routeModule = build.routes[id6].module, loaderHeaders = context.loaderHeaders[id6] || new Headers(), actionHeaders = context.actionHeaders[id6] || new Headers(), headers = new Headers(routeModule.headers ? typeof routeModule.headers == "function" ? routeModule.headers({
+    } = match.route, routeModule = build.routes[id6].module, loaderHeaders = context.loaderHeaders[id6] || new Headers(), actionHeaders = context.actionHeaders[id6] || new Headers(), includeErrorHeaders = errorHeaders != null && idx === matches.length - 1, includeErrorCookies = includeErrorHeaders && errorHeaders !== loaderHeaders && errorHeaders !== actionHeaders;
+    if (routeModule.headers == null && build.future.v2_headers) {
+      let headers2 = new Headers(parentHeaders);
+      return includeErrorCookies && prependCookies(errorHeaders, headers2), prependCookies(actionHeaders, headers2), prependCookies(loaderHeaders, headers2), headers2;
+    }
+    let headers = new Headers(routeModule.headers ? typeof routeModule.headers == "function" ? routeModule.headers({
       loaderHeaders,
       parentHeaders,
-      actionHeaders
+      actionHeaders,
+      errorHeaders: includeErrorHeaders ? errorHeaders : void 0
     }) : routeModule.headers : void 0);
-    return prependCookies(actionHeaders, headers), prependCookies(loaderHeaders, headers), prependCookies(parentHeaders, headers), headers;
+    return includeErrorCookies && prependCookies(errorHeaders, headers), prependCookies(actionHeaders, headers), prependCookies(loaderHeaders, headers), prependCookies(parentHeaders, headers), headers;
   }, new Headers());
 }
 function prependCookies(parentHeaders, childHeaders) {
@@ -3018,12 +3319,12 @@ async function callRouteActionRR({
 }
 async function callRouteLoaderRR({
   loadContext,
-  loader,
+  loader: loader2,
   params,
   request,
   routeId
 }) {
-  let result = await loader({
+  let result = await loader2({
     request: stripDataParam(stripIndexParam(request)),
     context: loadContext,
     params
@@ -3069,6 +3370,7 @@ function createRoutes(manifest, parentId = "", routesByParentId = groupRoutesByP
 function createStaticHandlerDataRoutes(manifest, future2, parentId = "", routesByParentId = groupRoutesByParentId(manifest)) {
   return (routesByParentId[parentId] || []).map((route) => {
     let commonRoute = {
+      // Always include root due to default boundaries
       hasErrorBoundary: future2.v2_errorBoundary === !0 ? route.id === "root" || route.module.ErrorBoundary != null : route.id === "root" || route.module.CatchBoundary != null || route.module.ErrorBoundary != null,
       id: route.id,
       path: route.path,
@@ -3131,7 +3433,7 @@ var init_serverHandoff = __esm({
 });
 
 // node_modules/@remix-run/server-runtime/dist/esm/server.js
-async function handleDataRequestRR(serverMode, staticHandler, routeId, request, loadContext) {
+async function handleDataRequestRR(serverMode, staticHandler, routeId, request, loadContext, handleError) {
   try {
     let response = await staticHandler.queryRoute(request, {
       routeId,
@@ -3146,15 +3448,17 @@ async function handleDataRequestRR(serverMode, staticHandler, routeId, request, 
     }
     if (UNSAFE_DEFERRED_SYMBOL in response) {
       let deferredData = response[UNSAFE_DEFERRED_SYMBOL], body = createDeferredReadableStream(deferredData, request.signal, serverMode), init4 = deferredData.init || {}, headers = new Headers(init4.headers);
-      return headers.set("Content-Type", "text/remix-deferred"), init4.headers = headers, new Response(body, init4);
+      return headers.set("Content-Type", "text/remix-deferred"), headers.set("X-Remix-Response", "yes"), init4.headers = headers, new Response(body, init4);
     }
-    return response;
+    return response.headers.set("X-Remix-Response", "yes"), response;
   } catch (error) {
     if (isResponse2(error))
       return error.headers.set("X-Remix-Catch", "yes"), error;
-    let status = isRouteErrorResponse(error) ? error.status : 500, errorInstance = isRouteErrorResponse(error) && error.error ? error.error : error instanceof Error ? error : new Error("Unexpected Server Error");
-    return logServerErrorIfNotAborted(errorInstance, request, serverMode), json3(serializeError(errorInstance, serverMode), {
-      status,
+    if (isRouteErrorResponse(error))
+      return error.error && handleError(error.error), errorResponseToJson(error, serverMode);
+    let errorInstance = error instanceof Error ? error : new Error("Unexpected Server Error");
+    return handleError(errorInstance), json(serializeError(errorInstance, serverMode), {
+      status: 500,
       headers: {
         "X-Remix-Error": "yes"
       }
@@ -3175,42 +3479,46 @@ function differentiateCatchVersusErrorBoundaries(build, context) {
   }
   context.errors = errors;
 }
-async function handleDocumentRequestRR(serverMode, build, staticHandler, request, loadContext) {
+async function handleDocumentRequestRR(serverMode, build, staticHandler, request, loadContext, handleError) {
   let context;
   try {
     context = await staticHandler.query(request, {
       requestContext: loadContext
     });
   } catch (error) {
-    return logServerErrorIfNotAborted(error, request, serverMode), new Response(null, {
+    return handleError(error), new Response(null, {
       status: 500
     });
   }
   if (isResponse2(context))
     return context;
-  context.errors && (context.errors = sanitizeErrors(context.errors, serverMode)), build.future.v2_errorBoundary !== !0 && differentiateCatchVersusErrorBoundaries(build, context);
+  context.errors && (Object.values(context.errors).forEach((err) => {
+    (!isRouteErrorResponse(err) || err.error) && handleError(err);
+  }), context.errors = sanitizeErrors(context.errors, serverMode)), build.future.v2_errorBoundary !== !0 && differentiateCatchVersusErrorBoundaries(build, context);
   let headers = getDocumentHeadersRR(build, context), entryContext = {
     manifest: build.assets,
     routeModules: createEntryRouteModules(build.routes),
     staticHandlerContext: context,
     serverHandoffString: createServerHandoffString({
+      url: context.location.pathname,
       state: {
         loaderData: context.loaderData,
         actionData: context.actionData,
         errors: serializeErrors(context.errors, serverMode)
       },
-      future: build.future,
-      dev: build.dev
+      future: build.future
     }),
-    future: build.future
+    future: build.future,
+    serializeError: (err) => serializeError(err, serverMode)
   }, handleDocumentRequestFunction = build.entry.module.default;
   try {
-    return await handleDocumentRequestFunction(request, context.statusCode, headers, entryContext);
+    return await handleDocumentRequestFunction(request, context.statusCode, headers, entryContext, loadContext);
   } catch (error) {
-    context = getStaticContextFromError(staticHandler.dataRoutes, context, error), context.errors && (context.errors = sanitizeErrors(context.errors, serverMode)), build.future.v2_errorBoundary !== !0 && differentiateCatchVersusErrorBoundaries(build, context), entryContext = {
+    handleError(error), context = getStaticContextFromError(staticHandler.dataRoutes, context, error), context.errors && (context.errors = sanitizeErrors(context.errors, serverMode)), build.future.v2_errorBoundary !== !0 && differentiateCatchVersusErrorBoundaries(build, context), entryContext = {
       ...entryContext,
       staticHandlerContext: context,
       serverHandoffString: createServerHandoffString({
+        url: context.location.pathname,
         state: {
           loaderData: context.loaderData,
           actionData: context.actionData,
@@ -3220,13 +3528,13 @@ async function handleDocumentRequestRR(serverMode, build, staticHandler, request
       })
     };
     try {
-      return await handleDocumentRequestFunction(request, context.statusCode, headers, entryContext);
+      return await handleDocumentRequestFunction(request, context.statusCode, headers, entryContext, loadContext);
     } catch (error2) {
-      return logServerErrorIfNotAborted(error2, request, serverMode), returnLastResortErrorResponse(error2, serverMode);
+      return handleError(error2), returnLastResortErrorResponse(error2, serverMode);
     }
   }
 }
-async function handleResourceRequestRR(serverMode, staticHandler, routeId, request, loadContext) {
+async function handleResourceRequestRR(serverMode, staticHandler, routeId, request, loadContext, handleError) {
   try {
     let response = await staticHandler.queryRoute(request, {
       routeId,
@@ -3234,11 +3542,17 @@ async function handleResourceRequestRR(serverMode, staticHandler, routeId, reque
     });
     return invariant2(isResponse2(response), "Expected a Response to be returned from queryRoute"), response;
   } catch (error) {
-    return isResponse2(error) ? (error.headers.set("X-Remix-Catch", "yes"), error) : (logServerErrorIfNotAborted(error, request, serverMode), returnLastResortErrorResponse(error, serverMode));
+    return isResponse2(error) ? (error.headers.set("X-Remix-Catch", "yes"), error) : isRouteErrorResponse(error) ? (error.error && handleError(error.error), errorResponseToJson(error, serverMode)) : (handleError(error), returnLastResortErrorResponse(error, serverMode));
   }
 }
-function logServerErrorIfNotAborted(error, request, serverMode) {
-  serverMode !== ServerMode.Test && !request.signal.aborted && console.error(error);
+function errorResponseToJson(errorResponse, serverMode) {
+  return json(serializeError(errorResponse.error || new Error("Unexpected Server Error"), serverMode), {
+    status: errorResponse.status,
+    statusText: errorResponse.statusText,
+    headers: {
+      "X-Remix-Error": "yes"
+    }
+  });
 }
 function returnLastResortErrorResponse(error, serverMode) {
   let message = "Unexpected Server Error";
@@ -3264,33 +3578,29 @@ var createRequestHandler, init_server = __esm({
     init_responses();
     init_serverHandoff();
     createRequestHandler = (build, mode) => {
-      let routes2 = createRoutes(build.routes), dataRoutes = createStaticHandlerDataRoutes(build.routes, build.future), serverMode = isServerMode(mode) ? mode : ServerMode.Production, staticHandler = createStaticHandler(dataRoutes);
+      let routes2 = createRoutes(build.routes), dataRoutes = createStaticHandlerDataRoutes(build.routes, build.future), serverMode = isServerMode(mode) ? mode : ServerMode.Production, staticHandler = createStaticHandler(dataRoutes), errorHandler = build.entry.module.handleError || ((error, {
+        request
+      }) => {
+        serverMode !== ServerMode.Test && !request.signal.aborted && console.error(error);
+      });
       return async function(request, loadContext = {}) {
-        let url = new URL(request.url), {
-          unstable_dev
-        } = build.future;
-        if (mode === "development" && unstable_dev !== !1 && url.pathname === (unstable_dev === !0 ? "/__REMIX_ASSETS_MANIFEST" : (unstable_dev.remixRequestHandlerPath ?? "") + "/__REMIX_ASSETS_MANIFEST"))
-          return request.method !== "GET" ? new Response("Method not allowed", {
-            status: 405
-          }) : new Response(JSON.stringify(build.assets), {
-            status: 200,
-            headers: {
-              "Content-Type": "application/json"
-            }
-          });
-        let matches = matchServerRoutes(routes2, url.pathname), response;
+        let url = new URL(request.url), matches = matchServerRoutes(routes2, url.pathname), handleError = (error) => errorHandler(error, {
+          context: loadContext,
+          params: matches && matches.length > 0 ? matches[0].params : {},
+          request
+        }), response;
         if (url.searchParams.has("_data")) {
           let routeId = url.searchParams.get("_data");
-          if (response = await handleDataRequestRR(serverMode, staticHandler, routeId, request, loadContext), build.entry.module.handleDataRequest) {
-            let match = matches.find((match2) => match2.route.id == routeId);
+          if (response = await handleDataRequestRR(serverMode, staticHandler, routeId, request, loadContext, handleError), build.entry.module.handleDataRequest) {
+            var _matches$find;
             response = await build.entry.module.handleDataRequest(response, {
               context: loadContext,
-              params: match ? match.params : {},
+              params: (matches == null || (_matches$find = matches.find((m) => m.route.id == routeId)) === null || _matches$find === void 0 ? void 0 : _matches$find.params) || {},
               request
             });
           }
         } else
-          matches && matches[matches.length - 1].route.module.default == null ? response = await handleResourceRequestRR(serverMode, staticHandler, matches.slice(-1)[0].route.id, request, loadContext) : response = await handleDocumentRequestRR(serverMode, build, staticHandler, request, loadContext);
+          matches && matches[matches.length - 1].route.module.default == null ? response = await handleResourceRequestRR(serverMode, staticHandler, matches.slice(-1)[0].route.id, request, loadContext, handleError) : response = await handleDocumentRequestRR(serverMode, build, staticHandler, request, loadContext, handleError);
         return request.method === "HEAD" ? new Response(null, {
           headers: response.headers,
           status: response.status,
@@ -3366,7 +3676,7 @@ var createSession, isSession, createSessionStorageFactory, init_sessions = __esm
         async destroySession(session, options) {
           return await deleteData(session.id), cookie.serialize("", {
             ...options,
-            expires: new Date(0)
+            expires: /* @__PURE__ */ new Date(0)
           });
         }
       };
@@ -3396,7 +3706,7 @@ var createCookieSessionStorageFactory, init_cookieStorage = __esm({
         async destroySession(_session, options) {
           return cookie.serialize("", {
             ...options,
-            expires: new Date(0)
+            expires: /* @__PURE__ */ new Date(0)
           });
         }
       };
@@ -3426,7 +3736,7 @@ var createMemorySessionStorageFactory, init_memoryStorage = __esm({
               data,
               expires
             } = map.get(id6);
-            if (!expires || expires > new Date())
+            if (!expires || expires > /* @__PURE__ */ new Date())
               return data;
             expires && map.delete(id6);
           }
@@ -3493,10 +3803,39 @@ var init_memoryUploadHandler = __esm({
   }
 });
 
+// node_modules/@remix-run/server-runtime/dist/esm/dev.js
+async function broadcastDevReady(build, origin) {
+  if (origin ?? (origin = ""), !origin)
+    throw Error("Dev server origin not set");
+  let url = new URL(origin);
+  url.pathname = "ping";
+  let response = await fetch(url.href, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      buildHash: build.assets.version
+    })
+  }).catch((error) => {
+    throw console.error(`Could not reach Remix dev server at ${url}`), error;
+  });
+  if (!response.ok)
+    throw console.error(`Could not reach Remix dev server at ${url} (${response.status})`), Error(await response.text());
+}
+function logDevReady(build) {
+  console.log(`[REMIX DEV] ${build.assets.version} ready`);
+}
+var init_dev = __esm({
+  "node_modules/@remix-run/server-runtime/dist/esm/dev.js"() {
+  }
+});
+
 // node_modules/@remix-run/server-runtime/dist/esm/index.js
 var esm_exports = {};
 __export(esm_exports, {
   MaxPartSizeExceededError: () => MaxPartSizeExceededError,
+  broadcastDevReady: () => broadcastDevReady,
   createCookieFactory: () => createCookieFactory,
   createCookieSessionStorageFactory: () => createCookieSessionStorageFactory,
   createMemorySessionStorageFactory: () => createMemorySessionStorageFactory,
@@ -3507,6 +3846,7 @@ __export(esm_exports, {
   isCookie: () => isCookie,
   isSession: () => isSession,
   json: () => json3,
+  logDevReady: () => logDevReady,
   redirect: () => redirect3,
   unstable_composeUploadHandlers: () => composeUploadHandlers,
   unstable_createMemoryUploadHandler: () => createMemoryUploadHandler,
@@ -3523,6 +3863,7 @@ var init_esm = __esm({
     init_memoryStorage();
     init_memoryUploadHandler();
     init_errors2();
+    init_dev();
   }
 });
 
@@ -3629,6 +3970,12 @@ var require_dist = __commonJS({
         return serverRuntime.MaxPartSizeExceededError;
       }
     });
+    Object.defineProperty(exports, "broadcastDevReady", {
+      enumerable: !0,
+      get: function() {
+        return serverRuntime.broadcastDevReady;
+      }
+    });
     Object.defineProperty(exports, "createRequestHandler", {
       enumerable: !0,
       get: function() {
@@ -3663,6 +4010,12 @@ var require_dist = __commonJS({
       enumerable: !0,
       get: function() {
         return serverRuntime.json;
+      }
+    });
+    Object.defineProperty(exports, "logDevReady", {
+      enumerable: !0,
+      get: function() {
+        return serverRuntime.logDevReady;
       }
     });
     Object.defineProperty(exports, "redirect", {
@@ -3700,7 +4053,7 @@ var require_react_development = __commonJS({
     (function() {
       "use strict";
       typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ < "u" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart == "function" && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart(new Error());
-      var ReactVersion = "18.2.0", REACT_ELEMENT_TYPE = Symbol.for("react.element"), REACT_PORTAL_TYPE = Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = Symbol.for("react.profiler"), REACT_PROVIDER_TYPE = Symbol.for("react.provider"), REACT_CONTEXT_TYPE = Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = Symbol.for("react.memo"), REACT_LAZY_TYPE = Symbol.for("react.lazy"), REACT_OFFSCREEN_TYPE = Symbol.for("react.offscreen"), MAYBE_ITERATOR_SYMBOL = Symbol.iterator, FAUX_ITERATOR_SYMBOL = "@@iterator";
+      var ReactVersion = "18.3.1", REACT_ELEMENT_TYPE = Symbol.for("react.element"), REACT_PORTAL_TYPE = Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = Symbol.for("react.profiler"), REACT_PROVIDER_TYPE = Symbol.for("react.provider"), REACT_CONTEXT_TYPE = Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = Symbol.for("react.memo"), REACT_LAZY_TYPE = Symbol.for("react.lazy"), REACT_OFFSCREEN_TYPE = Symbol.for("react.offscreen"), MAYBE_ITERATOR_SYMBOL = Symbol.iterator, FAUX_ITERATOR_SYMBOL = "@@iterator";
       function getIteratorFn(maybeIterable) {
         if (maybeIterable === null || typeof maybeIterable != "object")
           return null;
@@ -3708,14 +4061,23 @@ var require_react_development = __commonJS({
         return typeof maybeIterator == "function" ? maybeIterator : null;
       }
       var ReactCurrentDispatcher = {
+        /**
+         * @internal
+         * @type {ReactComponent}
+         */
         current: null
       }, ReactCurrentBatchConfig = {
         transition: null
       }, ReactCurrentActQueue = {
         current: null,
+        // Used to reproduce behavior of `batchedUpdates` in legacy mode.
         isBatchingLegacy: !1,
         didScheduleLegacyUpdate: !1
       }, ReactCurrentOwner = {
+        /**
+         * @internal
+         * @type {ReactComponent}
+         */
         current: null
       }, ReactDebugCurrentFrame = {}, currentExtraStackFrame = null;
       function setExtraStackFrame(stack) {
@@ -3769,15 +4131,62 @@ var require_react_development = __commonJS({
         }
       }
       var ReactNoopUpdateQueue = {
+        /**
+         * Checks whether or not this composite component is mounted.
+         * @param {ReactClass} publicInstance The instance we want to test.
+         * @return {boolean} True if mounted, false otherwise.
+         * @protected
+         * @final
+         */
         isMounted: function(publicInstance) {
           return !1;
         },
+        /**
+         * Forces an update. This should only be invoked when it is known with
+         * certainty that we are **not** in a DOM transaction.
+         *
+         * You may want to call this when you know that some deeper aspect of the
+         * component's state has changed but `setState` was not called.
+         *
+         * This will not invoke `shouldComponentUpdate`, but it will invoke
+         * `componentWillUpdate` and `componentDidUpdate`.
+         *
+         * @param {ReactClass} publicInstance The instance that should rerender.
+         * @param {?function} callback Called after component is updated.
+         * @param {?string} callerName name of the calling function in the public API.
+         * @internal
+         */
         enqueueForceUpdate: function(publicInstance, callback, callerName) {
           warnNoop(publicInstance, "forceUpdate");
         },
+        /**
+         * Replaces all of the state. Always use this or `setState` to mutate state.
+         * You should treat `this.state` as immutable.
+         *
+         * There is no guarantee that `this.state` will be immediately updated, so
+         * accessing `this.state` after calling this method may return the old value.
+         *
+         * @param {ReactClass} publicInstance The instance that should rerender.
+         * @param {object} completeState Next state.
+         * @param {?function} callback Called after component is updated.
+         * @param {?string} callerName name of the calling function in the public API.
+         * @internal
+         */
         enqueueReplaceState: function(publicInstance, completeState, callback, callerName) {
           warnNoop(publicInstance, "replaceState");
         },
+        /**
+         * Sets a subset of the state. This only exists because _pendingState is
+         * internal. This provides a merging strategy that is not available to deep
+         * properties which is confusing. TODO: Expose pendingState or don't use it
+         * during the merge.
+         *
+         * @param {ReactClass} publicInstance The instance that should rerender.
+         * @param {object} partialState Next partial state to be merged with state.
+         * @param {?function} callback Called after component is updated.
+         * @param {?string} Name of the calling function in the public API.
+         * @internal
+         */
         enqueueSetState: function(publicInstance, partialState, callback, callerName) {
           warnNoop(publicInstance, "setState");
         }
@@ -3949,11 +4358,14 @@ var require_react_development = __commonJS({
       }
       var ReactElement = function(type2, key, ref, self2, source, owner, props) {
         var element = {
+          // This tag allows us to uniquely identify this as a React Element
           $$typeof: REACT_ELEMENT_TYPE,
+          // Built-in properties that belong on the element
           type: type2,
           key,
           ref,
           props,
+          // Record the component responsible for creating this element.
           _owner: owner
         };
         return element._store = {}, Object.defineProperty(element._store, "validated", {
@@ -4073,7 +4485,14 @@ var require_react_development = __commonJS({
           } else
             mappedChild != null && (isValidElement3(mappedChild) && (mappedChild.key && (!_child || _child.key !== mappedChild.key) && checkKeyStringCoercion(mappedChild.key), mappedChild = cloneAndReplaceKey(
               mappedChild,
-              escapedPrefix + (mappedChild.key && (!_child || _child.key !== mappedChild.key) ? escapeUserProvidedKey("" + mappedChild.key) + "/" : "") + childKey
+              // Keep both the (mapped) and old keys if they differ, just as
+              // traverseAllChildren used to do for objects as children
+              escapedPrefix + // $FlowFixMe Flow incorrectly thinks React.Portal doesn't have a key
+              (mappedChild.key && (!_child || _child.key !== mappedChild.key) ? (
+                // $FlowFixMe Flow incorrectly thinks existing element's key can be a number
+                // eslint-disable-next-line react-internal/safe-string-coercion
+                escapeUserProvidedKey("" + mappedChild.key) + "/"
+              ) : "") + childKey
             )), array3.push(mappedChild));
           return 1;
         }
@@ -4124,14 +4543,23 @@ var require_react_development = __commonJS({
           throw new Error("React.Children.only expected to receive a single React element child.");
         return children4;
       }
-      function createContext9(defaultValue) {
+      function createContext12(defaultValue) {
         var context = {
           $$typeof: REACT_CONTEXT_TYPE,
+          // As a workaround to support multiple concurrent renderers, we categorize
+          // some renderers as primary and others as secondary. We only expect
+          // there to be two concurrent renderers at most: React Native (primary) and
+          // Fabric (secondary); React DOM (primary) and React ART (secondary).
+          // Secondary renderers store their context values on separate fields.
           _currentValue: defaultValue,
           _currentValue2: defaultValue,
+          // Used to track how many concurrent renderers this context currently
+          // supports within in a single renderer. Such as parallel server rendering.
           _threadCount: 0,
+          // These are circular
           Provider: null,
           Consumer: null,
+          // Add these to use same hidden class in VM as ServerContext
           _defaultValue: null,
           _globalName: null
         };
@@ -4230,6 +4658,7 @@ Your code should look like:
       }
       function lazy(ctor) {
         var payload = {
+          // We use these fields to store the result.
           _status: Uninitialized,
           _result: ctor
         }, lazyType = {
@@ -4290,9 +4719,13 @@ Your code should look like:
       var REACT_MODULE_REFERENCE;
       REACT_MODULE_REFERENCE = Symbol.for("react.module.reference");
       function isValidElementType(type2) {
-        return !!(typeof type2 == "string" || typeof type2 == "function" || type2 === REACT_FRAGMENT_TYPE || type2 === REACT_PROFILER_TYPE || enableDebugTracing || type2 === REACT_STRICT_MODE_TYPE || type2 === REACT_SUSPENSE_TYPE || type2 === REACT_SUSPENSE_LIST_TYPE || enableLegacyHidden || type2 === REACT_OFFSCREEN_TYPE || enableScopeAPI || enableCacheElement || enableTransitionTracing || typeof type2 == "object" && type2 !== null && (type2.$$typeof === REACT_LAZY_TYPE || type2.$$typeof === REACT_MEMO_TYPE || type2.$$typeof === REACT_PROVIDER_TYPE || type2.$$typeof === REACT_CONTEXT_TYPE || type2.$$typeof === REACT_FORWARD_REF_TYPE || type2.$$typeof === REACT_MODULE_REFERENCE || type2.getModuleId !== void 0));
+        return !!(typeof type2 == "string" || typeof type2 == "function" || type2 === REACT_FRAGMENT_TYPE || type2 === REACT_PROFILER_TYPE || enableDebugTracing || type2 === REACT_STRICT_MODE_TYPE || type2 === REACT_SUSPENSE_TYPE || type2 === REACT_SUSPENSE_LIST_TYPE || enableLegacyHidden || type2 === REACT_OFFSCREEN_TYPE || enableScopeAPI || enableCacheElement || enableTransitionTracing || typeof type2 == "object" && type2 !== null && (type2.$$typeof === REACT_LAZY_TYPE || type2.$$typeof === REACT_MEMO_TYPE || type2.$$typeof === REACT_PROVIDER_TYPE || type2.$$typeof === REACT_CONTEXT_TYPE || type2.$$typeof === REACT_FORWARD_REF_TYPE || // This needs to include all possible module reference object
+        // types supported by any Flight configuration anywhere since
+        // we don't know which Flight build this will end up being used
+        // with.
+        type2.$$typeof === REACT_MODULE_REFERENCE || type2.getModuleId !== void 0));
       }
-      function memo(type2, compare) {
+      function memo2(type2, compare) {
         isValidElementType(type2) || error("memo: The first argument must be a component. Instead received: %s", type2 === null ? "null" : typeof type2);
         var elementType = {
           $$typeof: REACT_MEMO_TYPE,
@@ -4322,7 +4755,7 @@ Your code should look like:
 3. You might have more than one copy of React in the same app
 See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.`), dispatcher;
       }
-      function useContext13(Context) {
+      function useContext16(Context) {
         var dispatcher = resolveDispatcher();
         if (Context._context !== void 0) {
           var realContext = Context._context;
@@ -4330,7 +4763,7 @@ See https://reactjs.org/link/invalid-hook-call for tips about how to debug and f
         }
         return dispatcher.useContext(Context);
       }
-      function useState10(initialState) {
+      function useState11(initialState) {
         var dispatcher = resolveDispatcher();
         return dispatcher.useState(initialState);
       }
@@ -4338,11 +4771,11 @@ See https://reactjs.org/link/invalid-hook-call for tips about how to debug and f
         var dispatcher = resolveDispatcher();
         return dispatcher.useReducer(reducer, initialArg, init4);
       }
-      function useRef11(initialValue) {
+      function useRef12(initialValue) {
         var dispatcher = resolveDispatcher();
         return dispatcher.useRef(initialValue);
       }
-      function useEffect14(create4, deps) {
+      function useEffect16(create4, deps) {
         var dispatcher = resolveDispatcher();
         return dispatcher.useEffect(create4, deps);
       }
@@ -4350,11 +4783,11 @@ See https://reactjs.org/link/invalid-hook-call for tips about how to debug and f
         var dispatcher = resolveDispatcher();
         return dispatcher.useInsertionEffect(create4, deps);
       }
-      function useLayoutEffect5(create4, deps) {
+      function useLayoutEffect4(create4, deps) {
         var dispatcher = resolveDispatcher();
         return dispatcher.useLayoutEffect(create4, deps);
       }
-      function useCallback5(callback, deps) {
+      function useCallback6(callback, deps) {
         var dispatcher = resolveDispatcher();
         return dispatcher.useCallback(callback, deps);
       }
@@ -4366,7 +4799,7 @@ See https://reactjs.org/link/invalid-hook-call for tips about how to debug and f
         var dispatcher = resolveDispatcher();
         return dispatcher.useImperativeHandle(ref, create4, deps);
       }
-      function useDebugValue2(value, formatterFn) {
+      function useDebugValue(value, formatterFn) {
         {
           var dispatcher = resolveDispatcher();
           return dispatcher.useDebugValue(value, formatterFn);
@@ -4681,7 +5114,9 @@ Check the top-level render call using <` + parentName + ">.");
           var propTypes;
           if (typeof type2 == "function")
             propTypes = type2.propTypes;
-          else if (typeof type2 == "object" && (type2.$$typeof === REACT_FORWARD_REF_TYPE || type2.$$typeof === REACT_MEMO_TYPE))
+          else if (typeof type2 == "object" && (type2.$$typeof === REACT_FORWARD_REF_TYPE || // Note: Memo only checks outer props here.
+          // Inner props are checked in the reconciler.
+          type2.$$typeof === REACT_MEMO_TYPE))
             propTypes = type2.propTypes;
           else
             return;
@@ -4869,7 +5304,7 @@ Check the top-level render call using <` + parentName + ">.");
         toArray,
         only: onlyChild
       };
-      exports.Children = Children3, exports.Component = Component3, exports.Fragment = REACT_FRAGMENT_TYPE, exports.Profiler = REACT_PROFILER_TYPE, exports.PureComponent = PureComponent, exports.StrictMode = REACT_STRICT_MODE_TYPE, exports.Suspense = REACT_SUSPENSE_TYPE, exports.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = ReactSharedInternals, exports.cloneElement = cloneElement$1, exports.createContext = createContext9, exports.createElement = createElement$1, exports.createFactory = createFactory, exports.createRef = createRef, exports.forwardRef = forwardRef4, exports.isValidElement = isValidElement3, exports.lazy = lazy, exports.memo = memo, exports.startTransition = startTransition, exports.unstable_act = act, exports.useCallback = useCallback5, exports.useContext = useContext13, exports.useDebugValue = useDebugValue2, exports.useDeferredValue = useDeferredValue, exports.useEffect = useEffect14, exports.useId = useId4, exports.useImperativeHandle = useImperativeHandle, exports.useInsertionEffect = useInsertionEffect3, exports.useLayoutEffect = useLayoutEffect5, exports.useMemo = useMemo10, exports.useReducer = useReducer, exports.useRef = useRef11, exports.useState = useState10, exports.useSyncExternalStore = useSyncExternalStore2, exports.useTransition = useTransition2, exports.version = ReactVersion, typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ < "u" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop == "function" && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(new Error());
+      exports.Children = Children3, exports.Component = Component3, exports.Fragment = REACT_FRAGMENT_TYPE, exports.Profiler = REACT_PROFILER_TYPE, exports.PureComponent = PureComponent, exports.StrictMode = REACT_STRICT_MODE_TYPE, exports.Suspense = REACT_SUSPENSE_TYPE, exports.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = ReactSharedInternals, exports.act = act, exports.cloneElement = cloneElement$1, exports.createContext = createContext12, exports.createElement = createElement$1, exports.createFactory = createFactory, exports.createRef = createRef, exports.forwardRef = forwardRef4, exports.isValidElement = isValidElement3, exports.lazy = lazy, exports.memo = memo2, exports.startTransition = startTransition, exports.unstable_act = act, exports.useCallback = useCallback6, exports.useContext = useContext16, exports.useDebugValue = useDebugValue, exports.useDeferredValue = useDeferredValue, exports.useEffect = useEffect16, exports.useId = useId4, exports.useImperativeHandle = useImperativeHandle, exports.useInsertionEffect = useInsertionEffect3, exports.useLayoutEffect = useLayoutEffect4, exports.useMemo = useMemo10, exports.useReducer = useReducer, exports.useRef = useRef12, exports.useState = useState11, exports.useSyncExternalStore = useSyncExternalStore2, exports.useTransition = useTransition2, exports.version = ReactVersion, typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ < "u" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop == "function" && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(new Error());
     })();
   }
 });
@@ -4883,48 +5318,62 @@ var require_react = __commonJS({
 });
 
 // node_modules/react-router/dist/index.js
-function isPolyfill(x, y) {
-  return x === y && (x !== 0 || 1 / x === 1 / y) || x !== x && y !== y;
-}
-function useSyncExternalStore$2(subscribe, getSnapshot, getServerSnapshot) {
-  didWarnOld18Alpha || "startTransition" in React && (didWarnOld18Alpha = !0, console.error("You are using an outdated, pre-release alpha of React 18 that does not support useSyncExternalStore. The use-sync-external-store shim will not work correctly. Upgrade to a newer pre-release."));
-  let value = getSnapshot();
-  if (!didWarnUncachedGetSnapshot) {
-    let cachedValue = getSnapshot();
-    is(value, cachedValue) || (console.error("The result of getSnapshot should be cached to avoid an infinite loop"), didWarnUncachedGetSnapshot = !0);
-  }
-  let [{
-    inst
-  }, forceUpdate] = useState2({
-    inst: {
-      value,
-      getSnapshot
-    }
-  });
-  return useLayoutEffect2(() => {
-    inst.value = value, inst.getSnapshot = getSnapshot, checkIfSnapshotChanged(inst) && forceUpdate({
-      inst
-    });
-  }, [subscribe, value, getSnapshot]), useEffect2(() => (checkIfSnapshotChanged(inst) && forceUpdate({
-    inst
-  }), subscribe(() => {
-    checkIfSnapshotChanged(inst) && forceUpdate({
-      inst
-    });
-  })), [subscribe]), useDebugValue(value), value;
-}
-function checkIfSnapshotChanged(inst) {
-  let latestGetSnapshot = inst.getSnapshot, prevValue = inst.value;
-  try {
-    let nextValue = latestGetSnapshot();
-    return !is(prevValue, nextValue);
-  } catch {
-    return !0;
-  }
-}
-function useSyncExternalStore$1(subscribe, getSnapshot, getServerSnapshot) {
-  return getSnapshot();
-}
+var dist_exports = {};
+__export(dist_exports, {
+  AbortedDeferredError: () => AbortedDeferredError,
+  Await: () => Await,
+  MemoryRouter: () => MemoryRouter,
+  Navigate: () => Navigate,
+  NavigationType: () => Action,
+  Outlet: () => Outlet,
+  Route: () => Route,
+  Router: () => Router,
+  RouterProvider: () => RouterProvider,
+  Routes: () => Routes,
+  UNSAFE_DataRouterContext: () => DataRouterContext,
+  UNSAFE_DataRouterStateContext: () => DataRouterStateContext,
+  UNSAFE_LocationContext: () => LocationContext,
+  UNSAFE_NavigationContext: () => NavigationContext,
+  UNSAFE_RouteContext: () => RouteContext,
+  UNSAFE_mapRouteProperties: () => mapRouteProperties,
+  UNSAFE_useRouteId: () => useRouteId,
+  UNSAFE_useRoutesImpl: () => useRoutesImpl,
+  createMemoryRouter: () => createMemoryRouter,
+  createPath: () => createPath,
+  createRoutesFromChildren: () => createRoutesFromChildren,
+  createRoutesFromElements: () => createRoutesFromChildren,
+  defer: () => defer,
+  generatePath: () => generatePath,
+  isRouteErrorResponse: () => isRouteErrorResponse,
+  json: () => json,
+  matchPath: () => matchPath,
+  matchRoutes: () => matchRoutes,
+  parsePath: () => parsePath,
+  redirect: () => redirect,
+  renderMatches: () => renderMatches,
+  resolvePath: () => resolvePath,
+  unstable_useBlocker: () => useBlocker,
+  useActionData: () => useActionData,
+  useAsyncError: () => useAsyncError,
+  useAsyncValue: () => useAsyncValue,
+  useHref: () => useHref,
+  useInRouterContext: () => useInRouterContext,
+  useLoaderData: () => useLoaderData,
+  useLocation: () => useLocation,
+  useMatch: () => useMatch,
+  useMatches: () => useMatches,
+  useNavigate: () => useNavigate,
+  useNavigation: () => useNavigation,
+  useNavigationType: () => useNavigationType,
+  useOutlet: () => useOutlet,
+  useOutletContext: () => useOutletContext,
+  useParams: () => useParams,
+  useResolvedPath: () => useResolvedPath,
+  useRevalidator: () => useRevalidator,
+  useRouteError: () => useRouteError,
+  useRouteLoaderData: () => useRouteLoaderData,
+  useRoutes: () => useRoutes
+});
 function _extends2() {
   return _extends2 = Object.assign ? Object.assign.bind() : function(target) {
     for (var i = 1; i < arguments.length; i++) {
@@ -4941,6 +5390,8 @@ function useHref(to, _temp) {
   } = _temp === void 0 ? {} : _temp;
   useInRouterContext() || invariant(
     !1,
+    // TODO: This error is probably because they somehow have 2 versions of the
+    // router loaded. We can help them understand how to avoid that.
     "useHref() may be used only in the context of a <Router> component."
   );
   let {
@@ -4965,6 +5416,8 @@ function useInRouterContext() {
 function useLocation() {
   return useInRouterContext() || invariant(
     !1,
+    // TODO: This error is probably because they somehow have 2 versions of the
+    // router loaded. We can help them understand how to avoid that.
     "useLocation() may be used only in the context of a <Router> component."
   ), React.useContext(LocationContext).location;
 }
@@ -4974,6 +5427,8 @@ function useNavigationType() {
 function useMatch(pattern) {
   useInRouterContext() || invariant(
     !1,
+    // TODO: This error is probably because they somehow have 2 versions of the
+    // router loaded. We can help them understand how to avoid that.
     "useMatch() may be used only in the context of a <Router> component."
   );
   let {
@@ -4981,12 +5436,23 @@ function useMatch(pattern) {
   } = useLocation();
   return React.useMemo(() => matchPath(pattern, pathname), [pathname, pattern]);
 }
+function useIsomorphicLayoutEffect(cb) {
+  React.useContext(NavigationContext).static || React.useLayoutEffect(cb);
+}
 function useNavigate() {
+  let {
+    isDataRoute
+  } = React.useContext(RouteContext);
+  return isDataRoute ? useNavigateStable() : useNavigateUnstable();
+}
+function useNavigateUnstable() {
   useInRouterContext() || invariant(
     !1,
+    // TODO: This error is probably because they somehow have 2 versions of the
+    // router loaded. We can help them understand how to avoid that.
     "useNavigate() may be used only in the context of a <Router> component."
   );
-  let {
+  let dataRouterContext = React.useContext(DataRouterContext), {
     basename,
     navigator: navigator2
   } = React.useContext(NavigationContext), {
@@ -4994,18 +5460,18 @@ function useNavigate() {
   } = React.useContext(RouteContext), {
     pathname: locationPathname
   } = useLocation(), routePathnamesJson = JSON.stringify(getPathContributingMatches(matches).map((match) => match.pathnameBase)), activeRef = React.useRef(!1);
-  return React.useEffect(() => {
+  return useIsomorphicLayoutEffect(() => {
     activeRef.current = !0;
   }), React.useCallback(function(to, options) {
-    if (options === void 0 && (options = {}), warning(activeRef.current, "You should call navigate() in a React.useEffect(), not when your component is first rendered."), !activeRef.current)
+    if (options === void 0 && (options = {}), warning(activeRef.current, navigateEffectWarning), !activeRef.current)
       return;
     if (typeof to == "number") {
       navigator2.go(to);
       return;
     }
     let path = resolveTo(to, JSON.parse(routePathnamesJson), locationPathname, options.relative === "path");
-    basename !== "/" && (path.pathname = path.pathname === "/" ? basename : joinPaths([basename, path.pathname])), (options.replace ? navigator2.replace : navigator2.push)(path, options.state, options);
-  }, [basename, navigator2, routePathnamesJson, locationPathname]);
+    dataRouterContext == null && basename !== "/" && (path.pathname = path.pathname === "/" ? basename : joinPaths([basename, path.pathname])), (options.replace ? navigator2.replace : navigator2.push)(path, options.state, options);
+  }, [basename, navigator2, routePathnamesJson, locationPathname, dataRouterContext]);
 }
 function useOutletContext() {
   return React.useContext(OutletContext);
@@ -5033,13 +5499,18 @@ function useResolvedPath(to, _temp2) {
   return React.useMemo(() => resolveTo(to, JSON.parse(routePathnamesJson), locationPathname, relative === "path"), [to, routePathnamesJson, locationPathname, relative]);
 }
 function useRoutes(routes2, locationArg) {
+  return useRoutesImpl(routes2, locationArg);
+}
+function useRoutesImpl(routes2, locationArg, dataRouterState) {
   useInRouterContext() || invariant(
     !1,
+    // TODO: This error is probably because they somehow have 2 versions of the
+    // router loaded. We can help them understand how to avoid that.
     "useRoutes() may be used only in the context of a <Router> component."
   );
   let {
     navigator: navigator2
-  } = React.useContext(NavigationContext), dataRouterStateContext = React.useContext(DataRouterStateContext), {
+  } = React.useContext(NavigationContext), {
     matches: parentMatches
   } = React.useContext(RouteContext), routeMatch = parentMatches[parentMatches.length - 1], parentParams = routeMatch ? routeMatch.params : {}, parentPathname = routeMatch ? routeMatch.pathname : "/", parentPathnameBase = routeMatch ? routeMatch.pathnameBase : "/", parentRoute = routeMatch && routeMatch.route;
   {
@@ -5052,7 +5523,7 @@ function useRoutes(routes2, locationArg) {
   if (locationArg) {
     var _parsedLocationArg$pa;
     let parsedLocationArg = typeof locationArg == "string" ? parsePath(locationArg) : locationArg;
-    parentPathnameBase === "/" || ((_parsedLocationArg$pa = parsedLocationArg.pathname) == null ? void 0 : _parsedLocationArg$pa.startsWith(parentPathnameBase)) || invariant(!1, "When overriding the location using `<Routes location>` or `useRoutes(routes, location)`, the location pathname must begin with the portion of the URL pathname that was " + ('matched by all parent routes. The current pathname base is "' + parentPathnameBase + '" ') + ('but pathname "' + parsedLocationArg.pathname + '" was given in the `location` prop.')), location = parsedLocationArg;
+    parentPathnameBase === "/" || (_parsedLocationArg$pa = parsedLocationArg.pathname) != null && _parsedLocationArg$pa.startsWith(parentPathnameBase) || invariant(!1, "When overriding the location using `<Routes location>` or `useRoutes(routes, location)`, the location pathname must begin with the portion of the URL pathname that was " + ('matched by all parent routes. The current pathname base is "' + parentPathnameBase + '" ') + ('but pathname "' + parsedLocationArg.pathname + '" was given in the `location` prop.')), location = parsedLocationArg;
   } else
     location = locationFromContext;
   let pathname = location.pathname || "/", remainingPathname = parentPathnameBase === "/" ? pathname : pathname.slice(parentPathnameBase.length) || "/", matches = matchRoutes(routes2, {
@@ -5063,13 +5534,15 @@ function useRoutes(routes2, locationArg) {
     params: Object.assign({}, parentParams, match.params),
     pathname: joinPaths([
       parentPathnameBase,
+      // Re-encode pathnames that were decoded inside matchRoutes
       navigator2.encodeLocation ? navigator2.encodeLocation(match.pathname).pathname : match.pathname
     ]),
     pathnameBase: match.pathnameBase === "/" ? parentPathnameBase : joinPaths([
       parentPathnameBase,
+      // Re-encode pathnames that were decoded inside matchRoutes
       navigator2.encodeLocation ? navigator2.encodeLocation(match.pathnameBase).pathname : match.pathnameBase
     ])
-  })), parentMatches, dataRouterStateContext || void 0);
+  })), parentMatches, dataRouterState);
   return locationArg && renderedMatches ? /* @__PURE__ */ React.createElement(LocationContext.Provider, {
     value: {
       location: _extends2({
@@ -5091,11 +5564,11 @@ function DefaultErrorComponent() {
     padding: "2px 4px",
     backgroundColor: lightgrey
   }, devInfo = null;
-  return devInfo = /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("p", null, "\u{1F4BF} Hey developer \u{1F44B}"), /* @__PURE__ */ React.createElement("p", null, "You can provide a way better UX than this when your app throws errors by providing your own\xA0", /* @__PURE__ */ React.createElement("code", {
+  return console.error("Error handled by React Router default ErrorBoundary:", error), devInfo = /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("p", null, "\u{1F4BF} Hey developer \u{1F44B}"), /* @__PURE__ */ React.createElement("p", null, "You can provide a way better UX than this when your app throws errors by providing your own ", /* @__PURE__ */ React.createElement("code", {
     style: codeStyles
-  }, "ErrorBoundary"), " prop on\xA0", /* @__PURE__ */ React.createElement("code", {
+  }, "ErrorBoundary"), " or", " ", /* @__PURE__ */ React.createElement("code", {
     style: codeStyles
-  }, "<Route>"))), /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("h2", null, "Unexpected Application Error!"), /* @__PURE__ */ React.createElement("h3", {
+  }, "errorElement"), " prop on your route.")), /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("h2", null, "Unexpected Application Error!"), /* @__PURE__ */ React.createElement("h3", {
     style: {
       fontStyle: "italic"
     }
@@ -5114,38 +5587,44 @@ function RenderedRoute(_ref) {
   }, children4);
 }
 function _renderMatches(matches, parentMatches, dataRouterState) {
-  if (parentMatches === void 0 && (parentMatches = []), matches == null)
-    if (dataRouterState != null && dataRouterState.errors)
+  var _dataRouterState2;
+  if (parentMatches === void 0 && (parentMatches = []), dataRouterState === void 0 && (dataRouterState = null), matches == null) {
+    var _dataRouterState;
+    if ((_dataRouterState = dataRouterState) != null && _dataRouterState.errors)
       matches = dataRouterState.matches;
     else
       return null;
-  let renderedMatches = matches, errors = dataRouterState == null ? void 0 : dataRouterState.errors;
+  }
+  let renderedMatches = matches, errors = (_dataRouterState2 = dataRouterState) == null ? void 0 : _dataRouterState2.errors;
   if (errors != null) {
     let errorIndex = renderedMatches.findIndex((m) => m.route.id && (errors == null ? void 0 : errors[m.route.id]));
-    errorIndex >= 0 || invariant(!1, "Could not find a matching route for the current errors: " + errors), renderedMatches = renderedMatches.slice(0, Math.min(renderedMatches.length, errorIndex + 1));
+    errorIndex >= 0 || invariant(!1, "Could not find a matching route for errors on route IDs: " + Object.keys(errors).join(",")), renderedMatches = renderedMatches.slice(0, Math.min(renderedMatches.length, errorIndex + 1));
   }
   return renderedMatches.reduceRight((outlet, match, index2) => {
     let error = match.route.id ? errors == null ? void 0 : errors[match.route.id] : null, errorElement = null;
-    dataRouterState && (match.route.ErrorBoundary ? errorElement = /* @__PURE__ */ React.createElement(match.route.ErrorBoundary, null) : match.route.errorElement ? errorElement = match.route.errorElement : errorElement = /* @__PURE__ */ React.createElement(DefaultErrorComponent, null));
+    dataRouterState && (errorElement = match.route.errorElement || defaultErrorElement);
     let matches2 = parentMatches.concat(renderedMatches.slice(0, index2 + 1)), getChildren = () => {
-      let children4 = outlet;
-      return error ? children4 = errorElement : match.route.Component ? children4 = /* @__PURE__ */ React.createElement(match.route.Component, null) : match.route.element && (children4 = match.route.element), /* @__PURE__ */ React.createElement(RenderedRoute, {
+      let children4;
+      return error ? children4 = errorElement : match.route.Component ? children4 = /* @__PURE__ */ React.createElement(match.route.Component, null) : match.route.element ? children4 = match.route.element : children4 = outlet, /* @__PURE__ */ React.createElement(RenderedRoute, {
         match,
         routeContext: {
           outlet,
-          matches: matches2
+          matches: matches2,
+          isDataRoute: dataRouterState != null
         },
         children: children4
       });
     };
     return dataRouterState && (match.route.ErrorBoundary || match.route.errorElement || index2 === 0) ? /* @__PURE__ */ React.createElement(RenderErrorBoundary, {
       location: dataRouterState.location,
+      revalidation: dataRouterState.revalidation,
       component: errorElement,
       error,
       children: getChildren(),
       routeContext: {
         outlet: null,
-        matches: matches2
+        matches: matches2,
+        isDataRoute: !0
       }
     }) : getChildren();
   }, null);
@@ -5168,6 +5647,9 @@ function useRouteContext(hookName) {
 function useCurrentRouteId(hookName) {
   let route = useRouteContext(hookName), thisRoute = route.matches[route.matches.length - 1];
   return thisRoute.route.id || invariant(!1, hookName + ' can only be used on routes that contain a unique "id"'), thisRoute.route.id;
+}
+function useRouteId() {
+  return useCurrentRouteId(DataRouterStateHook.UseRouteId);
 }
 function useNavigation() {
   return useDataRouterState(DataRouterStateHook.UseNavigation).navigation;
@@ -5228,9 +5710,46 @@ function useAsyncError() {
 }
 function useBlocker(shouldBlock) {
   let {
+    router,
+    basename
+  } = useDataRouterContext(DataRouterHook.UseBlocker), state = useDataRouterState(DataRouterStateHook.UseBlocker), [blockerKey, setBlockerKey] = React.useState(""), blockerFunction = React.useCallback((arg) => {
+    if (typeof shouldBlock != "function")
+      return !!shouldBlock;
+    if (basename === "/")
+      return shouldBlock(arg);
+    let {
+      currentLocation,
+      nextLocation,
+      historyAction
+    } = arg;
+    return shouldBlock({
+      currentLocation: _extends2({}, currentLocation, {
+        pathname: stripBasename(currentLocation.pathname, basename) || currentLocation.pathname
+      }),
+      nextLocation: _extends2({}, nextLocation, {
+        pathname: stripBasename(nextLocation.pathname, basename) || nextLocation.pathname
+      }),
+      historyAction
+    });
+  }, [basename, shouldBlock]);
+  return React.useEffect(() => {
+    let key = String(++blockerId);
+    return setBlockerKey(key), () => router.deleteBlocker(key);
+  }, [router]), React.useEffect(() => {
+    blockerKey !== "" && router.getBlocker(blockerKey, blockerFunction);
+  }, [router, blockerKey, blockerFunction]), blockerKey && state.blockers.has(blockerKey) ? state.blockers.get(blockerKey) : IDLE_BLOCKER;
+}
+function useNavigateStable() {
+  let {
     router
-  } = useDataRouterContext(DataRouterHook.UseBlocker), state = useDataRouterState(DataRouterStateHook.UseBlocker), [blockerKey] = React.useState(() => String(++blockerId)), blockerFunction = React.useCallback((args) => typeof shouldBlock == "function" ? !!shouldBlock(args) : !!shouldBlock, [shouldBlock]), blocker = router.getBlocker(blockerKey, blockerFunction);
-  return React.useEffect(() => () => router.deleteBlocker(blockerKey), [router, blockerKey]), state.blockers.get(blockerKey) || blocker;
+  } = useDataRouterContext(DataRouterHook.UseNavigateStable), id6 = useCurrentRouteId(DataRouterStateHook.UseNavigateStable), activeRef = React.useRef(!1);
+  return useIsomorphicLayoutEffect(() => {
+    activeRef.current = !0;
+  }), React.useCallback(function(to, options) {
+    options === void 0 && (options = {}), warning(activeRef.current, navigateEffectWarning), activeRef.current && (typeof to == "number" ? router.navigate(to) : router.navigate(to, _extends2({
+      fromRouteId: id6
+    }, options)));
+  }, [router, id6]);
 }
 function warningOnce(key, cond, message) {
   !cond && !alreadyWarned2[key] && (alreadyWarned2[key] = !0, warning(!1, message));
@@ -5238,12 +5757,15 @@ function warningOnce(key, cond, message) {
 function RouterProvider(_ref) {
   let {
     fallbackElement,
-    router
-  } = _ref, getState = React.useCallback(() => router.state, [router]), state = useSyncExternalStore(
-    router.subscribe,
-    getState,
-    getState
-  ), navigator2 = React.useMemo(() => ({
+    router,
+    future: future2
+  } = _ref, [state, setStateImpl] = React.useState(router.state), {
+    v7_startTransition
+  } = future2 || {}, setState = React.useCallback((newState) => {
+    v7_startTransition && startTransitionImpl ? startTransitionImpl(() => setStateImpl(newState)) : setStateImpl(newState);
+  }, [setStateImpl, v7_startTransition]);
+  React.useLayoutEffect(() => router.subscribe(setState), [router, setState]);
+  let navigator2 = React.useMemo(() => ({
     createHref: router.createHref,
     encodeLocation: router.encodeLocation,
     go: (n) => router.navigate(n),
@@ -5267,29 +5789,44 @@ function RouterProvider(_ref) {
   }, /* @__PURE__ */ React.createElement(DataRouterStateContext.Provider, {
     value: state
   }, /* @__PURE__ */ React.createElement(Router, {
-    basename: router.basename,
-    location: router.state.location,
-    navigationType: router.state.historyAction,
+    basename,
+    location: state.location,
+    navigationType: state.historyAction,
     navigator: navigator2
-  }, router.state.initialized ? /* @__PURE__ */ React.createElement(Routes, null) : fallbackElement))), null);
+  }, state.initialized ? /* @__PURE__ */ React.createElement(DataRoutes, {
+    routes: router.routes,
+    state
+  }) : fallbackElement))), null);
 }
-function MemoryRouter(_ref2) {
+function DataRoutes(_ref2) {
+  let {
+    routes: routes2,
+    state
+  } = _ref2;
+  return useRoutesImpl(routes2, void 0, state);
+}
+function MemoryRouter(_ref3) {
   let {
     basename,
     children: children4,
     initialEntries,
-    initialIndex
-  } = _ref2, historyRef = React.useRef();
+    initialIndex,
+    future: future2
+  } = _ref3, historyRef = React.useRef();
   historyRef.current == null && (historyRef.current = createMemoryHistory({
     initialEntries,
     initialIndex,
     v5Compat: !0
   }));
-  let history = historyRef.current, [state, setState] = React.useState({
+  let history = historyRef.current, [state, setStateImpl] = React.useState({
     action: history.action,
     location: history.location
-  });
-  return React.useLayoutEffect(() => history.listen(setState), [history]), /* @__PURE__ */ React.createElement(Router, {
+  }), {
+    v7_startTransition
+  } = future2 || {}, setState = React.useCallback((newState) => {
+    v7_startTransition && startTransitionImpl ? startTransitionImpl(() => setStateImpl(newState)) : setStateImpl(newState);
+  }, [setStateImpl, v7_startTransition]);
+  return React.useLayoutEffect(() => history.listen(setState), [history, setState]), /* @__PURE__ */ React.createElement(Router, {
     basename,
     children: children4,
     location: state.location,
@@ -5297,25 +5834,29 @@ function MemoryRouter(_ref2) {
     navigator: history
   });
 }
-function Navigate(_ref3) {
+function Navigate(_ref4) {
   let {
     to,
     replace,
     state,
     relative
-  } = _ref3;
+  } = _ref4;
   useInRouterContext() || invariant(
     !1,
+    // TODO: This error is probably because they somehow have 2 versions of
+    // the router loaded. We can help them understand how to avoid that.
     "<Navigate> may be used only in the context of a <Router> component."
   ), warning(!React.useContext(NavigationContext).static, "<Navigate> must not be used on the initial render in a <StaticRouter>. This is a no-op, but you should modify your code so the <Navigate> is only ever rendered in response to some user interaction or state change.");
-  let dataRouterState = React.useContext(DataRouterStateContext), navigate = useNavigate();
-  return React.useEffect(() => {
-    dataRouterState && dataRouterState.navigation.state !== "idle" || navigate(to, {
-      replace,
-      state,
-      relative
-    });
-  }), null;
+  let {
+    matches
+  } = React.useContext(RouteContext), {
+    pathname: locationPathname
+  } = useLocation(), navigate = useNavigate(), path = resolveTo(to, getPathContributingMatches(matches).map((match) => match.pathnameBase), locationPathname, relative === "path"), jsonPath = JSON.stringify(path);
+  return React.useEffect(() => navigate(JSON.parse(jsonPath), {
+    replace,
+    state,
+    relative
+  }), [navigate, jsonPath, relative, replace, state]), null;
 }
 function Outlet(props) {
   return useOutlet(props.context);
@@ -5323,7 +5864,7 @@ function Outlet(props) {
 function Route(_props) {
   invariant(!1, "A <Route> is only ever to be used as the child of <Routes> element, never rendered directly. Please wrap your <Route> in a <Routes>.");
 }
-function Router(_ref4) {
+function Router(_ref5) {
   let {
     basename: basenameProp = "/",
     children: children4 = null,
@@ -5331,7 +5872,7 @@ function Router(_ref4) {
     navigationType = Action.Pop,
     navigator: navigator2,
     static: staticProp = !1
-  } = _ref4;
+  } = _ref5;
   useInRouterContext() && invariant(!1, "You cannot render a <Router> inside another <Router>. You should never have more than one in your app.");
   let basename = basenameProp.replace(/^\/*/, "/"), navigationContext = React.useMemo(() => ({
     basename,
@@ -5365,28 +5906,28 @@ function Router(_ref4) {
     value: locationContext
   }));
 }
-function Routes(_ref5) {
+function Routes(_ref6) {
   let {
     children: children4,
     location
-  } = _ref5, dataRouterContext = React.useContext(DataRouterContext), routes2 = dataRouterContext && !children4 ? dataRouterContext.router.routes : createRoutesFromChildren(children4);
-  return useRoutes(routes2, location);
+  } = _ref6;
+  return useRoutes(createRoutesFromChildren(children4), location);
 }
-function Await(_ref6) {
+function Await(_ref7) {
   let {
     children: children4,
     errorElement,
     resolve
-  } = _ref6;
+  } = _ref7;
   return /* @__PURE__ */ React.createElement(AwaitErrorBoundary, {
     resolve,
     errorElement
   }, /* @__PURE__ */ React.createElement(ResolveAwait, null, children4));
 }
-function ResolveAwait(_ref7) {
+function ResolveAwait(_ref8) {
   let {
     children: children4
-  } = _ref7, data = useAsyncValue(), toRender = typeof children4 == "function" ? children4(data) : children4;
+  } = _ref8, data = useAsyncValue(), toRender = typeof children4 == "function" ? children4(data) : children4;
   return /* @__PURE__ */ React.createElement(React.Fragment, null, toRender);
 }
 function createRoutesFromChildren(children4, parentPath) {
@@ -5423,34 +5964,41 @@ function createRoutesFromChildren(children4, parentPath) {
 function renderMatches(matches) {
   return _renderMatches(matches);
 }
-function detectErrorBoundary(route) {
-  return route.Component && route.element && warning(!1, "You should not include both `Component` and `element` on your route - `element` will be ignored."), route.ErrorBoundary && route.errorElement && warning(!1, "You should not include both `ErrorBoundary` and `errorElement` on your route - `errorElement` will be ignored."), Boolean(route.ErrorBoundary) || Boolean(route.errorElement);
+function mapRouteProperties(route) {
+  let updates = {
+    // Note: this check also occurs in createRoutesFromChildren so update
+    // there if you change this -- please and thank you!
+    hasErrorBoundary: route.ErrorBoundary != null || route.errorElement != null
+  };
+  return route.Component && (route.element && warning(!1, "You should not include both `Component` and `element` on your route - `Component` will be used."), Object.assign(updates, {
+    element: /* @__PURE__ */ React.createElement(route.Component),
+    Component: void 0
+  })), route.ErrorBoundary && (route.errorElement && warning(!1, "You should not include both `ErrorBoundary` and `errorElement` on your route - `ErrorBoundary` will be used."), Object.assign(updates, {
+    errorElement: /* @__PURE__ */ React.createElement(route.ErrorBoundary),
+    ErrorBoundary: void 0
+  })), updates;
 }
 function createMemoryRouter(routes2, opts) {
   return createRouter({
     basename: opts == null ? void 0 : opts.basename,
-    future: opts == null ? void 0 : opts.future,
+    future: _extends2({}, opts == null ? void 0 : opts.future, {
+      v7_prependBasename: !0
+    }),
     history: createMemoryHistory({
       initialEntries: opts == null ? void 0 : opts.initialEntries,
       initialIndex: opts == null ? void 0 : opts.initialIndex
     }),
     hydrationData: opts == null ? void 0 : opts.hydrationData,
     routes: routes2,
-    detectErrorBoundary
+    mapRouteProperties
   }).initialize();
 }
-var React, is, useState2, useEffect2, useLayoutEffect2, useDebugValue, didWarnOld18Alpha, didWarnUncachedGetSnapshot, canUseDOM, isServerEnvironment, shim, useSyncExternalStore, DataRouterContext, DataRouterStateContext, AwaitContext, NavigationContext, LocationContext, RouteContext, RouteErrorContext, OutletContext, RenderErrorBoundary, DataRouterHook, DataRouterStateHook, blockerId, alreadyWarned2, AwaitRenderStatus, neverSettledPromise, AwaitErrorBoundary, init_dist = __esm({
+var React, DataRouterContext, DataRouterStateContext, AwaitContext, NavigationContext, LocationContext, RouteContext, RouteErrorContext, navigateEffectWarning, OutletContext, defaultErrorElement, RenderErrorBoundary, DataRouterHook, DataRouterStateHook, blockerId, alreadyWarned2, START_TRANSITION, startTransitionImpl, AwaitRenderStatus, neverSettledPromise, AwaitErrorBoundary, init_dist = __esm({
   "node_modules/react-router/dist/index.js"() {
-    init_router();
-    init_router();
     React = __toESM(require_react());
-    is = typeof Object.is == "function" ? Object.is : isPolyfill, {
-      useState: useState2,
-      useEffect: useEffect2,
-      useLayoutEffect: useLayoutEffect2,
-      useDebugValue
-    } = React, didWarnOld18Alpha = !1, didWarnUncachedGetSnapshot = !1;
-    canUseDOM = typeof window < "u" && typeof window.document < "u" && typeof window.document.createElement < "u", isServerEnvironment = !canUseDOM, shim = isServerEnvironment ? useSyncExternalStore$1 : useSyncExternalStore$2, useSyncExternalStore = "useSyncExternalStore" in React ? ((module) => module.useSyncExternalStore)(React) : shim, DataRouterContext = /* @__PURE__ */ React.createContext(null);
+    init_router();
+    init_router();
+    DataRouterContext = /* @__PURE__ */ React.createContext(null);
     DataRouterContext.displayName = "DataRouter";
     DataRouterStateContext = /* @__PURE__ */ React.createContext(null);
     DataRouterStateContext.displayName = "DataRouterState";
@@ -5462,16 +6010,19 @@ var React, is, useState2, useEffect2, useLayoutEffect2, useDebugValue, didWarnOl
     LocationContext.displayName = "Location";
     RouteContext = /* @__PURE__ */ React.createContext({
       outlet: null,
-      matches: []
+      matches: [],
+      isDataRoute: !1
     });
     RouteContext.displayName = "Route";
     RouteErrorContext = /* @__PURE__ */ React.createContext(null);
     RouteErrorContext.displayName = "RouteError";
+    navigateEffectWarning = "You should call navigate() in a React.useEffect(), not when your component is first rendered.";
     OutletContext = /* @__PURE__ */ React.createContext(null);
-    RenderErrorBoundary = class extends React.Component {
+    defaultErrorElement = /* @__PURE__ */ React.createElement(DefaultErrorComponent, null), RenderErrorBoundary = class extends React.Component {
       constructor(props) {
         super(props), this.state = {
           location: props.location,
+          revalidation: props.revalidation,
           error: props.error
         };
       }
@@ -5481,12 +6032,14 @@ var React, is, useState2, useEffect2, useLayoutEffect2, useDebugValue, didWarnOl
         };
       }
       static getDerivedStateFromProps(props, state) {
-        return state.location !== props.location ? {
+        return state.location !== props.location || state.revalidation !== "idle" && props.revalidation === "idle" ? {
           error: props.error,
-          location: props.location
+          location: props.location,
+          revalidation: props.revalidation
         } : {
           error: props.error || state.error,
-          location: state.location
+          location: state.location,
+          revalidation: props.revalidation || state.revalidation
         };
       }
       componentDidCatch(error, errorInfo) {
@@ -5502,13 +6055,14 @@ var React, is, useState2, useEffect2, useLayoutEffect2, useDebugValue, didWarnOl
       }
     };
     (function(DataRouterHook3) {
-      DataRouterHook3.UseBlocker = "useBlocker", DataRouterHook3.UseRevalidator = "useRevalidator";
+      DataRouterHook3.UseBlocker = "useBlocker", DataRouterHook3.UseRevalidator = "useRevalidator", DataRouterHook3.UseNavigateStable = "useNavigate";
     })(DataRouterHook || (DataRouterHook = {}));
     (function(DataRouterStateHook3) {
-      DataRouterStateHook3.UseBlocker = "useBlocker", DataRouterStateHook3.UseLoaderData = "useLoaderData", DataRouterStateHook3.UseActionData = "useActionData", DataRouterStateHook3.UseRouteError = "useRouteError", DataRouterStateHook3.UseNavigation = "useNavigation", DataRouterStateHook3.UseRouteLoaderData = "useRouteLoaderData", DataRouterStateHook3.UseMatches = "useMatches", DataRouterStateHook3.UseRevalidator = "useRevalidator";
+      DataRouterStateHook3.UseBlocker = "useBlocker", DataRouterStateHook3.UseLoaderData = "useLoaderData", DataRouterStateHook3.UseActionData = "useActionData", DataRouterStateHook3.UseRouteError = "useRouteError", DataRouterStateHook3.UseNavigation = "useNavigation", DataRouterStateHook3.UseRouteLoaderData = "useRouteLoaderData", DataRouterStateHook3.UseMatches = "useMatches", DataRouterStateHook3.UseRevalidator = "useRevalidator", DataRouterStateHook3.UseNavigateStable = "useNavigate", DataRouterStateHook3.UseRouteId = "useRouteId";
     })(DataRouterStateHook || (DataRouterStateHook = {}));
     blockerId = 0;
     alreadyWarned2 = {};
+    START_TRANSITION = "startTransition", startTransitionImpl = React[START_TRANSITION];
     (function(AwaitRenderStatus2) {
       AwaitRenderStatus2[AwaitRenderStatus2.pending = 0] = "pending", AwaitRenderStatus2[AwaitRenderStatus2.success = 1] = "success", AwaitRenderStatus2[AwaitRenderStatus2.error = 2] = "error";
     })(AwaitRenderStatus || (AwaitRenderStatus = {}));
@@ -5577,8 +6131,8 @@ var React, is, useState2, useEffect2, useLayoutEffect2, useDebugValue, didWarnOl
 });
 
 // node_modules/react-router-dom/dist/index.js
-var dist_exports = {};
-__export(dist_exports, {
+var dist_exports2 = {};
+__export(dist_exports2, {
   AbortedDeferredError: () => AbortedDeferredError,
   Await: () => Await,
   BrowserRouter: () => BrowserRouter,
@@ -5600,6 +6154,7 @@ __export(dist_exports, {
   UNSAFE_LocationContext: () => LocationContext,
   UNSAFE_NavigationContext: () => NavigationContext,
   UNSAFE_RouteContext: () => RouteContext,
+  UNSAFE_useRouteId: () => useRouteId,
   UNSAFE_useScrollRestoration: () => useScrollRestoration,
   createBrowserRouter: () => createBrowserRouter,
   createHashRouter: () => createHashRouter,
@@ -5683,12 +6238,14 @@ function isModifiedEvent(event) {
   return !!(event.metaKey || event.altKey || event.ctrlKey || event.shiftKey);
 }
 function shouldProcessLinkClick(event, target) {
-  return event.button === 0 && (!target || target === "_self") && !isModifiedEvent(event);
+  return event.button === 0 && // Ignore everything but left clicks
+  (!target || target === "_self") && // Let browser handle "target=_blank" etc.
+  !isModifiedEvent(event);
 }
 function createSearchParams(init4) {
-  return init4 === void 0 && (init4 = ""), new URLSearchParams(typeof init4 == "string" || Array.isArray(init4) || init4 instanceof URLSearchParams ? init4 : Object.keys(init4).reduce((memo, key) => {
+  return init4 === void 0 && (init4 = ""), new URLSearchParams(typeof init4 == "string" || Array.isArray(init4) || init4 instanceof URLSearchParams ? init4 : Object.keys(init4).reduce((memo2, key) => {
     let value = init4[key];
-    return memo.concat(Array.isArray(value) ? value.map((v) => [key, v]) : [[key, value]]);
+    return memo2.concat(Array.isArray(value) ? value.map((v) => [key, v]) : [[key, value]]);
   }, []));
 }
 function getSearchParamsForLocation(locationSearch, defaultSearchParams) {
@@ -5700,61 +6257,83 @@ function getSearchParamsForLocation(locationSearch, defaultSearchParams) {
       });
   return searchParams;
 }
-function getFormSubmissionInfo(target, defaultAction, options) {
-  let method, action, encType, formData;
+function isFormDataSubmitterSupported() {
+  if (_formDataSupportsSubmitter === null)
+    try {
+      new FormData(
+        document.createElement("form"),
+        // @ts-expect-error if FormData supports the submitter parameter, this will throw
+        0
+      ), _formDataSupportsSubmitter = !1;
+    } catch {
+      _formDataSupportsSubmitter = !0;
+    }
+  return _formDataSupportsSubmitter;
+}
+function getFormEncType(encType) {
+  return encType != null && !supportedFormEncTypes.has(encType) ? (warning(!1, '"' + encType + '" is not a valid `encType` for `<Form>`/`<fetcher.Form>` ' + ('and will default to "' + defaultEncType + '"')), null) : encType;
+}
+function getFormSubmissionInfo(target, basename) {
+  let method, action, encType, formData, body;
   if (isFormElement(target)) {
-    let submissionTrigger = options.submissionTrigger;
-    method = options.method || target.getAttribute("method") || defaultMethod, action = options.action || target.getAttribute("action") || defaultAction, encType = options.encType || target.getAttribute("enctype") || defaultEncType, formData = new FormData(target), submissionTrigger && submissionTrigger.name && formData.append(submissionTrigger.name, submissionTrigger.value);
+    let attr = target.getAttribute("action");
+    action = attr ? stripBasename(attr, basename) : null, method = target.getAttribute("method") || defaultMethod, encType = getFormEncType(target.getAttribute("enctype")) || defaultEncType, formData = new FormData(target);
   } else if (isButtonElement(target) || isInputElement(target) && (target.type === "submit" || target.type === "image")) {
     let form = target.form;
     if (form == null)
       throw new Error('Cannot submit a <button> or <input type="submit"> without a <form>');
-    method = options.method || target.getAttribute("formmethod") || form.getAttribute("method") || defaultMethod, action = options.action || target.getAttribute("formaction") || form.getAttribute("action") || defaultAction, encType = options.encType || target.getAttribute("formenctype") || form.getAttribute("enctype") || defaultEncType, formData = new FormData(form), target.name && formData.append(target.name, target.value);
+    let attr = target.getAttribute("formaction") || form.getAttribute("action");
+    if (action = attr ? stripBasename(attr, basename) : null, method = target.getAttribute("formmethod") || form.getAttribute("method") || defaultMethod, encType = getFormEncType(target.getAttribute("formenctype")) || getFormEncType(form.getAttribute("enctype")) || defaultEncType, formData = new FormData(form, target), !isFormDataSubmitterSupported()) {
+      let {
+        name,
+        type: type2,
+        value
+      } = target;
+      if (type2 === "image") {
+        let prefix = name ? name + "." : "";
+        formData.append(prefix + "x", "0"), formData.append(prefix + "y", "0");
+      } else
+        name && formData.append(name, value);
+    }
   } else {
     if (isHtmlElement(target))
       throw new Error('Cannot submit element that is not <form>, <button>, or <input type="submit|image">');
-    if (method = options.method || defaultMethod, action = options.action || defaultAction, encType = options.encType || defaultEncType, target instanceof FormData)
-      formData = target;
-    else if (formData = new FormData(), target instanceof URLSearchParams)
-      for (let [name, value] of target)
-        formData.append(name, value);
-    else if (target != null)
-      for (let name of Object.keys(target))
-        formData.append(name, target[name]);
+    method = defaultMethod, action = null, encType = defaultEncType, body = target;
   }
-  let {
-    protocol,
-    host
-  } = window.location;
-  return {
-    url: new URL(action, protocol + "//" + host),
+  return formData && encType === "text/plain" && (body = formData, formData = void 0), {
+    action,
     method: method.toLowerCase(),
     encType,
-    formData
+    formData,
+    body
   };
 }
 function createBrowserRouter(routes2, opts) {
   return createRouter({
     basename: opts == null ? void 0 : opts.basename,
-    future: opts == null ? void 0 : opts.future,
+    future: _extends3({}, opts == null ? void 0 : opts.future, {
+      v7_prependBasename: !0
+    }),
     history: createBrowserHistory({
       window: opts == null ? void 0 : opts.window
     }),
     hydrationData: (opts == null ? void 0 : opts.hydrationData) || parseHydrationData(),
     routes: routes2,
-    detectErrorBoundary
+    mapRouteProperties
   }).initialize();
 }
 function createHashRouter(routes2, opts) {
   return createRouter({
     basename: opts == null ? void 0 : opts.basename,
-    future: opts == null ? void 0 : opts.future,
+    future: _extends3({}, opts == null ? void 0 : opts.future, {
+      v7_prependBasename: !0
+    }),
     history: createHashHistory({
       window: opts == null ? void 0 : opts.window
     }),
     hydrationData: (opts == null ? void 0 : opts.hydrationData) || parseHydrationData(),
     routes: routes2,
-    detectErrorBoundary
+    mapRouteProperties
   }).initialize();
 }
 function parseHydrationData() {
@@ -5772,8 +6351,19 @@ function deserializeErrors(errors) {
     if (val && val.__type === "RouteErrorResponse")
       serialized[key] = new ErrorResponse(val.status, val.statusText, val.data, val.internal === !0);
     else if (val && val.__type === "Error") {
-      let error = new Error(val.message);
-      error.stack = "", serialized[key] = error;
+      if (val.__subType) {
+        let ErrorConstructor = window[val.__subType];
+        if (typeof ErrorConstructor == "function")
+          try {
+            let error = new ErrorConstructor(val.message);
+            error.stack = "", serialized[key] = error;
+          } catch {
+          }
+      }
+      if (serialized[key] == null) {
+        let error = new Error(val.message);
+        error.stack = "", serialized[key] = error;
+      }
     } else
       serialized[key] = val;
   return serialized;
@@ -5782,17 +6372,22 @@ function BrowserRouter(_ref) {
   let {
     basename,
     children: children4,
+    future: future2,
     window: window2
   } = _ref, historyRef = React2.useRef();
   historyRef.current == null && (historyRef.current = createBrowserHistory({
     window: window2,
     v5Compat: !0
   }));
-  let history = historyRef.current, [state, setState] = React2.useState({
+  let history = historyRef.current, [state, setStateImpl] = React2.useState({
     action: history.action,
     location: history.location
-  });
-  return React2.useLayoutEffect(() => history.listen(setState), [history]), /* @__PURE__ */ React2.createElement(Router, {
+  }), {
+    v7_startTransition
+  } = future2 || {}, setState = React2.useCallback((newState) => {
+    v7_startTransition && startTransitionImpl2 ? startTransitionImpl2(() => setStateImpl(newState)) : setStateImpl(newState);
+  }, [setStateImpl, v7_startTransition]);
+  return React2.useLayoutEffect(() => history.listen(setState), [history, setState]), /* @__PURE__ */ React2.createElement(Router, {
     basename,
     children: children4,
     location: state.location,
@@ -5804,17 +6399,22 @@ function HashRouter(_ref2) {
   let {
     basename,
     children: children4,
+    future: future2,
     window: window2
   } = _ref2, historyRef = React2.useRef();
   historyRef.current == null && (historyRef.current = createHashHistory({
     window: window2,
     v5Compat: !0
   }));
-  let history = historyRef.current, [state, setState] = React2.useState({
+  let history = historyRef.current, [state, setStateImpl] = React2.useState({
     action: history.action,
     location: history.location
-  });
-  return React2.useLayoutEffect(() => history.listen(setState), [history]), /* @__PURE__ */ React2.createElement(Router, {
+  }), {
+    v7_startTransition
+  } = future2 || {}, setState = React2.useCallback((newState) => {
+    v7_startTransition && startTransitionImpl2 ? startTransitionImpl2(() => setStateImpl(newState)) : setStateImpl(newState);
+  }, [setStateImpl, v7_startTransition]);
+  return React2.useLayoutEffect(() => history.listen(setState), [history, setState]), /* @__PURE__ */ React2.createElement(Router, {
     basename,
     children: children4,
     location: state.location,
@@ -5826,12 +6426,17 @@ function HistoryRouter(_ref3) {
   let {
     basename,
     children: children4,
+    future: future2,
     history
-  } = _ref3, [state, setState] = React2.useState({
+  } = _ref3, [state, setStateImpl] = React2.useState({
     action: history.action,
     location: history.location
-  });
-  return React2.useLayoutEffect(() => history.listen(setState), [history]), /* @__PURE__ */ React2.createElement(Router, {
+  }), {
+    v7_startTransition
+  } = future2 || {}, setState = React2.useCallback((newState) => {
+    v7_startTransition && startTransitionImpl2 ? startTransitionImpl2(() => setStateImpl(newState)) : setStateImpl(newState);
+  }, [setStateImpl, v7_startTransition]);
+  return React2.useLayoutEffect(() => history.listen(setState), [history, setState]), /* @__PURE__ */ React2.createElement(Router, {
     basename,
     children: children4,
     location: state.location,
@@ -5885,36 +6490,71 @@ function useLinkClickHandler(to, _temp) {
 }
 function useSearchParams(defaultInit) {
   warning(typeof URLSearchParams < "u", "You cannot use the `useSearchParams` hook in a browser that does not support the URLSearchParams API. If you need to support Internet Explorer 11, we recommend you load a polyfill such as https://github.com/ungap/url-search-params\n\nIf you're unsure how to load polyfills, we recommend you check out https://polyfill.io/v3/ which provides some recommendations about how to load polyfills only for users that need them, instead of for every user.");
-  let defaultSearchParamsRef = React2.useRef(createSearchParams(defaultInit)), hasSetSearchParamsRef = React2.useRef(!1), location = useLocation(), searchParams = React2.useMemo(() => getSearchParamsForLocation(location.search, hasSetSearchParamsRef.current ? null : defaultSearchParamsRef.current), [location.search]), navigate = useNavigate(), setSearchParams = React2.useCallback((nextInit, navigateOptions) => {
+  let defaultSearchParamsRef = React2.useRef(createSearchParams(defaultInit)), hasSetSearchParamsRef = React2.useRef(!1), location = useLocation(), searchParams = React2.useMemo(() => (
+    // Only merge in the defaults if we haven't yet called setSearchParams.
+    // Once we call that we want those to take precedence, otherwise you can't
+    // remove a param with setSearchParams({}) if it has an initial value
+    getSearchParamsForLocation(location.search, hasSetSearchParamsRef.current ? null : defaultSearchParamsRef.current)
+  ), [location.search]), navigate = useNavigate(), setSearchParams = React2.useCallback((nextInit, navigateOptions) => {
     let newSearchParams = createSearchParams(typeof nextInit == "function" ? nextInit(searchParams) : nextInit);
     hasSetSearchParamsRef.current = !0, navigate("?" + newSearchParams, navigateOptions);
   }, [navigate, searchParams]);
   return [searchParams, setSearchParams];
 }
-function useSubmit() {
-  return useSubmitImpl();
+function validateClientSideSubmission() {
+  if (typeof document > "u")
+    throw new Error("You are calling submit during the server render. Try calling submit within a `useEffect` or callback instead.");
 }
-function useSubmitImpl(fetcherKey, routeId) {
+function useSubmit() {
   let {
     router
-  } = useDataRouterContext2(DataRouterHook2.UseSubmitImpl), defaultAction = useFormAction();
+  } = useDataRouterContext2(DataRouterHook2.UseSubmit), {
+    basename
+  } = React2.useContext(NavigationContext), currentRouteId = useRouteId();
   return React2.useCallback(function(target, options) {
-    if (options === void 0 && (options = {}), typeof document > "u")
-      throw new Error("You are calling submit during the server render. Try calling submit within a `useEffect` or callback instead.");
+    options === void 0 && (options = {}), validateClientSideSubmission();
     let {
+      action,
       method,
       encType,
       formData,
-      url
-    } = getFormSubmissionInfo(target, defaultAction, options), href = url.pathname + url.search, opts = {
-      replace: options.replace,
+      body
+    } = getFormSubmissionInfo(target, basename);
+    router.navigate(options.action || action, {
       preventScrollReset: options.preventScrollReset,
       formData,
-      formMethod: method,
-      formEncType: encType
-    };
-    fetcherKey ? (routeId == null && invariant(!1, "No routeId available for useFetcher()"), router.fetch(fetcherKey, routeId, href, opts)) : router.navigate(href, opts);
-  }, [defaultAction, router, fetcherKey, routeId]);
+      body,
+      formMethod: options.method || method,
+      formEncType: options.encType || encType,
+      replace: options.replace,
+      state: options.state,
+      fromRouteId: currentRouteId
+    });
+  }, [router, basename, currentRouteId]);
+}
+function useSubmitFetcher(fetcherKey, fetcherRouteId) {
+  let {
+    router
+  } = useDataRouterContext2(DataRouterHook2.UseSubmitFetcher), {
+    basename
+  } = React2.useContext(NavigationContext);
+  return React2.useCallback(function(target, options) {
+    options === void 0 && (options = {}), validateClientSideSubmission();
+    let {
+      action,
+      method,
+      encType,
+      formData,
+      body
+    } = getFormSubmissionInfo(target, basename);
+    fetcherRouteId == null && invariant(!1, "No routeId available for useFetcher()"), router.fetch(fetcherKey, fetcherRouteId, options.action || action, {
+      preventScrollReset: options.preventScrollReset,
+      formData,
+      body,
+      formMethod: options.method || method,
+      formEncType: options.encType || encType
+    });
+  }, [router, basename, fetcherKey, fetcherRouteId]);
 }
 function useFormAction(action, _temp2) {
   let {
@@ -5933,11 +6573,13 @@ function useFormAction(action, _temp2) {
   return (!action || action === ".") && match.route.index && (path.search = path.search ? path.search.replace(/^\?/, "?index&") : "?index"), basename !== "/" && (path.pathname = path.pathname === "/" ? basename : joinPaths([basename, path.pathname])), createPath(path);
 }
 function createFetcherForm(fetcherKey, routeId) {
-  let FetcherForm = /* @__PURE__ */ React2.forwardRef((props, ref) => /* @__PURE__ */ React2.createElement(FormImpl, _extends3({}, props, {
-    ref,
-    fetcherKey,
-    routeId
-  })));
+  let FetcherForm = /* @__PURE__ */ React2.forwardRef((props, ref) => {
+    let submit = useSubmitFetcher(fetcherKey, routeId);
+    return /* @__PURE__ */ React2.createElement(FormImpl, _extends3({}, props, {
+      ref,
+      submit
+    }));
+  });
   return FetcherForm.displayName = "fetcher.Form", FetcherForm;
 }
 function useFetcher() {
@@ -5950,14 +6592,14 @@ function useFetcher() {
   routeId == null && invariant(!1, 'useFetcher can only be used on routes that contain a unique "id"');
   let [fetcherKey] = React2.useState(() => String(++fetcherId)), [Form2] = React2.useState(() => (routeId || invariant(!1, "No routeId available for fetcher.Form()"), createFetcherForm(fetcherKey, routeId))), [load] = React2.useState(() => (href) => {
     router || invariant(!1, "No router available for fetcher.load()"), routeId || invariant(!1, "No routeId available for fetcher.load()"), router.fetch(fetcherKey, routeId, href);
-  }), submit = useSubmitImpl(fetcherKey, routeId), fetcher = router.getFetcher(fetcherKey), fetcherWithComponents = React2.useMemo(() => _extends3({
+  }), submit = useSubmitFetcher(fetcherKey, routeId), fetcher = router.getFetcher(fetcherKey), fetcherWithComponents = React2.useMemo(() => _extends3({
     Form: Form2,
     submit,
     load
   }, fetcher), [fetcher, Form2, submit, load]);
   return React2.useEffect(() => () => {
     if (!router) {
-      console.warn("No fetcher available to clean up from useFetcher()");
+      console.warn("No router available to clean up from useFetcher()");
       return;
     }
     router.deleteFetcher(fetcherKey);
@@ -5975,7 +6617,9 @@ function useScrollRestoration(_temp3) {
   } = useDataRouterContext2(DataRouterHook2.UseScrollRestoration), {
     restoreScrollPosition,
     preventScrollReset
-  } = useDataRouterState2(DataRouterStateHook2.UseScrollRestoration), location = useLocation(), matches = useMatches(), navigation = useNavigation();
+  } = useDataRouterState2(DataRouterStateHook2.UseScrollRestoration), {
+    basename
+  } = React2.useContext(NavigationContext), location = useLocation(), matches = useMatches(), navigation = useNavigation();
   React2.useEffect(() => (window.history.scrollRestoration = "manual", () => {
     window.history.scrollRestoration = "auto";
   }), []), usePageHide(React2.useCallback(() => {
@@ -5991,16 +6635,22 @@ function useScrollRestoration(_temp3) {
     } catch {
     }
   }, [storageKey]), React2.useLayoutEffect(() => {
-    let disableScrollRestoration = router == null ? void 0 : router.enableScrollRestoration(savedScrollPositions, () => window.scrollY, getKey);
+    let getKeyWithoutBasename = getKey && basename !== "/" ? (location2, matches2) => getKey(
+      // Strip the basename to match useLocation()
+      _extends3({}, location2, {
+        pathname: stripBasename(location2.pathname, basename) || location2.pathname
+      }),
+      matches2
+    ) : getKey, disableScrollRestoration = router == null ? void 0 : router.enableScrollRestoration(savedScrollPositions, () => window.scrollY, getKeyWithoutBasename);
     return () => disableScrollRestoration && disableScrollRestoration();
-  }, [router, getKey]), React2.useLayoutEffect(() => {
+  }, [router, basename, getKey]), React2.useLayoutEffect(() => {
     if (restoreScrollPosition !== !1) {
       if (typeof restoreScrollPosition == "number") {
         window.scrollTo(0, restoreScrollPosition);
         return;
       }
       if (location.hash) {
-        let el = document.getElementById(location.hash.slice(1));
+        let el = document.getElementById(decodeURIComponent(location.hash.slice(1)));
         if (el) {
           el.scrollIntoView();
           return;
@@ -6047,16 +6697,19 @@ function usePrompt(_ref8) {
     blocker.state === "blocked" && (window.confirm(message) ? setTimeout(blocker.proceed, 0) : blocker.reset());
   }, [blocker, message]);
 }
-var React2, defaultMethod, defaultEncType, _excluded, _excluded2, _excluded3, isBrowser2, ABSOLUTE_URL_REGEX2, Link, NavLink, Form, FormImpl, DataRouterHook2, DataRouterStateHook2, fetcherId, SCROLL_RESTORATION_STORAGE_KEY, savedScrollPositions, init_dist2 = __esm({
+var React2, defaultMethod, defaultEncType, _formDataSupportsSubmitter, supportedFormEncTypes, _excluded, _excluded2, _excluded3, START_TRANSITION2, startTransitionImpl2, isBrowser, ABSOLUTE_URL_REGEX2, Link, NavLink, Form, FormImpl, DataRouterHook2, DataRouterStateHook2, fetcherId, SCROLL_RESTORATION_STORAGE_KEY, savedScrollPositions, init_dist2 = __esm({
   "node_modules/react-router-dom/dist/index.js"() {
     React2 = __toESM(require_react());
     init_dist();
     init_dist();
     init_router();
     defaultMethod = "get", defaultEncType = "application/x-www-form-urlencoded";
-    _excluded = ["onClick", "relative", "reloadDocument", "replace", "state", "target", "to", "preventScrollReset"], _excluded2 = ["aria-current", "caseSensitive", "className", "end", "style", "to", "children"], _excluded3 = ["reloadDocument", "replace", "method", "action", "onSubmit", "fetcherKey", "routeId", "relative", "preventScrollReset"];
+    _formDataSupportsSubmitter = null;
+    supportedFormEncTypes = /* @__PURE__ */ new Set(["application/x-www-form-urlencoded", "multipart/form-data", "text/plain"]);
+    _excluded = ["onClick", "relative", "reloadDocument", "replace", "state", "target", "to", "preventScrollReset"], _excluded2 = ["aria-current", "caseSensitive", "className", "end", "style", "to", "children"], _excluded3 = ["reloadDocument", "replace", "state", "method", "action", "onSubmit", "submit", "relative", "preventScrollReset"];
+    START_TRANSITION2 = "startTransition", startTransitionImpl2 = React2[START_TRANSITION2];
     HistoryRouter.displayName = "unstable_HistoryRouter";
-    isBrowser2 = typeof window < "u" && typeof window.document < "u" && typeof window.document.createElement < "u", ABSOLUTE_URL_REGEX2 = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i, Link = /* @__PURE__ */ React2.forwardRef(function(_ref4, ref) {
+    isBrowser = typeof window < "u" && typeof window.document < "u" && typeof window.document.createElement < "u", ABSOLUTE_URL_REGEX2 = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i, Link = /* @__PURE__ */ React2.forwardRef(function(_ref4, ref) {
       let {
         onClick,
         relative,
@@ -6069,10 +6722,13 @@ var React2, defaultMethod, defaultEncType, _excluded, _excluded2, _excluded3, is
       } = _ref4, rest = _objectWithoutPropertiesLoose(_ref4, _excluded), {
         basename
       } = React2.useContext(NavigationContext), absoluteHref, isExternal = !1;
-      if (typeof to == "string" && ABSOLUTE_URL_REGEX2.test(to) && (absoluteHref = to, isBrowser2)) {
-        let currentUrl = new URL(window.location.href), targetUrl = to.startsWith("//") ? new URL(currentUrl.protocol + to) : new URL(to), path = stripBasename(targetUrl.pathname, basename);
-        targetUrl.origin === currentUrl.origin && path != null ? to = path + targetUrl.search + targetUrl.hash : isExternal = !0;
-      }
+      if (typeof to == "string" && ABSOLUTE_URL_REGEX2.test(to) && (absoluteHref = to, isBrowser))
+        try {
+          let currentUrl = new URL(window.location.href), targetUrl = to.startsWith("//") ? new URL(currentUrl.protocol + to) : new URL(to), path = stripBasename(targetUrl.pathname, basename);
+          targetUrl.origin === currentUrl.origin && path != null ? to = path + targetUrl.search + targetUrl.hash : isExternal = !0;
+        } catch {
+          warning(!1, '<Link to="' + to + '"> contains an invalid URL which will probably break when clicked - please update to a valid URL path.');
+        }
       let href = useHref(to, {
         relative
       }), internalOnClick = useLinkClickHandler(to, {
@@ -6085,12 +6741,15 @@ var React2, defaultMethod, defaultEncType, _excluded, _excluded2, _excluded3, is
       function handleClick(event) {
         onClick && onClick(event), event.defaultPrevented || internalOnClick(event);
       }
-      return /* @__PURE__ */ React2.createElement("a", _extends3({}, rest, {
-        href: absoluteHref || href,
-        onClick: isExternal || reloadDocument ? onClick : handleClick,
-        ref,
-        target
-      }));
+      return (
+        // eslint-disable-next-line jsx-a11y/anchor-has-content
+        /* @__PURE__ */ React2.createElement("a", _extends3({}, rest, {
+          href: absoluteHref || href,
+          onClick: isExternal || reloadDocument ? onClick : handleClick,
+          ref,
+          target
+        }))
+      );
     });
     Link.displayName = "Link";
     NavLink = /* @__PURE__ */ React2.forwardRef(function(_ref5, ref) {
@@ -6129,22 +6788,26 @@ var React2, defaultMethod, defaultEncType, _excluded, _excluded2, _excluded3, is
       }) : children4);
     });
     NavLink.displayName = "NavLink";
-    Form = /* @__PURE__ */ React2.forwardRef((props, ref) => /* @__PURE__ */ React2.createElement(FormImpl, _extends3({}, props, {
-      ref
-    })));
+    Form = /* @__PURE__ */ React2.forwardRef((props, ref) => {
+      let submit = useSubmit();
+      return /* @__PURE__ */ React2.createElement(FormImpl, _extends3({}, props, {
+        submit,
+        ref
+      }));
+    });
     Form.displayName = "Form";
     FormImpl = /* @__PURE__ */ React2.forwardRef((_ref6, forwardedRef) => {
       let {
         reloadDocument,
         replace,
+        state,
         method = defaultMethod,
         action,
         onSubmit,
-        fetcherKey,
-        routeId,
+        submit,
         relative,
         preventScrollReset
-      } = _ref6, props = _objectWithoutPropertiesLoose(_ref6, _excluded3), submit = useSubmitImpl(fetcherKey, routeId), formMethod = method.toLowerCase() === "get" ? "get" : "post", formAction = useFormAction(action, {
+      } = _ref6, props = _objectWithoutPropertiesLoose(_ref6, _excluded3), formMethod = method.toLowerCase() === "get" ? "get" : "post", formAction = useFormAction(action, {
         relative
       });
       return /* @__PURE__ */ React2.createElement("form", _extends3({
@@ -6159,6 +6822,7 @@ var React2, defaultMethod, defaultEncType, _excluded, _excluded2, _excluded3, is
           submit(submitter || event.currentTarget, {
             method: submitMethod,
             replace,
+            state,
             relative,
             preventScrollReset
           });
@@ -6168,7 +6832,7 @@ var React2, defaultMethod, defaultEncType, _excluded, _excluded2, _excluded3, is
     FormImpl.displayName = "FormImpl";
     ScrollRestoration.displayName = "ScrollRestoration";
     (function(DataRouterHook3) {
-      DataRouterHook3.UseScrollRestoration = "useScrollRestoration", DataRouterHook3.UseSubmitImpl = "useSubmitImpl", DataRouterHook3.UseFetcher = "useFetcher";
+      DataRouterHook3.UseScrollRestoration = "useScrollRestoration", DataRouterHook3.UseSubmit = "useSubmit", DataRouterHook3.UseSubmitFetcher = "useSubmitFetcher", DataRouterHook3.UseFetcher = "useFetcher";
     })(DataRouterHook2 || (DataRouterHook2 = {}));
     (function(DataRouterStateHook3) {
       DataRouterStateHook3.UseFetchers = "useFetchers", DataRouterStateHook3.UseScrollRestoration = "useScrollRestoration";
@@ -6183,7 +6847,7 @@ var require_server = __commonJS({
   "node_modules/react-router-dom/server.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: !0 });
-    var React15 = require_react(), router = (init_router(), __toCommonJS(router_exports)), reactRouterDom = (init_dist2(), __toCommonJS(dist_exports));
+    var React20 = require_react(), router = (init_router(), __toCommonJS(router_exports)), reactRouter = (init_dist(), __toCommonJS(dist_exports)), reactRouterDom = (init_dist2(), __toCommonJS(dist_exports2));
     function _interopNamespace(e) {
       if (e && e.__esModule)
         return e;
@@ -6200,7 +6864,7 @@ var require_server = __commonJS({
         }
       }), n.default = e, Object.freeze(n);
     }
-    var React__namespace = /* @__PURE__ */ _interopNamespace(React15);
+    var React__namespace = /* @__PURE__ */ _interopNamespace(React20);
     function StaticRouter({
       basename,
       children: children4,
@@ -6245,22 +6909,35 @@ var require_server = __commonJS({
         };
         hydrateScript = `window.__staticRouterHydrationData = JSON.parse(${htmlEscape(JSON.stringify(JSON.stringify(data)))});`;
       }
+      let {
+        state
+      } = dataRouterContext.router;
       return /* @__PURE__ */ React__namespace.createElement(React__namespace.Fragment, null, /* @__PURE__ */ React__namespace.createElement(reactRouterDom.UNSAFE_DataRouterContext.Provider, {
         value: dataRouterContext
       }, /* @__PURE__ */ React__namespace.createElement(reactRouterDom.UNSAFE_DataRouterStateContext.Provider, {
-        value: dataRouterContext.router.state
+        value: state
       }, /* @__PURE__ */ React__namespace.createElement(reactRouterDom.Router, {
         basename: dataRouterContext.basename,
-        location: dataRouterContext.router.state.location,
-        navigationType: dataRouterContext.router.state.historyAction,
-        navigator: dataRouterContext.navigator
-      }, /* @__PURE__ */ React__namespace.createElement(reactRouterDom.Routes, null)))), hydrateScript ? /* @__PURE__ */ React__namespace.createElement("script", {
+        location: state.location,
+        navigationType: state.historyAction,
+        navigator: dataRouterContext.navigator,
+        static: dataRouterContext.static
+      }, /* @__PURE__ */ React__namespace.createElement(DataRoutes2, {
+        routes: router$1.routes,
+        state
+      })))), hydrateScript ? /* @__PURE__ */ React__namespace.createElement("script", {
         suppressHydrationWarning: !0,
         nonce,
         dangerouslySetInnerHTML: {
           __html: hydrateScript
         }
       }) : null);
+    }
+    function DataRoutes2({
+      routes: routes2,
+      state
+    }) {
+      return reactRouter.UNSAFE_useRoutesImpl(routes2, void 0, state);
     }
     function serializeErrors2(errors) {
       if (!errors)
@@ -6272,7 +6949,12 @@ var require_server = __commonJS({
           __type: "RouteErrorResponse"
         } : val instanceof Error ? serialized[key] = {
           message: val.message,
-          __type: "Error"
+          __type: "Error",
+          // If this is a subclass (i.e., ReferenceError), send up the type so we
+          // can re-create the same type during hydration.
+          ...val.name !== "Error" ? {
+            __subType: val.name
+          } : {}
         } : serialized[key] = val;
       return serialized;
     }
@@ -6297,15 +6979,14 @@ var require_server = __commonJS({
         }
       };
     }
-    var detectErrorBoundary2 = (route) => Boolean(route.ErrorBoundary) || Boolean(route.errorElement);
     function createStaticHandler2(routes2, opts) {
       return router.createStaticHandler(routes2, {
         ...opts,
-        detectErrorBoundary: detectErrorBoundary2
+        mapRouteProperties: reactRouter.UNSAFE_mapRouteProperties
       });
     }
     function createStaticRouter2(routes2, context) {
-      let manifest = {}, dataRoutes = router.UNSAFE_convertRoutesToDataRoutes(routes2, detectErrorBoundary2, void 0, manifest), matches = context.matches.map((match) => {
+      let manifest = {}, dataRoutes = router.UNSAFE_convertRoutesToDataRoutes(routes2, reactRouter.UNSAFE_mapRouteProperties, void 0, manifest), matches = context.matches.map((match) => {
         let route = manifest[match.route.id] || match.route;
         return {
           ...match,
@@ -6412,7 +7093,7 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
     "use strict";
     (function() {
       "use strict";
-      var React15 = require_react(), ReactVersion = "18.2.0", ReactSharedInternals = React15.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+      var React20 = require_react(), ReactVersion = "18.3.1", ReactSharedInternals = React20.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
       function warn(format) {
         {
           for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++)
@@ -6522,6 +7203,9 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
       var properties = {}, reservedProps = [
         "children",
         "dangerouslySetInnerHTML",
+        // TODO: This prevents the assignment of defaultValue to regular
+        // elements (not just inputs). Now that ReactDOMInput assigns to the
+        // defaultValue property -- do we need this?
         "defaultValue",
         "defaultChecked",
         "innerHTML",
@@ -6534,9 +7218,13 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
           name,
           RESERVED,
           !1,
+          // mustUseProperty
           name,
+          // attributeName
           null,
+          // attributeNamespace
           !1,
+          // sanitizeURL
           !1
         );
       }), [["acceptCharset", "accept-charset"], ["className", "class"], ["htmlFor", "for"], ["httpEquiv", "http-equiv"]].forEach(function(_ref) {
@@ -6545,9 +7233,13 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
           name,
           STRING,
           !1,
+          // mustUseProperty
           attributeName,
+          // attributeName
           null,
+          // attributeNamespace
           !1,
+          // sanitizeURL
           !1
         );
       }), ["contentEditable", "draggable", "spellCheck", "value"].forEach(function(name) {
@@ -6555,9 +7247,13 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
           name,
           BOOLEANISH_STRING,
           !1,
+          // mustUseProperty
           name.toLowerCase(),
+          // attributeName
           null,
+          // attributeNamespace
           !1,
+          // sanitizeURL
           !1
         );
       }), ["autoReverse", "externalResourcesRequired", "focusable", "preserveAlpha"].forEach(function(name) {
@@ -6565,14 +7261,20 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
           name,
           BOOLEANISH_STRING,
           !1,
+          // mustUseProperty
           name,
+          // attributeName
           null,
+          // attributeNamespace
           !1,
+          // sanitizeURL
           !1
         );
       }), [
         "allowFullScreen",
         "async",
+        // Note: there is a special case that prevents it from being written to the DOM
+        // on the client side because the browsers are inconsistent. Instead we call focus().
         "autoFocus",
         "autoPlay",
         "controls",
@@ -6593,43 +7295,64 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
         "reversed",
         "scoped",
         "seamless",
+        // Microdata
         "itemScope"
       ].forEach(function(name) {
         properties[name] = new PropertyInfoRecord(
           name,
           BOOLEAN,
           !1,
+          // mustUseProperty
           name.toLowerCase(),
+          // attributeName
           null,
+          // attributeNamespace
           !1,
+          // sanitizeURL
           !1
         );
       }), [
         "checked",
+        // Note: `option.selected` is not updated if `select.multiple` is
+        // disabled with `removeAttribute`. We have special logic for handling this.
         "multiple",
         "muted",
         "selected"
+        // NOTE: if you add a camelCased prop to this list,
+        // you'll need to set attributeName to name.toLowerCase()
+        // instead in the assignment below.
       ].forEach(function(name) {
         properties[name] = new PropertyInfoRecord(
           name,
           BOOLEAN,
           !0,
+          // mustUseProperty
           name,
+          // attributeName
           null,
+          // attributeNamespace
           !1,
+          // sanitizeURL
           !1
         );
       }), [
         "capture",
         "download"
+        // NOTE: if you add a camelCased prop to this list,
+        // you'll need to set attributeName to name.toLowerCase()
+        // instead in the assignment below.
       ].forEach(function(name) {
         properties[name] = new PropertyInfoRecord(
           name,
           OVERLOADED_BOOLEAN,
           !1,
+          // mustUseProperty
           name,
+          // attributeName
           null,
+          // attributeNamespace
           !1,
+          // sanitizeURL
           !1
         );
       }), [
@@ -6637,14 +7360,21 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
         "rows",
         "size",
         "span"
+        // NOTE: if you add a camelCased prop to this list,
+        // you'll need to set attributeName to name.toLowerCase()
+        // instead in the assignment below.
       ].forEach(function(name) {
         properties[name] = new PropertyInfoRecord(
           name,
           POSITIVE_NUMERIC,
           !1,
+          // mustUseProperty
           name,
+          // attributeName
           null,
+          // attributeNamespace
           !1,
+          // sanitizeURL
           !1
         );
       }), ["rowSpan", "start"].forEach(function(name) {
@@ -6652,9 +7382,13 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
           name,
           NUMERIC,
           !1,
+          // mustUseProperty
           name.toLowerCase(),
+          // attributeName
           null,
+          // attributeNamespace
           !1,
+          // sanitizeURL
           !1
         );
       });
@@ -6735,15 +7469,21 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
         "writing-mode",
         "xmlns:xlink",
         "x-height"
+        // NOTE: if you add a camelCased prop to this list,
+        // you'll need to set attributeName to name.toLowerCase()
+        // instead in the assignment below.
       ].forEach(function(attributeName) {
         var name = attributeName.replace(CAMELIZE, capitalize);
         properties[name] = new PropertyInfoRecord(
           name,
           STRING,
           !1,
+          // mustUseProperty
           attributeName,
           null,
+          // attributeNamespace
           !1,
+          // sanitizeURL
           !1
         );
       }), [
@@ -6753,30 +7493,40 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
         "xlink:show",
         "xlink:title",
         "xlink:type"
+        // NOTE: if you add a camelCased prop to this list,
+        // you'll need to set attributeName to name.toLowerCase()
+        // instead in the assignment below.
       ].forEach(function(attributeName) {
         var name = attributeName.replace(CAMELIZE, capitalize);
         properties[name] = new PropertyInfoRecord(
           name,
           STRING,
           !1,
+          // mustUseProperty
           attributeName,
           "http://www.w3.org/1999/xlink",
           !1,
+          // sanitizeURL
           !1
         );
       }), [
         "xml:base",
         "xml:lang",
         "xml:space"
+        // NOTE: if you add a camelCased prop to this list,
+        // you'll need to set attributeName to name.toLowerCase()
+        // instead in the assignment below.
       ].forEach(function(attributeName) {
         var name = attributeName.replace(CAMELIZE, capitalize);
         properties[name] = new PropertyInfoRecord(
           name,
           STRING,
           !1,
+          // mustUseProperty
           attributeName,
           "http://www.w3.org/XML/1998/namespace",
           !1,
+          // sanitizeURL
           !1
         );
       }), ["tabIndex", "crossOrigin"].forEach(function(attributeName) {
@@ -6784,9 +7534,13 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
           attributeName,
           STRING,
           !1,
+          // mustUseProperty
           attributeName.toLowerCase(),
+          // attributeName
           null,
+          // attributeNamespace
           !1,
+          // sanitizeURL
           !1
         );
       });
@@ -6795,18 +7549,24 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
         "xlinkHref",
         STRING,
         !1,
+        // mustUseProperty
         "xlink:href",
         "http://www.w3.org/1999/xlink",
         !0,
+        // sanitizeURL
         !1
       ), ["src", "href", "action", "formAction"].forEach(function(attributeName) {
         properties[attributeName] = new PropertyInfoRecord(
           attributeName,
           STRING,
           !1,
+          // mustUseProperty
           attributeName.toLowerCase(),
+          // attributeName
           null,
+          // attributeNamespace
           !0,
+          // sanitizeURL
           !0
         );
       });
@@ -6846,6 +7606,7 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
         widows: !0,
         zIndex: !0,
         zoom: !0,
+        // SVG-related properties
         fillOpacity: !0,
         floodOpacity: !0,
         stopOpacity: !0,
@@ -6895,14 +7656,19 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
       }
       var ariaProperties = {
         "aria-current": 0,
+        // state
         "aria-description": 0,
         "aria-details": 0,
         "aria-disabled": 0,
+        // state
         "aria-hidden": 0,
+        // state
         "aria-invalid": 0,
+        // state
         "aria-keyshortcuts": 0,
         "aria-label": 0,
         "aria-roledescription": 0,
+        // Widget Attributes
         "aria-autocomplete": 0,
         "aria-checked": 0,
         "aria-expanded": 0,
@@ -6922,12 +7688,15 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
         "aria-valuemin": 0,
         "aria-valuenow": 0,
         "aria-valuetext": 0,
+        // Live Region Attributes
         "aria-atomic": 0,
         "aria-busy": 0,
         "aria-live": 0,
         "aria-relevant": 0,
+        // Drag-and-Drop Attributes
         "aria-dropeffect": 0,
         "aria-grabbed": 0,
+        // Relationship Attributes
         "aria-activedescendant": 0,
         "aria-colcount": 0,
         "aria-colindex": 0,
@@ -6990,6 +7759,7 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
         }
       }
       var possibleStandardNames = {
+        // HTML
         accept: "accept",
         acceptcharset: "acceptCharset",
         "accept-charset": "acceptCharset",
@@ -7139,6 +7909,7 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
         width: "width",
         wmode: "wmode",
         wrap: "wrap",
+        // SVG
         about: "about",
         accentheight: "accentHeight",
         "accent-height": "accentHeight",
@@ -7543,6 +8314,9 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
           warnedStyleNames.hasOwnProperty(name) && warnedStyleNames[name] || (warnedStyleNames[name] = !0, error(
             "Unsupported style property %s. Did you mean %s?",
             name,
+            // As Andi Smith suggests
+            // (http://www.andismith.com/blog/2012/02/modernizr-prefixed/), an `-ms` prefix
+            // is converted to lowercase `ms`.
             camelize(name.replace(msPattern, "ms-"))
           ));
         }, warnBadVendoredStyleName = function(name) {
@@ -7695,7 +8469,7 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
           throw new Error("The `style` prop expects a mapping from style properties to values, not a string. For example, style={{marginRight: spacing + 'em'}} when using JSX.");
         var isFirst = !0;
         for (var styleName in style)
-          if (!!hasOwnProperty.call(style, styleName)) {
+          if (hasOwnProperty.call(style, styleName)) {
             var styleValue4 = style[styleName];
             if (!(styleValue4 == null || typeof styleValue4 == "boolean" || styleValue4 === "")) {
               var nameChunk = void 0, valueChunk = void 0, isCustomProperty = styleName.indexOf("--") === 0;
@@ -7718,7 +8492,11 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
           case "suppressHydrationWarning":
             return;
         }
-        if (!(name.length > 2 && (name[0] === "o" || name[0] === "O") && (name[1] === "n" || name[1] === "N"))) {
+        if (
+          // shouldIgnoreAttribute
+          // We have already filtered out null/undefined and reserved words.
+          !(name.length > 2 && (name[0] === "o" || name[0] === "O") && (name[1] === "n" || name[1] === "N"))
+        ) {
           var propertyInfo = getPropertyInfo(name);
           if (propertyInfo !== null) {
             switch (typeof value) {
@@ -7809,7 +8587,7 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
       }
       function flattenOptionChildren(children4) {
         var content = "";
-        return React15.Children.forEach(children4, function(child) {
+        return React20.Children.forEach(children4, function(child) {
           child != null && (content += child, !didWarnInvalidOptionChildren && typeof child != "string" && typeof child != "number" && (didWarnInvalidOptionChildren = !0, error("Cannot infer the option value of complex children. Pass a `value` prop or use a plain string as children to <option>.")));
         }), content;
       }
@@ -8267,6 +9045,7 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
       function createResponseState$1(generateStaticMarkup, identifierPrefix) {
         var responseState = createResponseState(identifierPrefix, void 0);
         return {
+          // Keep this in sync with ReactDOMServerFormatConfig
           bootstrapChunks: responseState.bootstrapChunks,
           startInlineScript: responseState.startInlineScript,
           placeholderPrefix: responseState.placeholderPrefix,
@@ -8277,12 +9056,14 @@ var require_react_dom_server_legacy_browser_development = __commonJS({
           sentCompleteSegmentFunction: responseState.sentCompleteSegmentFunction,
           sentCompleteBoundaryFunction: responseState.sentCompleteBoundaryFunction,
           sentClientRenderFunction: responseState.sentClientRenderFunction,
+          // This is an extra field for the legacy renderer
           generateStaticMarkup
         };
       }
       function createRootFormatContext() {
         return {
           insertionMode: HTML_MODE,
+          // We skip the root mode because we don't want to emit the DOCTYPE in legacy mode.
           selectedValue: null
         };
       }
@@ -8762,7 +9543,10 @@ Please check the code for the %s component.`, callerName, callerName, componentN
       function constructClassInstance(ctor, props, maskedLegacyContext) {
         var context = emptyContextObject, contextType = ctor.contextType;
         if ("contextType" in ctor) {
-          var isValid = contextType === null || contextType !== void 0 && contextType.$$typeof === REACT_CONTEXT_TYPE && contextType._context === void 0;
+          var isValid = (
+            // Allow null for conditional declaration
+            contextType === null || contextType !== void 0 && contextType.$$typeof === REACT_CONTEXT_TYPE && contextType._context === void 0
+          );
           if (!isValid && !didWarnAboutInvalidateContextType.has(ctor)) {
             didWarnAboutInvalidateContextType.add(ctor);
             var addendum = "";
@@ -8810,6 +9594,7 @@ https://reactjs.org/link/unsafe-component-lifecycles`, _componentName, newApiNam
           if (instance.componentWillMount.__suppressDeprecationWarning !== !0) {
             var componentName = getComponentNameFromType(type2) || "Unknown";
             didWarnAboutDeprecatedWillMount[componentName] || (warn(
+              // keep this warning in sync with ReactStrictModeWarning.js
               `componentWillMount has been renamed, and is not recommended for use. See https://reactjs.org/link/unsafe-component-lifecycles for details.
 
 * Move code from componentWillMount to componentDidMount (preferred in most cases) or the constructor.
@@ -8889,10 +9674,10 @@ Please update the following components: %s`,
         var asUint = x >>> 0;
         return asUint === 0 ? 32 : 31 - (log2(asUint) / LN2 | 0) | 0;
       }
-      function is2(x, y) {
+      function is(x, y) {
         return x === y && (x !== 0 || 1 / x === 1 / y) || x !== x && y !== y;
       }
-      var objectIs = typeof Object.is == "function" ? Object.is : is2, currentlyRenderingComponent = null, currentlyRenderingTask = null, firstWorkInProgressHook = null, workInProgressHook = null, isReRender = !1, didScheduleRenderPhaseUpdate = !1, localIdCounter = 0, renderPhaseUpdates = null, numberOfReRenders = 0, RE_RENDER_LIMIT = 25, isInHookUserCodeInDev = !1, currentHookNameInDev;
+      var objectIs = typeof Object.is == "function" ? Object.is : is, currentlyRenderingComponent = null, currentlyRenderingTask = null, firstWorkInProgressHook = null, workInProgressHook = null, isReRender = !1, didScheduleRenderPhaseUpdate = !1, localIdCounter = 0, renderPhaseUpdates = null, numberOfReRenders = 0, RE_RENDER_LIMIT = 25, isInHookUserCodeInDev = !1, currentHookNameInDev;
       function resolveCurrentlyRenderingComponent() {
         if (currentlyRenderingComponent === null)
           throw new Error(`Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
@@ -8944,15 +9729,16 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
       function readContext$1(context) {
         return isInHookUserCodeInDev && error("Context can only be read while React is rendering. In classes, you can read it in the render method or getDerivedStateFromProps. In function components, you can read it directly in the function body, but not inside Hooks like useReducer() or useMemo()."), readContext(context);
       }
-      function useContext13(context) {
+      function useContext16(context) {
         return currentHookNameInDev = "useContext", resolveCurrentlyRenderingComponent(), readContext(context);
       }
       function basicStateReducer(state, action) {
         return typeof action == "function" ? action(state) : action;
       }
-      function useState10(initialState) {
+      function useState11(initialState) {
         return currentHookNameInDev = "useState", useReducer(
           basicStateReducer,
+          // useReducer has a special case to support lazy useState initializers
           initialState
         );
       }
@@ -8979,8 +9765,8 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
           var _queue = workInProgressHook.queue = {
             last: null,
             dispatch: null
-          }, _dispatch = _queue.dispatch = dispatchAction.bind(null, currentlyRenderingComponent, _queue);
-          return [workInProgressHook.memoizedState, _dispatch];
+          }, _dispatch3 = _queue.dispatch = dispatchAction.bind(null, currentlyRenderingComponent, _queue);
+          return [workInProgressHook.memoizedState, _dispatch3];
         }
       }
       function useMemo10(nextCreate, deps) {
@@ -8998,7 +9784,7 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
         var nextValue = nextCreate();
         return isInHookUserCodeInDev = !1, workInProgressHook.memoizedState = [nextValue, nextDeps], nextValue;
       }
-      function useRef11(initialValue) {
+      function useRef12(initialValue) {
         currentlyRenderingComponent = resolveCurrentlyRenderingComponent(), workInProgressHook = createWorkInProgressHook();
         var previousRef = workInProgressHook.memoizedState;
         if (previousRef === null) {
@@ -9009,7 +9795,7 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
         } else
           return previousRef;
       }
-      function useLayoutEffect5(create4, inputs) {
+      function useLayoutEffect4(create4, inputs) {
         currentHookNameInDev = "useLayoutEffect", error("useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.");
       }
       function dispatchAction(componentIdentity, queue, action) {
@@ -9032,7 +9818,7 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
           }
         }
       }
-      function useCallback5(callback, deps) {
+      function useCallback6(callback, deps) {
         return useMemo10(function() {
           return callback;
         }, deps);
@@ -9061,24 +9847,28 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
         var localId = localIdCounter++;
         return makeId(responseState, treeId, localId);
       }
-      function noop5() {
+      function noop7() {
       }
       var Dispatcher = {
         readContext: readContext$1,
-        useContext: useContext13,
+        useContext: useContext16,
         useMemo: useMemo10,
         useReducer,
-        useRef: useRef11,
-        useState: useState10,
-        useInsertionEffect: noop5,
-        useLayoutEffect: useLayoutEffect5,
-        useCallback: useCallback5,
-        useImperativeHandle: noop5,
-        useEffect: noop5,
-        useDebugValue: noop5,
+        useRef: useRef12,
+        useState: useState11,
+        useInsertionEffect: noop7,
+        useLayoutEffect: useLayoutEffect4,
+        useCallback: useCallback6,
+        // useImperativeHandle is not run in the server environment
+        useImperativeHandle: noop7,
+        // Effects are not run in the server environment.
+        useEffect: noop7,
+        // Debugging effect
+        useDebugValue: noop7,
         useDeferredValue,
         useTransition: useTransition2,
         useId: useId4,
+        // Subscriptions are not setup in a server environment.
         useMutableSource,
         useSyncExternalStore: useSyncExternalStore2
       }, currentResponseState = null;
@@ -9141,6 +9931,7 @@ Error generating stack: ` + x.message + `
           0,
           null,
           rootFormatContext,
+          // Root segments are never embedded in Text on either edge
           !1,
           !1
         );
@@ -9187,6 +9978,7 @@ Error generating stack: ` + x.message + `
         return {
           status: PENDING,
           id: -1,
+          // lazily assigned later
           index: index2,
           parentFlushed: !1,
           chunks: [],
@@ -9253,6 +10045,7 @@ Error generating stack: ` + x.message + `
           insertionIndex,
           newBoundary,
           parentSegment.formatContext,
+          // boundaries never require text embedding at their edges because comment nodes bound them
           !1,
           !1
         );
@@ -9262,6 +10055,7 @@ Error generating stack: ` + x.message + `
           0,
           null,
           parentSegment.formatContext,
+          // boundaries never require text embedding at their edges because comment nodes bound them
           !1,
           !1
         );
@@ -9313,7 +10107,7 @@ Error generating stack: ` + x.message + `
         var maskedContext = getMaskedContext(Component3, task.legacyContext), instance = constructClassInstance(Component3, props, maskedContext);
         mountClassInstance(instance, Component3, props, maskedContext), finishClassComponent(request, task, instance, Component3, props), popComponentStackInDEV(task);
       }
-      var didWarnAboutBadClass = {}, didWarnAboutModulePatternComponent = {}, didWarnAboutContextTypeOnFunctionComponent = {}, didWarnAboutGetDerivedStateOnFunctionComponent = {}, didWarnAboutReassigningProps = !1, didWarnAboutGenerators = !1, didWarnAboutMaps = !1, hasWarnedAboutUsingContextAsConsumer = !1;
+      var didWarnAboutBadClass = {}, didWarnAboutModulePatternComponent = {}, didWarnAboutContextTypeOnFunctionComponent = {}, didWarnAboutGetDerivedStateOnFunctionComponent = {}, didWarnAboutReassigningProps = !1, didWarnAboutDefaultPropsOnFunctionComponent = {}, didWarnAboutGenerators = !1, didWarnAboutMaps = !1, hasWarnedAboutUsingContextAsConsumer = !1;
       function renderIndeterminateComponent(request, task, Component3, props) {
         var legacyContext;
         if (legacyContext = getMaskedContext(Component3, task.legacyContext), pushFunctionComponentStackInDEV(task, Component3), Component3.prototype && typeof Component3.prototype.render == "function") {
@@ -9325,7 +10119,11 @@ Error generating stack: ` + x.message + `
           var _componentName = getComponentNameFromType(Component3) || "Unknown";
           didWarnAboutModulePatternComponent[_componentName] || (error("The <%s /> component appears to be a function component that returns a class instance. Change %s to a class that extends React.Component instead. If you can't use a class try assigning the prototype on the function as a workaround. `%s.prototype = React.Component.prototype`. Don't use an arrow function since it cannot be called with `new` by React.", _componentName, _componentName, _componentName), didWarnAboutModulePatternComponent[_componentName] = !0);
         }
-        if (typeof value == "object" && value !== null && typeof value.render == "function" && value.$$typeof === void 0) {
+        if (
+          // Run these checks in production only if the flag is off.
+          // Eventually we'll delete this branch altogether.
+          typeof value == "object" && value !== null && typeof value.render == "function" && value.$$typeof === void 0
+        ) {
           {
             var _componentName2 = getComponentNameFromType(Component3) || "Unknown";
             didWarnAboutModulePatternComponent[_componentName2] || (error("The <%s /> component appears to be a function component that returns a class instance. Change %s to a class that extends React.Component instead. If you can't use a class try assigning the prototype on the function as a workaround. `%s.prototype = React.Component.prototype`. Don't use an arrow function since it cannot be called with `new` by React.", _componentName2, _componentName2, _componentName2), didWarnAboutModulePatternComponent[_componentName2] = !0);
@@ -9345,7 +10143,11 @@ Error generating stack: ` + x.message + `
       }
       function validateFunctionComponentInDev(Component3) {
         {
-          if (Component3 && Component3.childContextTypes && error("%s(...): childContextTypes cannot be defined on a function component.", Component3.displayName || Component3.name || "Component"), typeof Component3.getDerivedStateFromProps == "function") {
+          if (Component3 && Component3.childContextTypes && error("%s(...): childContextTypes cannot be defined on a function component.", Component3.displayName || Component3.name || "Component"), Component3.defaultProps !== void 0) {
+            var componentName = getComponentNameFromType(Component3) || "Unknown";
+            didWarnAboutDefaultPropsOnFunctionComponent[componentName] || (error("%s: Support for defaultProps will be removed from function components in a future major release. Use JavaScript default parameters instead.", componentName), didWarnAboutDefaultPropsOnFunctionComponent[componentName] = !0);
+          }
+          if (typeof Component3.getDerivedStateFromProps == "function") {
             var _componentName3 = getComponentNameFromType(Component3) || "Unknown";
             didWarnAboutGetDerivedStateOnFunctionComponent[_componentName3] || (error("%s: Function components do not support getDerivedStateFromProps.", _componentName3), didWarnAboutGetDerivedStateOnFunctionComponent[_componentName3] = !0);
           }
@@ -9459,7 +10261,8 @@ Error generating stack: ` + x.message + `
         throw (type2 === void 0 || typeof type2 == "object" && type2 !== null && Object.keys(type2).length === 0) && (info += " You likely forgot to export your component from the file it's defined in, or you might have mixed up default and named imports."), new Error("Element type is invalid: expected a string (for built-in components) or a class/function (for composite components) " + ("but got: " + (type2 == null ? type2 : typeof type2) + "." + info));
       }
       function validateIterable(iterable, iteratorFn) {
-        typeof Symbol == "function" && iterable[Symbol.toStringTag] === "Generator" && (didWarnAboutGenerators || error("Using Generators as children is unsupported and will likely yield unexpected results because enumerating a generator mutates it. You may convert it to an array with `Array.from()` or the `[...spread]` operator before rendering. Keep in mind you might need to polyfill these features for older browsers."), didWarnAboutGenerators = !0), iterable.entries === iteratorFn && (didWarnAboutMaps || error("Using Maps as children is not supported. Use an array of keyed ReactElements instead."), didWarnAboutMaps = !0);
+        typeof Symbol == "function" && // $FlowFixMe Flow doesn't know about toStringTag
+        iterable[Symbol.toStringTag] === "Generator" && (didWarnAboutGenerators || error("Using Generators as children is unsupported and will likely yield unexpected results because enumerating a generator mutates it. You may convert it to an array with `Array.from()` or the `[...spread]` operator before rendering. Keep in mind you might need to polyfill these features for older browsers."), didWarnAboutGenerators = !0), iterable.entries === iteratorFn && (didWarnAboutMaps || error("Using Maps as children is not supported. Use an array of keyed ReactElements instead."), didWarnAboutMaps = !0);
       }
       function renderNodeDestructive(request, task, node) {
         try {
@@ -9542,7 +10345,9 @@ Error generating stack: ` + x.message + `
           insertionIndex,
           null,
           segment.formatContext,
+          // Adopt the parent segment's leading text embed
           segment.lastPushedText,
+          // Assume we are text embedded at the trailing edge
           !0
         );
         segment.children.push(newSegment), segment.lastPushedText = !1;
@@ -9873,7 +10678,7 @@ var require_react_dom_server_browser_development = __commonJS({
     "use strict";
     (function() {
       "use strict";
-      var React15 = require_react(), ReactVersion = "18.2.0", ReactSharedInternals = React15.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+      var React20 = require_react(), ReactVersion = "18.3.1", ReactSharedInternals = React20.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
       function warn(format) {
         {
           for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++)
@@ -9994,6 +10799,9 @@ var require_react_dom_server_browser_development = __commonJS({
       var properties = {}, reservedProps = [
         "children",
         "dangerouslySetInnerHTML",
+        // TODO: This prevents the assignment of defaultValue to regular
+        // elements (not just inputs). Now that ReactDOMInput assigns to the
+        // defaultValue property -- do we need this?
         "defaultValue",
         "defaultChecked",
         "innerHTML",
@@ -10006,9 +10814,13 @@ var require_react_dom_server_browser_development = __commonJS({
           name,
           RESERVED,
           !1,
+          // mustUseProperty
           name,
+          // attributeName
           null,
+          // attributeNamespace
           !1,
+          // sanitizeURL
           !1
         );
       }), [["acceptCharset", "accept-charset"], ["className", "class"], ["htmlFor", "for"], ["httpEquiv", "http-equiv"]].forEach(function(_ref) {
@@ -10017,9 +10829,13 @@ var require_react_dom_server_browser_development = __commonJS({
           name,
           STRING,
           !1,
+          // mustUseProperty
           attributeName,
+          // attributeName
           null,
+          // attributeNamespace
           !1,
+          // sanitizeURL
           !1
         );
       }), ["contentEditable", "draggable", "spellCheck", "value"].forEach(function(name) {
@@ -10027,9 +10843,13 @@ var require_react_dom_server_browser_development = __commonJS({
           name,
           BOOLEANISH_STRING,
           !1,
+          // mustUseProperty
           name.toLowerCase(),
+          // attributeName
           null,
+          // attributeNamespace
           !1,
+          // sanitizeURL
           !1
         );
       }), ["autoReverse", "externalResourcesRequired", "focusable", "preserveAlpha"].forEach(function(name) {
@@ -10037,14 +10857,20 @@ var require_react_dom_server_browser_development = __commonJS({
           name,
           BOOLEANISH_STRING,
           !1,
+          // mustUseProperty
           name,
+          // attributeName
           null,
+          // attributeNamespace
           !1,
+          // sanitizeURL
           !1
         );
       }), [
         "allowFullScreen",
         "async",
+        // Note: there is a special case that prevents it from being written to the DOM
+        // on the client side because the browsers are inconsistent. Instead we call focus().
         "autoFocus",
         "autoPlay",
         "controls",
@@ -10065,43 +10891,64 @@ var require_react_dom_server_browser_development = __commonJS({
         "reversed",
         "scoped",
         "seamless",
+        // Microdata
         "itemScope"
       ].forEach(function(name) {
         properties[name] = new PropertyInfoRecord(
           name,
           BOOLEAN,
           !1,
+          // mustUseProperty
           name.toLowerCase(),
+          // attributeName
           null,
+          // attributeNamespace
           !1,
+          // sanitizeURL
           !1
         );
       }), [
         "checked",
+        // Note: `option.selected` is not updated if `select.multiple` is
+        // disabled with `removeAttribute`. We have special logic for handling this.
         "multiple",
         "muted",
         "selected"
+        // NOTE: if you add a camelCased prop to this list,
+        // you'll need to set attributeName to name.toLowerCase()
+        // instead in the assignment below.
       ].forEach(function(name) {
         properties[name] = new PropertyInfoRecord(
           name,
           BOOLEAN,
           !0,
+          // mustUseProperty
           name,
+          // attributeName
           null,
+          // attributeNamespace
           !1,
+          // sanitizeURL
           !1
         );
       }), [
         "capture",
         "download"
+        // NOTE: if you add a camelCased prop to this list,
+        // you'll need to set attributeName to name.toLowerCase()
+        // instead in the assignment below.
       ].forEach(function(name) {
         properties[name] = new PropertyInfoRecord(
           name,
           OVERLOADED_BOOLEAN,
           !1,
+          // mustUseProperty
           name,
+          // attributeName
           null,
+          // attributeNamespace
           !1,
+          // sanitizeURL
           !1
         );
       }), [
@@ -10109,14 +10956,21 @@ var require_react_dom_server_browser_development = __commonJS({
         "rows",
         "size",
         "span"
+        // NOTE: if you add a camelCased prop to this list,
+        // you'll need to set attributeName to name.toLowerCase()
+        // instead in the assignment below.
       ].forEach(function(name) {
         properties[name] = new PropertyInfoRecord(
           name,
           POSITIVE_NUMERIC,
           !1,
+          // mustUseProperty
           name,
+          // attributeName
           null,
+          // attributeNamespace
           !1,
+          // sanitizeURL
           !1
         );
       }), ["rowSpan", "start"].forEach(function(name) {
@@ -10124,9 +10978,13 @@ var require_react_dom_server_browser_development = __commonJS({
           name,
           NUMERIC,
           !1,
+          // mustUseProperty
           name.toLowerCase(),
+          // attributeName
           null,
+          // attributeNamespace
           !1,
+          // sanitizeURL
           !1
         );
       });
@@ -10207,15 +11065,21 @@ var require_react_dom_server_browser_development = __commonJS({
         "writing-mode",
         "xmlns:xlink",
         "x-height"
+        // NOTE: if you add a camelCased prop to this list,
+        // you'll need to set attributeName to name.toLowerCase()
+        // instead in the assignment below.
       ].forEach(function(attributeName) {
         var name = attributeName.replace(CAMELIZE, capitalize);
         properties[name] = new PropertyInfoRecord(
           name,
           STRING,
           !1,
+          // mustUseProperty
           attributeName,
           null,
+          // attributeNamespace
           !1,
+          // sanitizeURL
           !1
         );
       }), [
@@ -10225,30 +11089,40 @@ var require_react_dom_server_browser_development = __commonJS({
         "xlink:show",
         "xlink:title",
         "xlink:type"
+        // NOTE: if you add a camelCased prop to this list,
+        // you'll need to set attributeName to name.toLowerCase()
+        // instead in the assignment below.
       ].forEach(function(attributeName) {
         var name = attributeName.replace(CAMELIZE, capitalize);
         properties[name] = new PropertyInfoRecord(
           name,
           STRING,
           !1,
+          // mustUseProperty
           attributeName,
           "http://www.w3.org/1999/xlink",
           !1,
+          // sanitizeURL
           !1
         );
       }), [
         "xml:base",
         "xml:lang",
         "xml:space"
+        // NOTE: if you add a camelCased prop to this list,
+        // you'll need to set attributeName to name.toLowerCase()
+        // instead in the assignment below.
       ].forEach(function(attributeName) {
         var name = attributeName.replace(CAMELIZE, capitalize);
         properties[name] = new PropertyInfoRecord(
           name,
           STRING,
           !1,
+          // mustUseProperty
           attributeName,
           "http://www.w3.org/XML/1998/namespace",
           !1,
+          // sanitizeURL
           !1
         );
       }), ["tabIndex", "crossOrigin"].forEach(function(attributeName) {
@@ -10256,9 +11130,13 @@ var require_react_dom_server_browser_development = __commonJS({
           attributeName,
           STRING,
           !1,
+          // mustUseProperty
           attributeName.toLowerCase(),
+          // attributeName
           null,
+          // attributeNamespace
           !1,
+          // sanitizeURL
           !1
         );
       });
@@ -10267,18 +11145,24 @@ var require_react_dom_server_browser_development = __commonJS({
         "xlinkHref",
         STRING,
         !1,
+        // mustUseProperty
         "xlink:href",
         "http://www.w3.org/1999/xlink",
         !0,
+        // sanitizeURL
         !1
       ), ["src", "href", "action", "formAction"].forEach(function(attributeName) {
         properties[attributeName] = new PropertyInfoRecord(
           attributeName,
           STRING,
           !1,
+          // mustUseProperty
           attributeName.toLowerCase(),
+          // attributeName
           null,
+          // attributeNamespace
           !0,
+          // sanitizeURL
           !0
         );
       });
@@ -10318,6 +11202,7 @@ var require_react_dom_server_browser_development = __commonJS({
         widows: !0,
         zIndex: !0,
         zoom: !0,
+        // SVG-related properties
         fillOpacity: !0,
         floodOpacity: !0,
         stopOpacity: !0,
@@ -10367,14 +11252,19 @@ var require_react_dom_server_browser_development = __commonJS({
       }
       var ariaProperties = {
         "aria-current": 0,
+        // state
         "aria-description": 0,
         "aria-details": 0,
         "aria-disabled": 0,
+        // state
         "aria-hidden": 0,
+        // state
         "aria-invalid": 0,
+        // state
         "aria-keyshortcuts": 0,
         "aria-label": 0,
         "aria-roledescription": 0,
+        // Widget Attributes
         "aria-autocomplete": 0,
         "aria-checked": 0,
         "aria-expanded": 0,
@@ -10394,12 +11284,15 @@ var require_react_dom_server_browser_development = __commonJS({
         "aria-valuemin": 0,
         "aria-valuenow": 0,
         "aria-valuetext": 0,
+        // Live Region Attributes
         "aria-atomic": 0,
         "aria-busy": 0,
         "aria-live": 0,
         "aria-relevant": 0,
+        // Drag-and-Drop Attributes
         "aria-dropeffect": 0,
         "aria-grabbed": 0,
+        // Relationship Attributes
         "aria-activedescendant": 0,
         "aria-colcount": 0,
         "aria-colindex": 0,
@@ -10462,6 +11355,7 @@ var require_react_dom_server_browser_development = __commonJS({
         }
       }
       var possibleStandardNames = {
+        // HTML
         accept: "accept",
         acceptcharset: "acceptCharset",
         "accept-charset": "acceptCharset",
@@ -10611,6 +11505,7 @@ var require_react_dom_server_browser_development = __commonJS({
         width: "width",
         wmode: "wmode",
         wrap: "wrap",
+        // SVG
         about: "about",
         accentheight: "accentHeight",
         "accent-height": "accentHeight",
@@ -11015,6 +11910,9 @@ var require_react_dom_server_browser_development = __commonJS({
           warnedStyleNames.hasOwnProperty(name) && warnedStyleNames[name] || (warnedStyleNames[name] = !0, error(
             "Unsupported style property %s. Did you mean %s?",
             name,
+            // As Andi Smith suggests
+            // (http://www.andismith.com/blog/2012/02/modernizr-prefixed/), an `-ms` prefix
+            // is converted to lowercase `ms`.
             camelize(name.replace(msPattern, "ms-"))
           ));
         }, warnBadVendoredStyleName = function(name) {
@@ -11171,7 +12069,7 @@ var require_react_dom_server_browser_development = __commonJS({
           throw new Error("The `style` prop expects a mapping from style properties to values, not a string. For example, style={{marginRight: spacing + 'em'}} when using JSX.");
         var isFirst = !0;
         for (var styleName in style)
-          if (!!hasOwnProperty.call(style, styleName)) {
+          if (hasOwnProperty.call(style, styleName)) {
             var styleValue4 = style[styleName];
             if (!(styleValue4 == null || typeof styleValue4 == "boolean" || styleValue4 === "")) {
               var nameChunk = void 0, valueChunk = void 0, isCustomProperty = styleName.indexOf("--") === 0;
@@ -11194,7 +12092,11 @@ var require_react_dom_server_browser_development = __commonJS({
           case "suppressHydrationWarning":
             return;
         }
-        if (!(name.length > 2 && (name[0] === "o" || name[0] === "O") && (name[1] === "n" || name[1] === "N"))) {
+        if (
+          // shouldIgnoreAttribute
+          // We have already filtered out null/undefined and reserved words.
+          !(name.length > 2 && (name[0] === "o" || name[0] === "O") && (name[1] === "n" || name[1] === "N"))
+        ) {
           var propertyInfo = getPropertyInfo(name);
           if (propertyInfo !== null) {
             switch (typeof value) {
@@ -11285,7 +12187,7 @@ var require_react_dom_server_browser_development = __commonJS({
       }
       function flattenOptionChildren(children4) {
         var content = "";
-        return React15.Children.forEach(children4, function(child) {
+        return React20.Children.forEach(children4, function(child) {
           child != null && (content += child, !didWarnInvalidOptionChildren && typeof child != "string" && typeof child != "number" && (didWarnInvalidOptionChildren = !0, error("Cannot infer the option value of complex children. Pass a `value` prop or use a plain string as children to <option>.")));
         }), content;
       }
@@ -12197,7 +13099,10 @@ Please check the code for the %s component.`, callerName, callerName, componentN
       function constructClassInstance(ctor, props, maskedLegacyContext) {
         var context = emptyContextObject, contextType = ctor.contextType;
         if ("contextType" in ctor) {
-          var isValid = contextType === null || contextType !== void 0 && contextType.$$typeof === REACT_CONTEXT_TYPE && contextType._context === void 0;
+          var isValid = (
+            // Allow null for conditional declaration
+            contextType === null || contextType !== void 0 && contextType.$$typeof === REACT_CONTEXT_TYPE && contextType._context === void 0
+          );
           if (!isValid && !didWarnAboutInvalidateContextType.has(ctor)) {
             didWarnAboutInvalidateContextType.add(ctor);
             var addendum = "";
@@ -12245,6 +13150,7 @@ https://reactjs.org/link/unsafe-component-lifecycles`, _componentName, newApiNam
           if (instance.componentWillMount.__suppressDeprecationWarning !== !0) {
             var componentName = getComponentNameFromType(type2) || "Unknown";
             didWarnAboutDeprecatedWillMount[componentName] || (warn(
+              // keep this warning in sync with ReactStrictModeWarning.js
               `componentWillMount has been renamed, and is not recommended for use. See https://reactjs.org/link/unsafe-component-lifecycles for details.
 
 * Move code from componentWillMount to componentDidMount (preferred in most cases) or the constructor.
@@ -12324,10 +13230,10 @@ Please update the following components: %s`,
         var asUint = x >>> 0;
         return asUint === 0 ? 32 : 31 - (log2(asUint) / LN2 | 0) | 0;
       }
-      function is2(x, y) {
+      function is(x, y) {
         return x === y && (x !== 0 || 1 / x === 1 / y) || x !== x && y !== y;
       }
-      var objectIs = typeof Object.is == "function" ? Object.is : is2, currentlyRenderingComponent = null, currentlyRenderingTask = null, firstWorkInProgressHook = null, workInProgressHook = null, isReRender = !1, didScheduleRenderPhaseUpdate = !1, localIdCounter = 0, renderPhaseUpdates = null, numberOfReRenders = 0, RE_RENDER_LIMIT = 25, isInHookUserCodeInDev = !1, currentHookNameInDev;
+      var objectIs = typeof Object.is == "function" ? Object.is : is, currentlyRenderingComponent = null, currentlyRenderingTask = null, firstWorkInProgressHook = null, workInProgressHook = null, isReRender = !1, didScheduleRenderPhaseUpdate = !1, localIdCounter = 0, renderPhaseUpdates = null, numberOfReRenders = 0, RE_RENDER_LIMIT = 25, isInHookUserCodeInDev = !1, currentHookNameInDev;
       function resolveCurrentlyRenderingComponent() {
         if (currentlyRenderingComponent === null)
           throw new Error(`Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
@@ -12379,15 +13285,16 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
       function readContext$1(context) {
         return isInHookUserCodeInDev && error("Context can only be read while React is rendering. In classes, you can read it in the render method or getDerivedStateFromProps. In function components, you can read it directly in the function body, but not inside Hooks like useReducer() or useMemo()."), readContext(context);
       }
-      function useContext13(context) {
+      function useContext16(context) {
         return currentHookNameInDev = "useContext", resolveCurrentlyRenderingComponent(), readContext(context);
       }
       function basicStateReducer(state, action) {
         return typeof action == "function" ? action(state) : action;
       }
-      function useState10(initialState) {
+      function useState11(initialState) {
         return currentHookNameInDev = "useState", useReducer(
           basicStateReducer,
+          // useReducer has a special case to support lazy useState initializers
           initialState
         );
       }
@@ -12414,8 +13321,8 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
           var _queue = workInProgressHook.queue = {
             last: null,
             dispatch: null
-          }, _dispatch = _queue.dispatch = dispatchAction.bind(null, currentlyRenderingComponent, _queue);
-          return [workInProgressHook.memoizedState, _dispatch];
+          }, _dispatch3 = _queue.dispatch = dispatchAction.bind(null, currentlyRenderingComponent, _queue);
+          return [workInProgressHook.memoizedState, _dispatch3];
         }
       }
       function useMemo10(nextCreate, deps) {
@@ -12433,7 +13340,7 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
         var nextValue = nextCreate();
         return isInHookUserCodeInDev = !1, workInProgressHook.memoizedState = [nextValue, nextDeps], nextValue;
       }
-      function useRef11(initialValue) {
+      function useRef12(initialValue) {
         currentlyRenderingComponent = resolveCurrentlyRenderingComponent(), workInProgressHook = createWorkInProgressHook();
         var previousRef = workInProgressHook.memoizedState;
         if (previousRef === null) {
@@ -12444,7 +13351,7 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
         } else
           return previousRef;
       }
-      function useLayoutEffect5(create4, inputs) {
+      function useLayoutEffect4(create4, inputs) {
         currentHookNameInDev = "useLayoutEffect", error("useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.");
       }
       function dispatchAction(componentIdentity, queue, action) {
@@ -12467,7 +13374,7 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
           }
         }
       }
-      function useCallback5(callback, deps) {
+      function useCallback6(callback, deps) {
         return useMemo10(function() {
           return callback;
         }, deps);
@@ -12496,24 +13403,28 @@ Incoming: %s`, currentHookNameInDev, "[" + nextDeps.join(", ") + "]", "[" + prev
         var localId = localIdCounter++;
         return makeId(responseState, treeId, localId);
       }
-      function noop5() {
+      function noop7() {
       }
       var Dispatcher = {
         readContext: readContext$1,
-        useContext: useContext13,
+        useContext: useContext16,
         useMemo: useMemo10,
         useReducer,
-        useRef: useRef11,
-        useState: useState10,
-        useInsertionEffect: noop5,
-        useLayoutEffect: useLayoutEffect5,
-        useCallback: useCallback5,
-        useImperativeHandle: noop5,
-        useEffect: noop5,
-        useDebugValue: noop5,
+        useRef: useRef12,
+        useState: useState11,
+        useInsertionEffect: noop7,
+        useLayoutEffect: useLayoutEffect4,
+        useCallback: useCallback6,
+        // useImperativeHandle is not run in the server environment
+        useImperativeHandle: noop7,
+        // Effects are not run in the server environment.
+        useEffect: noop7,
+        // Debugging effect
+        useDebugValue: noop7,
         useDeferredValue,
         useTransition: useTransition2,
         useId: useId4,
+        // Subscriptions are not setup in a server environment.
         useMutableSource,
         useSyncExternalStore: useSyncExternalStore2
       }, currentResponseState = null;
@@ -12576,6 +13487,7 @@ Error generating stack: ` + x.message + `
           0,
           null,
           rootFormatContext,
+          // Root segments are never embedded in Text on either edge
           !1,
           !1
         );
@@ -12622,6 +13534,7 @@ Error generating stack: ` + x.message + `
         return {
           status: PENDING,
           id: -1,
+          // lazily assigned later
           index: index2,
           parentFlushed: !1,
           chunks: [],
@@ -12688,6 +13601,7 @@ Error generating stack: ` + x.message + `
           insertionIndex,
           newBoundary,
           parentSegment.formatContext,
+          // boundaries never require text embedding at their edges because comment nodes bound them
           !1,
           !1
         );
@@ -12697,6 +13611,7 @@ Error generating stack: ` + x.message + `
           0,
           null,
           parentSegment.formatContext,
+          // boundaries never require text embedding at their edges because comment nodes bound them
           !1,
           !1
         );
@@ -12748,7 +13663,7 @@ Error generating stack: ` + x.message + `
         var maskedContext = getMaskedContext(Component3, task.legacyContext), instance = constructClassInstance(Component3, props, maskedContext);
         mountClassInstance(instance, Component3, props, maskedContext), finishClassComponent(request, task, instance, Component3, props), popComponentStackInDEV(task);
       }
-      var didWarnAboutBadClass = {}, didWarnAboutModulePatternComponent = {}, didWarnAboutContextTypeOnFunctionComponent = {}, didWarnAboutGetDerivedStateOnFunctionComponent = {}, didWarnAboutReassigningProps = !1, didWarnAboutGenerators = !1, didWarnAboutMaps = !1, hasWarnedAboutUsingContextAsConsumer = !1;
+      var didWarnAboutBadClass = {}, didWarnAboutModulePatternComponent = {}, didWarnAboutContextTypeOnFunctionComponent = {}, didWarnAboutGetDerivedStateOnFunctionComponent = {}, didWarnAboutReassigningProps = !1, didWarnAboutDefaultPropsOnFunctionComponent = {}, didWarnAboutGenerators = !1, didWarnAboutMaps = !1, hasWarnedAboutUsingContextAsConsumer = !1;
       function renderIndeterminateComponent(request, task, Component3, props) {
         var legacyContext;
         if (legacyContext = getMaskedContext(Component3, task.legacyContext), pushFunctionComponentStackInDEV(task, Component3), Component3.prototype && typeof Component3.prototype.render == "function") {
@@ -12760,7 +13675,11 @@ Error generating stack: ` + x.message + `
           var _componentName = getComponentNameFromType(Component3) || "Unknown";
           didWarnAboutModulePatternComponent[_componentName] || (error("The <%s /> component appears to be a function component that returns a class instance. Change %s to a class that extends React.Component instead. If you can't use a class try assigning the prototype on the function as a workaround. `%s.prototype = React.Component.prototype`. Don't use an arrow function since it cannot be called with `new` by React.", _componentName, _componentName, _componentName), didWarnAboutModulePatternComponent[_componentName] = !0);
         }
-        if (typeof value == "object" && value !== null && typeof value.render == "function" && value.$$typeof === void 0) {
+        if (
+          // Run these checks in production only if the flag is off.
+          // Eventually we'll delete this branch altogether.
+          typeof value == "object" && value !== null && typeof value.render == "function" && value.$$typeof === void 0
+        ) {
           {
             var _componentName2 = getComponentNameFromType(Component3) || "Unknown";
             didWarnAboutModulePatternComponent[_componentName2] || (error("The <%s /> component appears to be a function component that returns a class instance. Change %s to a class that extends React.Component instead. If you can't use a class try assigning the prototype on the function as a workaround. `%s.prototype = React.Component.prototype`. Don't use an arrow function since it cannot be called with `new` by React.", _componentName2, _componentName2, _componentName2), didWarnAboutModulePatternComponent[_componentName2] = !0);
@@ -12780,7 +13699,11 @@ Error generating stack: ` + x.message + `
       }
       function validateFunctionComponentInDev(Component3) {
         {
-          if (Component3 && Component3.childContextTypes && error("%s(...): childContextTypes cannot be defined on a function component.", Component3.displayName || Component3.name || "Component"), typeof Component3.getDerivedStateFromProps == "function") {
+          if (Component3 && Component3.childContextTypes && error("%s(...): childContextTypes cannot be defined on a function component.", Component3.displayName || Component3.name || "Component"), Component3.defaultProps !== void 0) {
+            var componentName = getComponentNameFromType(Component3) || "Unknown";
+            didWarnAboutDefaultPropsOnFunctionComponent[componentName] || (error("%s: Support for defaultProps will be removed from function components in a future major release. Use JavaScript default parameters instead.", componentName), didWarnAboutDefaultPropsOnFunctionComponent[componentName] = !0);
+          }
+          if (typeof Component3.getDerivedStateFromProps == "function") {
             var _componentName3 = getComponentNameFromType(Component3) || "Unknown";
             didWarnAboutGetDerivedStateOnFunctionComponent[_componentName3] || (error("%s: Function components do not support getDerivedStateFromProps.", _componentName3), didWarnAboutGetDerivedStateOnFunctionComponent[_componentName3] = !0);
           }
@@ -12894,7 +13817,8 @@ Error generating stack: ` + x.message + `
         throw (type2 === void 0 || typeof type2 == "object" && type2 !== null && Object.keys(type2).length === 0) && (info += " You likely forgot to export your component from the file it's defined in, or you might have mixed up default and named imports."), new Error("Element type is invalid: expected a string (for built-in components) or a class/function (for composite components) " + ("but got: " + (type2 == null ? type2 : typeof type2) + "." + info));
       }
       function validateIterable(iterable, iteratorFn) {
-        typeof Symbol == "function" && iterable[Symbol.toStringTag] === "Generator" && (didWarnAboutGenerators || error("Using Generators as children is unsupported and will likely yield unexpected results because enumerating a generator mutates it. You may convert it to an array with `Array.from()` or the `[...spread]` operator before rendering. Keep in mind you might need to polyfill these features for older browsers."), didWarnAboutGenerators = !0), iterable.entries === iteratorFn && (didWarnAboutMaps || error("Using Maps as children is not supported. Use an array of keyed ReactElements instead."), didWarnAboutMaps = !0);
+        typeof Symbol == "function" && // $FlowFixMe Flow doesn't know about toStringTag
+        iterable[Symbol.toStringTag] === "Generator" && (didWarnAboutGenerators || error("Using Generators as children is unsupported and will likely yield unexpected results because enumerating a generator mutates it. You may convert it to an array with `Array.from()` or the `[...spread]` operator before rendering. Keep in mind you might need to polyfill these features for older browsers."), didWarnAboutGenerators = !0), iterable.entries === iteratorFn && (didWarnAboutMaps || error("Using Maps as children is not supported. Use an array of keyed ReactElements instead."), didWarnAboutMaps = !0);
       }
       function renderNodeDestructive(request, task, node) {
         try {
@@ -12977,7 +13901,9 @@ Error generating stack: ` + x.message + `
           insertionIndex,
           null,
           segment.formatContext,
+          // Adopt the parent segment's leading text embed
           segment.lastPushedText,
+          // Assume we are text embedded at the trailing edge
           !0
         );
         segment.children.push(newSegment), segment.lastPushedText = !1;
@@ -13281,6 +14207,7 @@ Error generating stack: ` + x.message + `
                   abort(request);
                 }
               },
+              // $FlowFixMe size() methods are not allowed on byte streams.
               {
                 highWaterMark: 0
               }
@@ -13327,14 +14254,14 @@ var require_react_jsx_dev_runtime_development = __commonJS({
     "use strict";
     (function() {
       "use strict";
-      var React15 = require_react(), REACT_ELEMENT_TYPE = Symbol.for("react.element"), REACT_PORTAL_TYPE = Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = Symbol.for("react.profiler"), REACT_PROVIDER_TYPE = Symbol.for("react.provider"), REACT_CONTEXT_TYPE = Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = Symbol.for("react.memo"), REACT_LAZY_TYPE = Symbol.for("react.lazy"), REACT_OFFSCREEN_TYPE = Symbol.for("react.offscreen"), MAYBE_ITERATOR_SYMBOL = Symbol.iterator, FAUX_ITERATOR_SYMBOL = "@@iterator";
+      var React20 = require_react(), REACT_ELEMENT_TYPE = Symbol.for("react.element"), REACT_PORTAL_TYPE = Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = Symbol.for("react.profiler"), REACT_PROVIDER_TYPE = Symbol.for("react.provider"), REACT_CONTEXT_TYPE = Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = Symbol.for("react.memo"), REACT_LAZY_TYPE = Symbol.for("react.lazy"), REACT_OFFSCREEN_TYPE = Symbol.for("react.offscreen"), MAYBE_ITERATOR_SYMBOL = Symbol.iterator, FAUX_ITERATOR_SYMBOL = "@@iterator";
       function getIteratorFn(maybeIterable) {
         if (maybeIterable === null || typeof maybeIterable != "object")
           return null;
         var maybeIterator = MAYBE_ITERATOR_SYMBOL && maybeIterable[MAYBE_ITERATOR_SYMBOL] || maybeIterable[FAUX_ITERATOR_SYMBOL];
         return typeof maybeIterator == "function" ? maybeIterator : null;
       }
-      var ReactSharedInternals = React15.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+      var ReactSharedInternals = React20.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
       function error(format) {
         {
           for (var _len2 = arguments.length, args = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++)
@@ -13355,7 +14282,11 @@ var require_react_jsx_dev_runtime_development = __commonJS({
       var enableScopeAPI = !1, enableCacheElement = !1, enableTransitionTracing = !1, enableLegacyHidden = !1, enableDebugTracing = !1, REACT_MODULE_REFERENCE;
       REACT_MODULE_REFERENCE = Symbol.for("react.module.reference");
       function isValidElementType(type2) {
-        return !!(typeof type2 == "string" || typeof type2 == "function" || type2 === REACT_FRAGMENT_TYPE || type2 === REACT_PROFILER_TYPE || enableDebugTracing || type2 === REACT_STRICT_MODE_TYPE || type2 === REACT_SUSPENSE_TYPE || type2 === REACT_SUSPENSE_LIST_TYPE || enableLegacyHidden || type2 === REACT_OFFSCREEN_TYPE || enableScopeAPI || enableCacheElement || enableTransitionTracing || typeof type2 == "object" && type2 !== null && (type2.$$typeof === REACT_LAZY_TYPE || type2.$$typeof === REACT_MEMO_TYPE || type2.$$typeof === REACT_PROVIDER_TYPE || type2.$$typeof === REACT_CONTEXT_TYPE || type2.$$typeof === REACT_FORWARD_REF_TYPE || type2.$$typeof === REACT_MODULE_REFERENCE || type2.getModuleId !== void 0));
+        return !!(typeof type2 == "string" || typeof type2 == "function" || type2 === REACT_FRAGMENT_TYPE || type2 === REACT_PROFILER_TYPE || enableDebugTracing || type2 === REACT_STRICT_MODE_TYPE || type2 === REACT_SUSPENSE_TYPE || type2 === REACT_SUSPENSE_LIST_TYPE || enableLegacyHidden || type2 === REACT_OFFSCREEN_TYPE || enableScopeAPI || enableCacheElement || enableTransitionTracing || typeof type2 == "object" && type2 !== null && (type2.$$typeof === REACT_LAZY_TYPE || type2.$$typeof === REACT_MEMO_TYPE || type2.$$typeof === REACT_PROVIDER_TYPE || type2.$$typeof === REACT_CONTEXT_TYPE || type2.$$typeof === REACT_FORWARD_REF_TYPE || // This needs to include all possible module reference object
+        // types supported by any Flight configuration anywhere since
+        // we don't know which Flight build this will end up being used
+        // with.
+        type2.$$typeof === REACT_MODULE_REFERENCE || type2.getModuleId !== void 0));
       }
       function getWrappedName(outerType, innerType, wrapperName) {
         var displayName = outerType.displayName;
@@ -13704,11 +14635,14 @@ var require_react_jsx_dev_runtime_development = __commonJS({
       }
       var ReactElement = function(type2, key, ref, self2, source, owner, props) {
         var element = {
+          // This tag allows us to uniquely identify this as a React Element
           $$typeof: REACT_ELEMENT_TYPE,
+          // Built-in properties that belong on the element
           type: type2,
           key,
           ref,
           props,
+          // Record the component responsible for creating this element.
           _owner: owner
         };
         return element._store = {}, Object.defineProperty(element._store, "validated", {
@@ -13728,7 +14662,7 @@ var require_react_jsx_dev_runtime_development = __commonJS({
           value: source
         }), Object.freeze && (Object.freeze(element.props), Object.freeze(element)), element;
       };
-      function jsxDEV13(type2, config, maybeKey, source, self2) {
+      function jsxDEV16(type2, config, maybeKey, source, self2) {
         {
           var propName, props = {}, key = null, ref = null;
           maybeKey !== void 0 && (checkKeyStringCoercion(maybeKey), key = "" + maybeKey), hasValidKey(config) && (checkKeyStringCoercion(config.key), key = "" + config.key), hasValidRef(config) && (ref = config.ref, warnIfStringRefCannotBeAutoConverted(config, self2));
@@ -13835,7 +14769,9 @@ Check the top-level render call using <` + parentName + ">.");
           var propTypes;
           if (typeof type2 == "function")
             propTypes = type2.propTypes;
-          else if (typeof type2 == "object" && (type2.$$typeof === REACT_FORWARD_REF_TYPE || type2.$$typeof === REACT_MEMO_TYPE))
+          else if (typeof type2 == "object" && (type2.$$typeof === REACT_FORWARD_REF_TYPE || // Note: Memo only checks outer props here.
+          // Inner props are checked in the reconciler.
+          type2.$$typeof === REACT_MEMO_TYPE))
             propTypes = type2.propTypes;
           else
             return;
@@ -13862,6 +14798,7 @@ Check the top-level render call using <` + parentName + ">.");
           fragment.ref !== null && (setCurrentlyValidatingElement$1(fragment), error("Invalid attribute `ref` supplied to `React.Fragment`."), setCurrentlyValidatingElement$1(null));
         }
       }
+      var didWarnAboutKeySpread = {};
       function jsxWithValidation(type2, props, key, isStaticChildren, source, self2) {
         {
           var validType = isValidElementType(type2);
@@ -13873,7 +14810,7 @@ Check the top-level render call using <` + parentName + ">.");
             var typeString;
             type2 === null ? typeString = "null" : isArray(type2) ? typeString = "array" : type2 !== void 0 && type2.$$typeof === REACT_ELEMENT_TYPE ? (typeString = "<" + (getComponentNameFromType(type2.type) || "Unknown") + " />", info = " Did you accidentally export a JSX literal instead of a component?") : typeString = typeof type2, error("React.jsx: type is invalid -- expected a string (for built-in components) or a class/function (for composite components) but got: %s.%s", typeString, info);
           }
-          var element = jsxDEV13(type2, props, key, source, self2);
+          var element = jsxDEV16(type2, props, key, source, self2);
           if (element == null)
             return element;
           if (validType) {
@@ -13889,6 +14826,20 @@ Check the top-level render call using <` + parentName + ">.");
               else
                 validateChildKeys(children4, type2);
           }
+          if (hasOwnProperty.call(props, "key")) {
+            var componentName = getComponentNameFromType(type2), keys = Object.keys(props).filter(function(k) {
+              return k !== "key";
+            }), beforeExample = keys.length > 0 ? "{key: someKey, " + keys.join(": ..., ") + ": ...}" : "{key: someKey}";
+            if (!didWarnAboutKeySpread[componentName + beforeExample]) {
+              var afterExample = keys.length > 0 ? "{" + keys.join(": ..., ") + ": ...}" : "{}";
+              error(`A props object containing a "key" prop is being spread into JSX:
+  let props = %s;
+  <%s {...props} />
+React keys must be passed directly to JSX without using spread:
+  let props = %s;
+  <%s key={someKey} {...props} />`, beforeExample, componentName, afterExample, componentName), didWarnAboutKeySpread[componentName + beforeExample] = !0;
+            }
+          }
           return type2 === REACT_FRAGMENT_TYPE ? validateFragmentProps(element) : validatePropTypes(element), element;
         }
       }
@@ -13903,6 +14854,621 @@ var require_jsx_dev_runtime = __commonJS({
   "node_modules/react/jsx-dev-runtime.js"(exports, module) {
     "use strict";
     module.exports = require_react_jsx_dev_runtime_development();
+  }
+});
+
+// node_modules/react/cjs/react-jsx-runtime.development.js
+var require_react_jsx_runtime_development = __commonJS({
+  "node_modules/react/cjs/react-jsx-runtime.development.js"(exports) {
+    "use strict";
+    (function() {
+      "use strict";
+      var React20 = require_react(), REACT_ELEMENT_TYPE = Symbol.for("react.element"), REACT_PORTAL_TYPE = Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = Symbol.for("react.profiler"), REACT_PROVIDER_TYPE = Symbol.for("react.provider"), REACT_CONTEXT_TYPE = Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = Symbol.for("react.memo"), REACT_LAZY_TYPE = Symbol.for("react.lazy"), REACT_OFFSCREEN_TYPE = Symbol.for("react.offscreen"), MAYBE_ITERATOR_SYMBOL = Symbol.iterator, FAUX_ITERATOR_SYMBOL = "@@iterator";
+      function getIteratorFn(maybeIterable) {
+        if (maybeIterable === null || typeof maybeIterable != "object")
+          return null;
+        var maybeIterator = MAYBE_ITERATOR_SYMBOL && maybeIterable[MAYBE_ITERATOR_SYMBOL] || maybeIterable[FAUX_ITERATOR_SYMBOL];
+        return typeof maybeIterator == "function" ? maybeIterator : null;
+      }
+      var ReactSharedInternals = React20.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+      function error(format) {
+        {
+          for (var _len2 = arguments.length, args = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++)
+            args[_key2 - 1] = arguments[_key2];
+          printWarning("error", format, args);
+        }
+      }
+      function printWarning(level, format, args) {
+        {
+          var ReactDebugCurrentFrame2 = ReactSharedInternals.ReactDebugCurrentFrame, stack = ReactDebugCurrentFrame2.getStackAddendum();
+          stack !== "" && (format += "%s", args = args.concat([stack]));
+          var argsWithFormat = args.map(function(item) {
+            return String(item);
+          });
+          argsWithFormat.unshift("Warning: " + format), Function.prototype.apply.call(console[level], console, argsWithFormat);
+        }
+      }
+      var enableScopeAPI = !1, enableCacheElement = !1, enableTransitionTracing = !1, enableLegacyHidden = !1, enableDebugTracing = !1, REACT_MODULE_REFERENCE;
+      REACT_MODULE_REFERENCE = Symbol.for("react.module.reference");
+      function isValidElementType(type2) {
+        return !!(typeof type2 == "string" || typeof type2 == "function" || type2 === REACT_FRAGMENT_TYPE || type2 === REACT_PROFILER_TYPE || enableDebugTracing || type2 === REACT_STRICT_MODE_TYPE || type2 === REACT_SUSPENSE_TYPE || type2 === REACT_SUSPENSE_LIST_TYPE || enableLegacyHidden || type2 === REACT_OFFSCREEN_TYPE || enableScopeAPI || enableCacheElement || enableTransitionTracing || typeof type2 == "object" && type2 !== null && (type2.$$typeof === REACT_LAZY_TYPE || type2.$$typeof === REACT_MEMO_TYPE || type2.$$typeof === REACT_PROVIDER_TYPE || type2.$$typeof === REACT_CONTEXT_TYPE || type2.$$typeof === REACT_FORWARD_REF_TYPE || // This needs to include all possible module reference object
+        // types supported by any Flight configuration anywhere since
+        // we don't know which Flight build this will end up being used
+        // with.
+        type2.$$typeof === REACT_MODULE_REFERENCE || type2.getModuleId !== void 0));
+      }
+      function getWrappedName(outerType, innerType, wrapperName) {
+        var displayName = outerType.displayName;
+        if (displayName)
+          return displayName;
+        var functionName = innerType.displayName || innerType.name || "";
+        return functionName !== "" ? wrapperName + "(" + functionName + ")" : wrapperName;
+      }
+      function getContextName(type2) {
+        return type2.displayName || "Context";
+      }
+      function getComponentNameFromType(type2) {
+        if (type2 == null)
+          return null;
+        if (typeof type2.tag == "number" && error("Received an unexpected object in getComponentNameFromType(). This is likely a bug in React. Please file an issue."), typeof type2 == "function")
+          return type2.displayName || type2.name || null;
+        if (typeof type2 == "string")
+          return type2;
+        switch (type2) {
+          case REACT_FRAGMENT_TYPE:
+            return "Fragment";
+          case REACT_PORTAL_TYPE:
+            return "Portal";
+          case REACT_PROFILER_TYPE:
+            return "Profiler";
+          case REACT_STRICT_MODE_TYPE:
+            return "StrictMode";
+          case REACT_SUSPENSE_TYPE:
+            return "Suspense";
+          case REACT_SUSPENSE_LIST_TYPE:
+            return "SuspenseList";
+        }
+        if (typeof type2 == "object")
+          switch (type2.$$typeof) {
+            case REACT_CONTEXT_TYPE:
+              var context = type2;
+              return getContextName(context) + ".Consumer";
+            case REACT_PROVIDER_TYPE:
+              var provider = type2;
+              return getContextName(provider._context) + ".Provider";
+            case REACT_FORWARD_REF_TYPE:
+              return getWrappedName(type2, type2.render, "ForwardRef");
+            case REACT_MEMO_TYPE:
+              var outerName = type2.displayName || null;
+              return outerName !== null ? outerName : getComponentNameFromType(type2.type) || "Memo";
+            case REACT_LAZY_TYPE: {
+              var lazyComponent = type2, payload = lazyComponent._payload, init4 = lazyComponent._init;
+              try {
+                return getComponentNameFromType(init4(payload));
+              } catch {
+                return null;
+              }
+            }
+          }
+        return null;
+      }
+      var assign = Object.assign, disabledDepth = 0, prevLog, prevInfo, prevWarn, prevError, prevGroup, prevGroupCollapsed, prevGroupEnd;
+      function disabledLog() {
+      }
+      disabledLog.__reactDisabledLog = !0;
+      function disableLogs() {
+        {
+          if (disabledDepth === 0) {
+            prevLog = console.log, prevInfo = console.info, prevWarn = console.warn, prevError = console.error, prevGroup = console.group, prevGroupCollapsed = console.groupCollapsed, prevGroupEnd = console.groupEnd;
+            var props = {
+              configurable: !0,
+              enumerable: !0,
+              value: disabledLog,
+              writable: !0
+            };
+            Object.defineProperties(console, {
+              info: props,
+              log: props,
+              warn: props,
+              error: props,
+              group: props,
+              groupCollapsed: props,
+              groupEnd: props
+            });
+          }
+          disabledDepth++;
+        }
+      }
+      function reenableLogs() {
+        {
+          if (disabledDepth--, disabledDepth === 0) {
+            var props = {
+              configurable: !0,
+              enumerable: !0,
+              writable: !0
+            };
+            Object.defineProperties(console, {
+              log: assign({}, props, {
+                value: prevLog
+              }),
+              info: assign({}, props, {
+                value: prevInfo
+              }),
+              warn: assign({}, props, {
+                value: prevWarn
+              }),
+              error: assign({}, props, {
+                value: prevError
+              }),
+              group: assign({}, props, {
+                value: prevGroup
+              }),
+              groupCollapsed: assign({}, props, {
+                value: prevGroupCollapsed
+              }),
+              groupEnd: assign({}, props, {
+                value: prevGroupEnd
+              })
+            });
+          }
+          disabledDepth < 0 && error("disabledDepth fell below zero. This is a bug in React. Please file an issue.");
+        }
+      }
+      var ReactCurrentDispatcher = ReactSharedInternals.ReactCurrentDispatcher, prefix;
+      function describeBuiltInComponentFrame(name, source, ownerFn) {
+        {
+          if (prefix === void 0)
+            try {
+              throw Error();
+            } catch (x) {
+              var match = x.stack.trim().match(/\n( *(at )?)/);
+              prefix = match && match[1] || "";
+            }
+          return `
+` + prefix + name;
+        }
+      }
+      var reentry = !1, componentFrameCache;
+      {
+        var PossiblyWeakMap = typeof WeakMap == "function" ? WeakMap : Map;
+        componentFrameCache = new PossiblyWeakMap();
+      }
+      function describeNativeComponentFrame(fn, construct) {
+        if (!fn || reentry)
+          return "";
+        {
+          var frame4 = componentFrameCache.get(fn);
+          if (frame4 !== void 0)
+            return frame4;
+        }
+        var control;
+        reentry = !0;
+        var previousPrepareStackTrace = Error.prepareStackTrace;
+        Error.prepareStackTrace = void 0;
+        var previousDispatcher;
+        previousDispatcher = ReactCurrentDispatcher.current, ReactCurrentDispatcher.current = null, disableLogs();
+        try {
+          if (construct) {
+            var Fake = function() {
+              throw Error();
+            };
+            if (Object.defineProperty(Fake.prototype, "props", {
+              set: function() {
+                throw Error();
+              }
+            }), typeof Reflect == "object" && Reflect.construct) {
+              try {
+                Reflect.construct(Fake, []);
+              } catch (x) {
+                control = x;
+              }
+              Reflect.construct(fn, [], Fake);
+            } else {
+              try {
+                Fake.call();
+              } catch (x) {
+                control = x;
+              }
+              fn.call(Fake.prototype);
+            }
+          } else {
+            try {
+              throw Error();
+            } catch (x) {
+              control = x;
+            }
+            fn();
+          }
+        } catch (sample) {
+          if (sample && control && typeof sample.stack == "string") {
+            for (var sampleLines = sample.stack.split(`
+`), controlLines = control.stack.split(`
+`), s = sampleLines.length - 1, c = controlLines.length - 1; s >= 1 && c >= 0 && sampleLines[s] !== controlLines[c]; )
+              c--;
+            for (; s >= 1 && c >= 0; s--, c--)
+              if (sampleLines[s] !== controlLines[c]) {
+                if (s !== 1 || c !== 1)
+                  do
+                    if (s--, c--, c < 0 || sampleLines[s] !== controlLines[c]) {
+                      var _frame = `
+` + sampleLines[s].replace(" at new ", " at ");
+                      return fn.displayName && _frame.includes("<anonymous>") && (_frame = _frame.replace("<anonymous>", fn.displayName)), typeof fn == "function" && componentFrameCache.set(fn, _frame), _frame;
+                    }
+                  while (s >= 1 && c >= 0);
+                break;
+              }
+          }
+        } finally {
+          reentry = !1, ReactCurrentDispatcher.current = previousDispatcher, reenableLogs(), Error.prepareStackTrace = previousPrepareStackTrace;
+        }
+        var name = fn ? fn.displayName || fn.name : "", syntheticFrame = name ? describeBuiltInComponentFrame(name) : "";
+        return typeof fn == "function" && componentFrameCache.set(fn, syntheticFrame), syntheticFrame;
+      }
+      function describeFunctionComponentFrame(fn, source, ownerFn) {
+        return describeNativeComponentFrame(fn, !1);
+      }
+      function shouldConstruct(Component3) {
+        var prototype = Component3.prototype;
+        return !!(prototype && prototype.isReactComponent);
+      }
+      function describeUnknownElementTypeFrameInDEV(type2, source, ownerFn) {
+        if (type2 == null)
+          return "";
+        if (typeof type2 == "function")
+          return describeNativeComponentFrame(type2, shouldConstruct(type2));
+        if (typeof type2 == "string")
+          return describeBuiltInComponentFrame(type2);
+        switch (type2) {
+          case REACT_SUSPENSE_TYPE:
+            return describeBuiltInComponentFrame("Suspense");
+          case REACT_SUSPENSE_LIST_TYPE:
+            return describeBuiltInComponentFrame("SuspenseList");
+        }
+        if (typeof type2 == "object")
+          switch (type2.$$typeof) {
+            case REACT_FORWARD_REF_TYPE:
+              return describeFunctionComponentFrame(type2.render);
+            case REACT_MEMO_TYPE:
+              return describeUnknownElementTypeFrameInDEV(type2.type, source, ownerFn);
+            case REACT_LAZY_TYPE: {
+              var lazyComponent = type2, payload = lazyComponent._payload, init4 = lazyComponent._init;
+              try {
+                return describeUnknownElementTypeFrameInDEV(init4(payload), source, ownerFn);
+              } catch {
+              }
+            }
+          }
+        return "";
+      }
+      var hasOwnProperty = Object.prototype.hasOwnProperty, loggedTypeFailures = {}, ReactDebugCurrentFrame = ReactSharedInternals.ReactDebugCurrentFrame;
+      function setCurrentlyValidatingElement(element) {
+        if (element) {
+          var owner = element._owner, stack = describeUnknownElementTypeFrameInDEV(element.type, element._source, owner ? owner.type : null);
+          ReactDebugCurrentFrame.setExtraStackFrame(stack);
+        } else
+          ReactDebugCurrentFrame.setExtraStackFrame(null);
+      }
+      function checkPropTypes(typeSpecs, values, location, componentName, element) {
+        {
+          var has = Function.call.bind(hasOwnProperty);
+          for (var typeSpecName in typeSpecs)
+            if (has(typeSpecs, typeSpecName)) {
+              var error$1 = void 0;
+              try {
+                if (typeof typeSpecs[typeSpecName] != "function") {
+                  var err = Error((componentName || "React class") + ": " + location + " type `" + typeSpecName + "` is invalid; it must be a function, usually from the `prop-types` package, but received `" + typeof typeSpecs[typeSpecName] + "`.This often happens because of typos such as `PropTypes.function` instead of `PropTypes.func`.");
+                  throw err.name = "Invariant Violation", err;
+                }
+                error$1 = typeSpecs[typeSpecName](values, typeSpecName, componentName, location, null, "SECRET_DO_NOT_PASS_THIS_OR_YOU_WILL_BE_FIRED");
+              } catch (ex) {
+                error$1 = ex;
+              }
+              error$1 && !(error$1 instanceof Error) && (setCurrentlyValidatingElement(element), error("%s: type specification of %s `%s` is invalid; the type checker function must return `null` or an `Error` but returned a %s. You may have forgotten to pass an argument to the type checker creator (arrayOf, instanceOf, objectOf, oneOf, oneOfType, and shape all require an argument).", componentName || "React class", location, typeSpecName, typeof error$1), setCurrentlyValidatingElement(null)), error$1 instanceof Error && !(error$1.message in loggedTypeFailures) && (loggedTypeFailures[error$1.message] = !0, setCurrentlyValidatingElement(element), error("Failed %s type: %s", location, error$1.message), setCurrentlyValidatingElement(null));
+            }
+        }
+      }
+      var isArrayImpl = Array.isArray;
+      function isArray(a) {
+        return isArrayImpl(a);
+      }
+      function typeName(value) {
+        {
+          var hasToStringTag = typeof Symbol == "function" && Symbol.toStringTag, type2 = hasToStringTag && value[Symbol.toStringTag] || value.constructor.name || "Object";
+          return type2;
+        }
+      }
+      function willCoercionThrow(value) {
+        try {
+          return testStringCoercion(value), !1;
+        } catch {
+          return !0;
+        }
+      }
+      function testStringCoercion(value) {
+        return "" + value;
+      }
+      function checkKeyStringCoercion(value) {
+        if (willCoercionThrow(value))
+          return error("The provided key is an unsupported type %s. This value must be coerced to a string before before using it here.", typeName(value)), testStringCoercion(value);
+      }
+      var ReactCurrentOwner = ReactSharedInternals.ReactCurrentOwner, RESERVED_PROPS = {
+        key: !0,
+        ref: !0,
+        __self: !0,
+        __source: !0
+      }, specialPropKeyWarningShown, specialPropRefWarningShown, didWarnAboutStringRefs;
+      didWarnAboutStringRefs = {};
+      function hasValidRef(config) {
+        if (hasOwnProperty.call(config, "ref")) {
+          var getter = Object.getOwnPropertyDescriptor(config, "ref").get;
+          if (getter && getter.isReactWarning)
+            return !1;
+        }
+        return config.ref !== void 0;
+      }
+      function hasValidKey(config) {
+        if (hasOwnProperty.call(config, "key")) {
+          var getter = Object.getOwnPropertyDescriptor(config, "key").get;
+          if (getter && getter.isReactWarning)
+            return !1;
+        }
+        return config.key !== void 0;
+      }
+      function warnIfStringRefCannotBeAutoConverted(config, self2) {
+        if (typeof config.ref == "string" && ReactCurrentOwner.current && self2 && ReactCurrentOwner.current.stateNode !== self2) {
+          var componentName = getComponentNameFromType(ReactCurrentOwner.current.type);
+          didWarnAboutStringRefs[componentName] || (error('Component "%s" contains the string ref "%s". Support for string refs will be removed in a future major release. This case cannot be automatically converted to an arrow function. We ask you to manually fix this case by using useRef() or createRef() instead. Learn more about using refs safely here: https://reactjs.org/link/strict-mode-string-ref', getComponentNameFromType(ReactCurrentOwner.current.type), config.ref), didWarnAboutStringRefs[componentName] = !0);
+        }
+      }
+      function defineKeyPropWarningGetter(props, displayName) {
+        {
+          var warnAboutAccessingKey = function() {
+            specialPropKeyWarningShown || (specialPropKeyWarningShown = !0, error("%s: `key` is not a prop. Trying to access it will result in `undefined` being returned. If you need to access the same value within the child component, you should pass it as a different prop. (https://reactjs.org/link/special-props)", displayName));
+          };
+          warnAboutAccessingKey.isReactWarning = !0, Object.defineProperty(props, "key", {
+            get: warnAboutAccessingKey,
+            configurable: !0
+          });
+        }
+      }
+      function defineRefPropWarningGetter(props, displayName) {
+        {
+          var warnAboutAccessingRef = function() {
+            specialPropRefWarningShown || (specialPropRefWarningShown = !0, error("%s: `ref` is not a prop. Trying to access it will result in `undefined` being returned. If you need to access the same value within the child component, you should pass it as a different prop. (https://reactjs.org/link/special-props)", displayName));
+          };
+          warnAboutAccessingRef.isReactWarning = !0, Object.defineProperty(props, "ref", {
+            get: warnAboutAccessingRef,
+            configurable: !0
+          });
+        }
+      }
+      var ReactElement = function(type2, key, ref, self2, source, owner, props) {
+        var element = {
+          // This tag allows us to uniquely identify this as a React Element
+          $$typeof: REACT_ELEMENT_TYPE,
+          // Built-in properties that belong on the element
+          type: type2,
+          key,
+          ref,
+          props,
+          // Record the component responsible for creating this element.
+          _owner: owner
+        };
+        return element._store = {}, Object.defineProperty(element._store, "validated", {
+          configurable: !1,
+          enumerable: !1,
+          writable: !0,
+          value: !1
+        }), Object.defineProperty(element, "_self", {
+          configurable: !1,
+          enumerable: !1,
+          writable: !1,
+          value: self2
+        }), Object.defineProperty(element, "_source", {
+          configurable: !1,
+          enumerable: !1,
+          writable: !1,
+          value: source
+        }), Object.freeze && (Object.freeze(element.props), Object.freeze(element)), element;
+      };
+      function jsxDEV16(type2, config, maybeKey, source, self2) {
+        {
+          var propName, props = {}, key = null, ref = null;
+          maybeKey !== void 0 && (checkKeyStringCoercion(maybeKey), key = "" + maybeKey), hasValidKey(config) && (checkKeyStringCoercion(config.key), key = "" + config.key), hasValidRef(config) && (ref = config.ref, warnIfStringRefCannotBeAutoConverted(config, self2));
+          for (propName in config)
+            hasOwnProperty.call(config, propName) && !RESERVED_PROPS.hasOwnProperty(propName) && (props[propName] = config[propName]);
+          if (type2 && type2.defaultProps) {
+            var defaultProps = type2.defaultProps;
+            for (propName in defaultProps)
+              props[propName] === void 0 && (props[propName] = defaultProps[propName]);
+          }
+          if (key || ref) {
+            var displayName = typeof type2 == "function" ? type2.displayName || type2.name || "Unknown" : type2;
+            key && defineKeyPropWarningGetter(props, displayName), ref && defineRefPropWarningGetter(props, displayName);
+          }
+          return ReactElement(type2, key, ref, self2, source, ReactCurrentOwner.current, props);
+        }
+      }
+      var ReactCurrentOwner$1 = ReactSharedInternals.ReactCurrentOwner, ReactDebugCurrentFrame$1 = ReactSharedInternals.ReactDebugCurrentFrame;
+      function setCurrentlyValidatingElement$1(element) {
+        if (element) {
+          var owner = element._owner, stack = describeUnknownElementTypeFrameInDEV(element.type, element._source, owner ? owner.type : null);
+          ReactDebugCurrentFrame$1.setExtraStackFrame(stack);
+        } else
+          ReactDebugCurrentFrame$1.setExtraStackFrame(null);
+      }
+      var propTypesMisspellWarningShown;
+      propTypesMisspellWarningShown = !1;
+      function isValidElement3(object3) {
+        return typeof object3 == "object" && object3 !== null && object3.$$typeof === REACT_ELEMENT_TYPE;
+      }
+      function getDeclarationErrorAddendum() {
+        {
+          if (ReactCurrentOwner$1.current) {
+            var name = getComponentNameFromType(ReactCurrentOwner$1.current.type);
+            if (name)
+              return `
+
+Check the render method of \`` + name + "`.";
+          }
+          return "";
+        }
+      }
+      function getSourceInfoErrorAddendum(source) {
+        {
+          if (source !== void 0) {
+            var fileName = source.fileName.replace(/^.*[\\\/]/, ""), lineNumber = source.lineNumber;
+            return `
+
+Check your code at ` + fileName + ":" + lineNumber + ".";
+          }
+          return "";
+        }
+      }
+      var ownerHasKeyUseWarning = {};
+      function getCurrentComponentErrorInfo(parentType) {
+        {
+          var info = getDeclarationErrorAddendum();
+          if (!info) {
+            var parentName = typeof parentType == "string" ? parentType : parentType.displayName || parentType.name;
+            parentName && (info = `
+
+Check the top-level render call using <` + parentName + ">.");
+          }
+          return info;
+        }
+      }
+      function validateExplicitKey(element, parentType) {
+        {
+          if (!element._store || element._store.validated || element.key != null)
+            return;
+          element._store.validated = !0;
+          var currentComponentErrorInfo = getCurrentComponentErrorInfo(parentType);
+          if (ownerHasKeyUseWarning[currentComponentErrorInfo])
+            return;
+          ownerHasKeyUseWarning[currentComponentErrorInfo] = !0;
+          var childOwner = "";
+          element && element._owner && element._owner !== ReactCurrentOwner$1.current && (childOwner = " It was passed a child from " + getComponentNameFromType(element._owner.type) + "."), setCurrentlyValidatingElement$1(element), error('Each child in a list should have a unique "key" prop.%s%s See https://reactjs.org/link/warning-keys for more information.', currentComponentErrorInfo, childOwner), setCurrentlyValidatingElement$1(null);
+        }
+      }
+      function validateChildKeys(node, parentType) {
+        {
+          if (typeof node != "object")
+            return;
+          if (isArray(node))
+            for (var i = 0; i < node.length; i++) {
+              var child = node[i];
+              isValidElement3(child) && validateExplicitKey(child, parentType);
+            }
+          else if (isValidElement3(node))
+            node._store && (node._store.validated = !0);
+          else if (node) {
+            var iteratorFn = getIteratorFn(node);
+            if (typeof iteratorFn == "function" && iteratorFn !== node.entries)
+              for (var iterator = iteratorFn.call(node), step; !(step = iterator.next()).done; )
+                isValidElement3(step.value) && validateExplicitKey(step.value, parentType);
+          }
+        }
+      }
+      function validatePropTypes(element) {
+        {
+          var type2 = element.type;
+          if (type2 == null || typeof type2 == "string")
+            return;
+          var propTypes;
+          if (typeof type2 == "function")
+            propTypes = type2.propTypes;
+          else if (typeof type2 == "object" && (type2.$$typeof === REACT_FORWARD_REF_TYPE || // Note: Memo only checks outer props here.
+          // Inner props are checked in the reconciler.
+          type2.$$typeof === REACT_MEMO_TYPE))
+            propTypes = type2.propTypes;
+          else
+            return;
+          if (propTypes) {
+            var name = getComponentNameFromType(type2);
+            checkPropTypes(propTypes, element.props, "prop", name, element);
+          } else if (type2.PropTypes !== void 0 && !propTypesMisspellWarningShown) {
+            propTypesMisspellWarningShown = !0;
+            var _name = getComponentNameFromType(type2);
+            error("Component %s declared `PropTypes` instead of `propTypes`. Did you misspell the property assignment?", _name || "Unknown");
+          }
+          typeof type2.getDefaultProps == "function" && !type2.getDefaultProps.isReactClassApproved && error("getDefaultProps is only used on classic React.createClass definitions. Use a static property named `defaultProps` instead.");
+        }
+      }
+      function validateFragmentProps(fragment) {
+        {
+          for (var keys = Object.keys(fragment.props), i = 0; i < keys.length; i++) {
+            var key = keys[i];
+            if (key !== "children" && key !== "key") {
+              setCurrentlyValidatingElement$1(fragment), error("Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.", key), setCurrentlyValidatingElement$1(null);
+              break;
+            }
+          }
+          fragment.ref !== null && (setCurrentlyValidatingElement$1(fragment), error("Invalid attribute `ref` supplied to `React.Fragment`."), setCurrentlyValidatingElement$1(null));
+        }
+      }
+      var didWarnAboutKeySpread = {};
+      function jsxWithValidation(type2, props, key, isStaticChildren, source, self2) {
+        {
+          var validType = isValidElementType(type2);
+          if (!validType) {
+            var info = "";
+            (type2 === void 0 || typeof type2 == "object" && type2 !== null && Object.keys(type2).length === 0) && (info += " You likely forgot to export your component from the file it's defined in, or you might have mixed up default and named imports.");
+            var sourceInfo = getSourceInfoErrorAddendum(source);
+            sourceInfo ? info += sourceInfo : info += getDeclarationErrorAddendum();
+            var typeString;
+            type2 === null ? typeString = "null" : isArray(type2) ? typeString = "array" : type2 !== void 0 && type2.$$typeof === REACT_ELEMENT_TYPE ? (typeString = "<" + (getComponentNameFromType(type2.type) || "Unknown") + " />", info = " Did you accidentally export a JSX literal instead of a component?") : typeString = typeof type2, error("React.jsx: type is invalid -- expected a string (for built-in components) or a class/function (for composite components) but got: %s.%s", typeString, info);
+          }
+          var element = jsxDEV16(type2, props, key, source, self2);
+          if (element == null)
+            return element;
+          if (validType) {
+            var children4 = props.children;
+            if (children4 !== void 0)
+              if (isStaticChildren)
+                if (isArray(children4)) {
+                  for (var i = 0; i < children4.length; i++)
+                    validateChildKeys(children4[i], type2);
+                  Object.freeze && Object.freeze(children4);
+                } else
+                  error("React.jsx: Static children should always be an array. You are likely explicitly calling React.jsxs or React.jsxDEV. Use the Babel transform instead.");
+              else
+                validateChildKeys(children4, type2);
+          }
+          if (hasOwnProperty.call(props, "key")) {
+            var componentName = getComponentNameFromType(type2), keys = Object.keys(props).filter(function(k) {
+              return k !== "key";
+            }), beforeExample = keys.length > 0 ? "{key: someKey, " + keys.join(": ..., ") + ": ...}" : "{key: someKey}";
+            if (!didWarnAboutKeySpread[componentName + beforeExample]) {
+              var afterExample = keys.length > 0 ? "{" + keys.join(": ..., ") + ": ...}" : "{}";
+              error(`A props object containing a "key" prop is being spread into JSX:
+  let props = %s;
+  <%s {...props} />
+React keys must be passed directly to JSX without using spread:
+  let props = %s;
+  <%s key={someKey} {...props} />`, beforeExample, componentName, afterExample, componentName), didWarnAboutKeySpread[componentName + beforeExample] = !0;
+            }
+          }
+          return type2 === REACT_FRAGMENT_TYPE ? validateFragmentProps(element) : validatePropTypes(element), element;
+        }
+      }
+      function jsxWithValidationStatic(type2, props, key) {
+        return jsxWithValidation(type2, props, key, !0);
+      }
+      function jsxWithValidationDynamic(type2, props, key) {
+        return jsxWithValidation(type2, props, key, !1);
+      }
+      var jsx3 = jsxWithValidationDynamic, jsxs = jsxWithValidationStatic;
+      exports.Fragment = REACT_FRAGMENT_TYPE, exports.jsx = jsx3, exports.jsxs = jsxs;
+    })();
+  }
+});
+
+// node_modules/react/jsx-runtime.js
+var require_jsx_runtime = __commonJS({
+  "node_modules/react/jsx-runtime.js"(exports, module) {
+    "use strict";
+    module.exports = require_react_jsx_runtime_development();
   }
 });
 
@@ -13931,6 +15497,7 @@ var reactPropsRegex, index, is_prop_valid_esm_default, init_is_prop_valid_esm = 
       function(prop) {
         return reactPropsRegex.test(prop) || prop.charCodeAt(0) === 111 && prop.charCodeAt(1) === 110 && prop.charCodeAt(2) < 91;
       }
+      /* Z+1 */
     ), is_prop_valid_esm_default = index;
   }
 });
@@ -13943,7 +15510,8 @@ var require_react_is_development = __commonJS({
       "use strict";
       var hasSymbol = typeof Symbol == "function" && Symbol.for, REACT_ELEMENT_TYPE = hasSymbol ? Symbol.for("react.element") : 60103, REACT_PORTAL_TYPE = hasSymbol ? Symbol.for("react.portal") : 60106, REACT_FRAGMENT_TYPE = hasSymbol ? Symbol.for("react.fragment") : 60107, REACT_STRICT_MODE_TYPE = hasSymbol ? Symbol.for("react.strict_mode") : 60108, REACT_PROFILER_TYPE = hasSymbol ? Symbol.for("react.profiler") : 60114, REACT_PROVIDER_TYPE = hasSymbol ? Symbol.for("react.provider") : 60109, REACT_CONTEXT_TYPE = hasSymbol ? Symbol.for("react.context") : 60110, REACT_ASYNC_MODE_TYPE = hasSymbol ? Symbol.for("react.async_mode") : 60111, REACT_CONCURRENT_MODE_TYPE = hasSymbol ? Symbol.for("react.concurrent_mode") : 60111, REACT_FORWARD_REF_TYPE = hasSymbol ? Symbol.for("react.forward_ref") : 60112, REACT_SUSPENSE_TYPE = hasSymbol ? Symbol.for("react.suspense") : 60113, REACT_SUSPENSE_LIST_TYPE = hasSymbol ? Symbol.for("react.suspense_list") : 60120, REACT_MEMO_TYPE = hasSymbol ? Symbol.for("react.memo") : 60115, REACT_LAZY_TYPE = hasSymbol ? Symbol.for("react.lazy") : 60116, REACT_BLOCK_TYPE = hasSymbol ? Symbol.for("react.block") : 60121, REACT_FUNDAMENTAL_TYPE = hasSymbol ? Symbol.for("react.fundamental") : 60117, REACT_RESPONDER_TYPE = hasSymbol ? Symbol.for("react.responder") : 60118, REACT_SCOPE_TYPE = hasSymbol ? Symbol.for("react.scope") : 60119;
       function isValidElementType(type2) {
-        return typeof type2 == "string" || typeof type2 == "function" || type2 === REACT_FRAGMENT_TYPE || type2 === REACT_CONCURRENT_MODE_TYPE || type2 === REACT_PROFILER_TYPE || type2 === REACT_STRICT_MODE_TYPE || type2 === REACT_SUSPENSE_TYPE || type2 === REACT_SUSPENSE_LIST_TYPE || typeof type2 == "object" && type2 !== null && (type2.$$typeof === REACT_LAZY_TYPE || type2.$$typeof === REACT_MEMO_TYPE || type2.$$typeof === REACT_PROVIDER_TYPE || type2.$$typeof === REACT_CONTEXT_TYPE || type2.$$typeof === REACT_FORWARD_REF_TYPE || type2.$$typeof === REACT_FUNDAMENTAL_TYPE || type2.$$typeof === REACT_RESPONDER_TYPE || type2.$$typeof === REACT_SCOPE_TYPE || type2.$$typeof === REACT_BLOCK_TYPE);
+        return typeof type2 == "string" || typeof type2 == "function" || // Note: its typeof might be other than 'symbol' or 'number' if it's a polyfill.
+        type2 === REACT_FRAGMENT_TYPE || type2 === REACT_CONCURRENT_MODE_TYPE || type2 === REACT_PROFILER_TYPE || type2 === REACT_STRICT_MODE_TYPE || type2 === REACT_SUSPENSE_TYPE || type2 === REACT_SUSPENSE_LIST_TYPE || typeof type2 == "object" && type2 !== null && (type2.$$typeof === REACT_LAZY_TYPE || type2.$$typeof === REACT_MEMO_TYPE || type2.$$typeof === REACT_PROVIDER_TYPE || type2.$$typeof === REACT_CONTEXT_TYPE || type2.$$typeof === REACT_FORWARD_REF_TYPE || type2.$$typeof === REACT_FUNDAMENTAL_TYPE || type2.$$typeof === REACT_RESPONDER_TYPE || type2.$$typeof === REACT_SCOPE_TYPE || type2.$$typeof === REACT_BLOCK_TYPE);
       }
       function typeOf(object3) {
         if (typeof object3 == "object" && object3 !== null) {
@@ -14187,7 +15755,7 @@ var require_factoryWithTypeCheckers = __commonJS({
         shape: createShapeTypeChecker,
         exact: createStrictShapeTypeChecker
       };
-      function is2(x, y) {
+      function is(x, y) {
         return x === y ? x !== 0 || 1 / x === 1 / y : x !== x && y !== y;
       }
       function PropTypeError(message, data) {
@@ -14205,7 +15773,8 @@ var require_factoryWithTypeCheckers = __commonJS({
               throw err.name = "Invariant Violation", err;
             } else if (typeof console < "u") {
               var cacheKey = componentName + ":" + propName;
-              !manualPropTypeCallCache[cacheKey] && manualPropTypeWarningCount < 3 && (printWarning(
+              !manualPropTypeCallCache[cacheKey] && // Avoid spamming the console because they are often not actionable except for lib authors
+              manualPropTypeWarningCount < 3 && (printWarning(
                 "You are manually calling a React.PropTypes validation function for the `" + propFullName + "` prop on `" + componentName + "`. This is deprecated and will throw in the standalone `prop-types` package. You may be seeing this warning due to a third-party PropTypes library. See https://fb.me/react-warning-dont-call-proptypes for details."
               ), manualPropTypeCallCache[cacheKey] = !0, manualPropTypeWarningCount++);
             }
@@ -14289,7 +15858,7 @@ var require_factoryWithTypeCheckers = __commonJS({
           ) : printWarning("Invalid argument supplied to oneOf, expected an array."), emptyFunctionThatReturnsNull;
         function validate(props, propName, componentName, location, propFullName) {
           for (var propValue = props[propName], i = 0; i < expectedValues.length; i++)
-            if (is2(propValue, expectedValues[i]))
+            if (is(propValue, expectedValues[i]))
               return null;
           var valuesString = JSON.stringify(expectedValues, function(key, value) {
             var type2 = getPreciseType(value);
@@ -14552,7 +16121,7 @@ var epsilon, epsilon2, pi, halfPi, quarterPi, tau, degrees2, radians, abs, atan,
 });
 
 // node_modules/d3-geo/src/noop.js
-function noop2() {
+function noop4() {
 }
 var init_noop = __esm({
   "node_modules/d3-geo/src/noop.js"() {
@@ -14646,15 +16215,15 @@ var areaRingSum, areaSum, lambda00, phi00, lambda0, cosPhi0, sinPhi0, areaStream
     init_noop();
     init_stream();
     areaRingSum = new Adder(), areaSum = new Adder(), areaStream = {
-      point: noop2,
-      lineStart: noop2,
-      lineEnd: noop2,
+      point: noop4,
+      lineStart: noop4,
+      lineEnd: noop4,
       polygonStart: function() {
         areaRingSum = new Adder(), areaStream.lineStart = areaRingStart, areaStream.lineEnd = areaRingEnd;
       },
       polygonEnd: function() {
         var areaRing = +areaRingSum;
-        areaSum.add(areaRing < 0 ? tau + areaRing : areaRing), this.lineStart = this.lineEnd = this.point = noop2;
+        areaSum.add(areaRing < 0 ? tau + areaRing : areaRing), this.lineStart = this.lineEnd = this.point = noop4;
       },
       sphere: function() {
         areaSum.add(tau);
@@ -14824,7 +16393,7 @@ var W0, W1, X0, Y0, Z0, X1, Y1, Z1, X2, Y2, Z2, lambda003, phi003, x0, y0, z0, c
     init_noop();
     init_stream();
     centroidStream = {
-      sphere: noop2,
+      sphere: noop4,
       point: centroidPoint,
       lineStart: centroidLineStart,
       lineEnd: centroidLineEnd,
@@ -14915,7 +16484,7 @@ var init_rotation = __esm({
 
 // node_modules/d3-geo/src/circle.js
 function circleStream(stream, radius, delta, direction, t0, t1) {
-  if (!!delta) {
+  if (delta) {
     var cosRadius = cos(radius), sinRadius = sin(radius), step = direction * delta;
     t0 == null ? (t0 = radius + direction * tau, t1 = radius - step / 2) : (t0 = circleRadius(cosRadius, t0), t1 = circleRadius(cosRadius, t1), (direction > 0 ? t0 < t1 : t0 > t1) && (t0 += direction * tau));
     for (var point, t = t0; direction > 0 ? t > t1 : t < t1; t -= step)
@@ -14963,7 +16532,7 @@ function buffer_default() {
     lineStart: function() {
       lines.push(line = []);
     },
-    lineEnd: noop2,
+    lineEnd: noop4,
     rejoin: function() {
       lines.length > 1 && lines.push(lines.pop().concat(lines.shift()));
     },
@@ -15040,7 +16609,7 @@ function rejoin_default(segments, compareIntersection2, startInside, interpolate
   }
 }
 function link(array3) {
-  if (!!(n = array3.length)) {
+  if (n = array3.length) {
     for (var n, i = 0, a = array3[0], b; ++i < n; )
       a.n = b = array3[i], b.p = a, a = b;
     a.n = b = array3[0], b.p = a;
@@ -15061,7 +16630,7 @@ function polygonContains_default(polygon, point) {
   var lambda = longitude(point), phi = point[1], sinPhi = sin(phi), normal = [sin(lambda), -cos(lambda), 0], angle2 = 0, winding = 0, sum = new Adder();
   sinPhi === 1 ? phi = halfPi + epsilon : sinPhi === -1 && (phi = -halfPi - epsilon);
   for (var i = 0, n = polygon.length; i < n; ++i)
-    if (!!(m = (ring = polygon[i]).length))
+    if (m = (ring = polygon[i]).length)
       for (var ring, m, point0 = ring[m - 1], lambda04 = longitude(point0), phi02 = point0[1] / 2 + quarterPi, sinPhi03 = sin(phi02), cosPhi03 = cos(phi02), j = 0; j < m; ++j, lambda04 = lambda12, sinPhi03 = sinPhi1, cosPhi03 = cosPhi1, point0 = point1) {
         var point1 = ring[j], lambda12 = longitude(point1), phi12 = point1[1] / 2 + quarterPi, sinPhi1 = sin(phi12), cosPhi1 = cos(phi12), delta = lambda12 - lambda04, sign2 = delta >= 0 ? 1 : -1, absDelta = sign2 * delta, antimeridian = absDelta > pi, k = sinPhi03 * sinPhi1;
         if (sum.add(atan2(k * sign2 * sin(absDelta), cosPhi03 * cosPhi1 + k * cos(absDelta))), angle2 += antimeridian ? delta + sign2 * tau : delta, antimeridian ^ lambda04 >= lambda ^ lambda12 >= lambda) {
@@ -15230,6 +16799,8 @@ function circle_default2(radius) {
       lineEnd: function() {
         v0 && stream.lineEnd(), point0 = null;
       },
+      // Rejoin first and last segments if there were intersections and the first
+      // and last points were visible.
       clean: function() {
         return clean | (v00 && v0) << 1;
       }
@@ -15428,7 +16999,7 @@ function lengthLineStart() {
   lengthStream.point = lengthPointFirst, lengthStream.lineEnd = lengthLineEnd;
 }
 function lengthLineEnd() {
-  lengthStream.point = lengthStream.lineEnd = noop2;
+  lengthStream.point = lengthStream.lineEnd = noop4;
 }
 function lengthPointFirst(lambda, phi) {
   lambda *= radians, phi *= radians, lambda03 = lambda, sinPhi02 = sin(phi), cosPhi02 = cos(phi), lengthStream.point = lengthPoint;
@@ -15448,12 +17019,12 @@ var lengthSum, lambda03, sinPhi02, cosPhi02, lengthStream, init_length = __esm({
     init_noop();
     init_stream();
     lengthStream = {
-      sphere: noop2,
-      point: noop2,
+      sphere: noop4,
+      point: noop4,
       lineStart: lengthLineStart,
-      lineEnd: noop2,
-      polygonStart: noop2,
-      polygonEnd: noop2
+      lineEnd: noop4,
+      polygonStart: noop4,
+      polygonEnd: noop4
     };
   }
 });
@@ -15667,14 +17238,14 @@ var areaSum2, areaRingSum2, x00, y00, x02, y02, areaStream2, area_default2, init
     init_math();
     init_noop();
     areaSum2 = new Adder(), areaRingSum2 = new Adder(), areaStream2 = {
-      point: noop2,
-      lineStart: noop2,
-      lineEnd: noop2,
+      point: noop4,
+      lineStart: noop4,
+      lineEnd: noop4,
       polygonStart: function() {
         areaStream2.lineStart = areaRingStart2, areaStream2.lineEnd = areaRingEnd2;
       },
       polygonEnd: function() {
-        areaStream2.lineStart = areaStream2.lineEnd = areaStream2.point = noop2, areaSum2.add(abs(areaRingSum2)), areaRingSum2 = new Adder();
+        areaStream2.lineStart = areaStream2.lineEnd = areaStream2.point = noop4, areaSum2.add(abs(areaRingSum2)), areaRingSum2 = new Adder();
       },
       result: function() {
         var area = areaSum2 / 2;
@@ -15694,10 +17265,10 @@ var x03, y03, x1, y1, boundsStream2, bounds_default2, init_bounds2 = __esm({
     init_noop();
     x03 = 1 / 0, y03 = x03, x1 = -x03, y1 = x1, boundsStream2 = {
       point: boundsPoint2,
-      lineStart: noop2,
-      lineEnd: noop2,
-      polygonStart: noop2,
-      polygonEnd: noop2,
+      lineStart: noop4,
+      lineEnd: noop4,
+      polygonStart: noop4,
+      polygonEnd: noop4,
       result: function() {
         var bounds = [[x03, y03], [x1, y1]];
         return x1 = y1 = -(y03 = x03 = 1 / 0), bounds;
@@ -15800,7 +17371,7 @@ var init_context = __esm({
           }
         }
       },
-      result: noop2
+      result: noop4
     };
   }
 });
@@ -15818,12 +17389,12 @@ var lengthSum2, lengthRing, x003, y003, x05, y05, lengthStream2, measure_default
     init_math();
     init_noop();
     lengthSum2 = new Adder(), lengthStream2 = {
-      point: noop2,
+      point: noop4,
       lineStart: function() {
         lengthStream2.point = lengthPointFirst2;
       },
       lineEnd: function() {
-        lengthRing && lengthPoint2(x003, y003), lengthStream2.point = noop2;
+        lengthRing && lengthPoint2(x003, y003), lengthStream2.point = noop4;
       },
       polygonStart: function() {
         lengthRing = !0;
@@ -17278,14 +18849,14 @@ function get(type2, name) {
 function set(type2, name, callback) {
   for (var i = 0, n = type2.length; i < n; ++i)
     if (type2[i].name === name) {
-      type2[i] = noop3, type2 = type2.slice(0, i).concat(type2.slice(i + 1));
+      type2[i] = noop5, type2 = type2.slice(0, i).concat(type2.slice(i + 1));
       break;
     }
   return callback != null && type2.push({ name, value: callback }), type2;
 }
-var noop3, dispatch_default, init_dispatch = __esm({
+var noop5, dispatch_default, init_dispatch = __esm({
   "node_modules/d3-dispatch/src/dispatch.js"() {
-    noop3 = { value: () => {
+    noop5 = { value: () => {
     } };
     Dispatch.prototype = dispatch.prototype = {
       constructor: Dispatch,
@@ -18087,7 +19658,7 @@ function parseTypenames2(typenames) {
 function onRemove(typename) {
   return function() {
     var on = this.__on;
-    if (!!on) {
+    if (on) {
       for (var j = 0, i = -1, m = on.length, o; j < m; ++j)
         o = on[j], (!typename.type || o.type === typename.type) && o.name === typename.name ? this.removeEventListener(o.type, o.listener, o.options) : on[++i] = o;
       ++i ? on.length = i : delete this.__on;
@@ -18432,7 +20003,261 @@ var init_src7 = __esm({
   }
 });
 
-// node_modules/d3-color/src/define.js
+// node_modules/d3-zoom/node_modules/d3-interpolate/src/zoom.js
+function cosh(x) {
+  return ((x = Math.exp(x)) + 1 / x) / 2;
+}
+function sinh(x) {
+  return ((x = Math.exp(x)) - 1 / x) / 2;
+}
+function tanh(x) {
+  return ((x = Math.exp(2 * x)) - 1) / (x + 1);
+}
+var epsilon22, zoom_default, init_zoom = __esm({
+  "node_modules/d3-zoom/node_modules/d3-interpolate/src/zoom.js"() {
+    epsilon22 = 1e-12;
+    zoom_default = function zoomRho(rho, rho2, rho4) {
+      function zoom(p02, p1) {
+        var ux0 = p02[0], uy0 = p02[1], w0 = p02[2], ux1 = p1[0], uy1 = p1[1], w1 = p1[2], dx = ux1 - ux0, dy = uy1 - uy0, d2 = dx * dx + dy * dy, i, S;
+        if (d2 < epsilon22)
+          S = Math.log(w1 / w0) / rho, i = function(t) {
+            return [
+              ux0 + t * dx,
+              uy0 + t * dy,
+              w0 * Math.exp(rho * t * S)
+            ];
+          };
+        else {
+          var d1 = Math.sqrt(d2), b0 = (w1 * w1 - w0 * w0 + rho4 * d2) / (2 * w0 * rho2 * d1), b1 = (w1 * w1 - w0 * w0 - rho4 * d2) / (2 * w1 * rho2 * d1), r0 = Math.log(Math.sqrt(b0 * b0 + 1) - b0), r1 = Math.log(Math.sqrt(b1 * b1 + 1) - b1);
+          S = (r1 - r0) / rho, i = function(t) {
+            var s = t * S, coshr0 = cosh(r0), u = w0 / (rho2 * d1) * (coshr0 * tanh(rho * s + r0) - sinh(r0));
+            return [
+              ux0 + u * dx,
+              uy0 + u * dy,
+              w0 * coshr0 / cosh(rho * s + r0)
+            ];
+          };
+        }
+        return i.duration = S * 1e3 * rho / Math.SQRT2, i;
+      }
+      return zoom.rho = function(_) {
+        var _1 = Math.max(1e-3, +_), _2 = _1 * _1, _4 = _2 * _2;
+        return zoomRho(_1, _2, _4);
+      }, zoom;
+    }(Math.SQRT2, 2, 4);
+  }
+});
+
+// node_modules/d3-zoom/node_modules/d3-interpolate/src/index.js
+var init_src8 = __esm({
+  "node_modules/d3-zoom/node_modules/d3-interpolate/src/index.js"() {
+    init_zoom();
+  }
+});
+
+// node_modules/d3-timer/src/timer.js
+function now() {
+  return clockNow || (setFrame(clearNow), clockNow = clock.now() + clockSkew);
+}
+function clearNow() {
+  clockNow = 0;
+}
+function Timer() {
+  this._call = this._time = this._next = null;
+}
+function timer(callback, delay2, time) {
+  var t = new Timer();
+  return t.restart(callback, delay2, time), t;
+}
+function timerFlush() {
+  now(), ++frame2;
+  for (var t = taskHead, e; t; )
+    (e = clockNow - t._time) >= 0 && t._call.call(null, e), t = t._next;
+  --frame2;
+}
+function wake() {
+  clockNow = (clockLast = clock.now()) + clockSkew, frame2 = timeout = 0;
+  try {
+    timerFlush();
+  } finally {
+    frame2 = 0, nap(), clockNow = 0;
+  }
+}
+function poke() {
+  var now3 = clock.now(), delay2 = now3 - clockLast;
+  delay2 > pokeDelay && (clockSkew -= delay2, clockLast = now3);
+}
+function nap() {
+  for (var t0, t1 = taskHead, t2, time = 1 / 0; t1; )
+    t1._call ? (time > t1._time && (time = t1._time), t0 = t1, t1 = t1._next) : (t2 = t1._next, t1._next = null, t1 = t0 ? t0._next = t2 : taskHead = t2);
+  taskTail = t0, sleep2(time);
+}
+function sleep2(time) {
+  if (!frame2) {
+    timeout && (timeout = clearTimeout(timeout));
+    var delay2 = time - clockNow;
+    delay2 > 24 ? (time < 1 / 0 && (timeout = setTimeout(wake, time - clock.now() - clockSkew)), interval && (interval = clearInterval(interval))) : (interval || (clockLast = clock.now(), interval = setInterval(poke, pokeDelay)), frame2 = 1, setFrame(wake));
+  }
+}
+var frame2, timeout, interval, pokeDelay, taskHead, taskTail, clockLast, clockNow, clockSkew, clock, setFrame, init_timer = __esm({
+  "node_modules/d3-timer/src/timer.js"() {
+    frame2 = 0, timeout = 0, interval = 0, pokeDelay = 1e3, clockLast = 0, clockNow = 0, clockSkew = 0, clock = typeof performance == "object" && performance.now ? performance : Date, setFrame = typeof window == "object" && window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : function(f) {
+      setTimeout(f, 17);
+    };
+    Timer.prototype = timer.prototype = {
+      constructor: Timer,
+      restart: function(callback, delay2, time) {
+        if (typeof callback != "function")
+          throw new TypeError("callback is not a function");
+        time = (time == null ? now() : +time) + (delay2 == null ? 0 : +delay2), !this._next && taskTail !== this && (taskTail ? taskTail._next = this : taskHead = this, taskTail = this), this._call = callback, this._time = time, sleep2();
+      },
+      stop: function() {
+        this._call && (this._call = null, this._time = 1 / 0, sleep2());
+      }
+    };
+  }
+});
+
+// node_modules/d3-timer/src/timeout.js
+function timeout_default(callback, delay2, time) {
+  var t = new Timer();
+  return delay2 = delay2 == null ? 0 : +delay2, t.restart((elapsed) => {
+    t.stop(), callback(elapsed + delay2);
+  }, delay2, time), t;
+}
+var init_timeout = __esm({
+  "node_modules/d3-timer/src/timeout.js"() {
+    init_timer();
+  }
+});
+
+// node_modules/d3-timer/src/index.js
+var init_src9 = __esm({
+  "node_modules/d3-timer/src/index.js"() {
+    init_timer();
+    init_timeout();
+  }
+});
+
+// node_modules/d3-transition/src/transition/schedule.js
+function schedule_default(node, name, id6, index2, group, timing) {
+  var schedules = node.__transition;
+  if (!schedules)
+    node.__transition = {};
+  else if (id6 in schedules)
+    return;
+  create(node, id6, {
+    name,
+    index: index2,
+    // For context during callback.
+    group,
+    // For context during callback.
+    on: emptyOn,
+    tween: emptyTween,
+    time: timing.time,
+    delay: timing.delay,
+    duration: timing.duration,
+    ease: timing.ease,
+    timer: null,
+    state: CREATED
+  });
+}
+function init(node, id6) {
+  var schedule = get2(node, id6);
+  if (schedule.state > CREATED)
+    throw new Error("too late; already scheduled");
+  return schedule;
+}
+function set2(node, id6) {
+  var schedule = get2(node, id6);
+  if (schedule.state > STARTED)
+    throw new Error("too late; already running");
+  return schedule;
+}
+function get2(node, id6) {
+  var schedule = node.__transition;
+  if (!schedule || !(schedule = schedule[id6]))
+    throw new Error("transition not found");
+  return schedule;
+}
+function create(node, id6, self2) {
+  var schedules = node.__transition, tween;
+  schedules[id6] = self2, self2.timer = timer(schedule, 0, self2.time);
+  function schedule(elapsed) {
+    self2.state = SCHEDULED, self2.timer.restart(start4, self2.delay, self2.time), self2.delay <= elapsed && start4(elapsed - self2.delay);
+  }
+  function start4(elapsed) {
+    var i, j, n, o;
+    if (self2.state !== SCHEDULED)
+      return stop();
+    for (i in schedules)
+      if (o = schedules[i], o.name === self2.name) {
+        if (o.state === STARTED)
+          return timeout_default(start4);
+        o.state === RUNNING ? (o.state = ENDED, o.timer.stop(), o.on.call("interrupt", node, node.__data__, o.index, o.group), delete schedules[i]) : +i < id6 && (o.state = ENDED, o.timer.stop(), o.on.call("cancel", node, node.__data__, o.index, o.group), delete schedules[i]);
+      }
+    if (timeout_default(function() {
+      self2.state === STARTED && (self2.state = RUNNING, self2.timer.restart(tick, self2.delay, self2.time), tick(elapsed));
+    }), self2.state = STARTING, self2.on.call("start", node, node.__data__, self2.index, self2.group), self2.state === STARTING) {
+      for (self2.state = STARTED, tween = new Array(n = self2.tween.length), i = 0, j = -1; i < n; ++i)
+        (o = self2.tween[i].value.call(node, node.__data__, self2.index, self2.group)) && (tween[++j] = o);
+      tween.length = j + 1;
+    }
+  }
+  function tick(elapsed) {
+    for (var t = elapsed < self2.duration ? self2.ease.call(null, elapsed / self2.duration) : (self2.timer.restart(stop), self2.state = ENDING, 1), i = -1, n = tween.length; ++i < n; )
+      tween[i].call(node, t);
+    self2.state === ENDING && (self2.on.call("end", node, node.__data__, self2.index, self2.group), stop());
+  }
+  function stop() {
+    self2.state = ENDED, self2.timer.stop(), delete schedules[id6];
+    for (var i in schedules)
+      return;
+    delete node.__transition;
+  }
+}
+var emptyOn, emptyTween, CREATED, SCHEDULED, STARTING, STARTED, RUNNING, ENDING, ENDED, init_schedule = __esm({
+  "node_modules/d3-transition/src/transition/schedule.js"() {
+    init_src5();
+    init_src9();
+    emptyOn = dispatch_default("start", "end", "cancel", "interrupt"), emptyTween = [], CREATED = 0, SCHEDULED = 1, STARTING = 2, STARTED = 3, RUNNING = 4, ENDING = 5, ENDED = 6;
+  }
+});
+
+// node_modules/d3-transition/src/interrupt.js
+function interrupt_default(node, name) {
+  var schedules = node.__transition, schedule, active, empty4 = !0, i;
+  if (schedules) {
+    name = name == null ? null : name + "";
+    for (i in schedules) {
+      if ((schedule = schedules[i]).name !== name) {
+        empty4 = !1;
+        continue;
+      }
+      active = schedule.state > STARTING && schedule.state < ENDING, schedule.state = ENDED, schedule.timer.stop(), schedule.on.call(active ? "interrupt" : "cancel", node, node.__data__, schedule.index, schedule.group), delete schedules[i];
+    }
+    empty4 && delete node.__transition;
+  }
+}
+var init_interrupt = __esm({
+  "node_modules/d3-transition/src/interrupt.js"() {
+    init_schedule();
+  }
+});
+
+// node_modules/d3-transition/src/selection/interrupt.js
+function interrupt_default2(name) {
+  return this.each(function() {
+    interrupt_default(this, name);
+  });
+}
+var init_interrupt2 = __esm({
+  "node_modules/d3-transition/src/selection/interrupt.js"() {
+    init_interrupt();
+  }
+});
+
+// node_modules/d3-transition/node_modules/d3-color/src/define.js
 function define_default(constructor, factory, prototype) {
   constructor.prototype = factory.prototype = prototype, prototype.constructor = constructor;
 }
@@ -18443,11 +20268,11 @@ function extend(parent, definition) {
   return prototype;
 }
 var init_define = __esm({
-  "node_modules/d3-color/src/define.js"() {
+  "node_modules/d3-transition/node_modules/d3-color/src/define.js"() {
   }
 });
 
-// node_modules/d3-color/src/color.js
+// node_modules/d3-transition/node_modules/d3-color/src/color.js
 function Color() {
 }
 function color_formatHex() {
@@ -18512,7 +20337,7 @@ function hsl2rgb(h, m1, m2) {
   return (h < 60 ? m1 + (m2 - m1) * h / 60 : h < 180 ? m2 : h < 240 ? m1 + (m2 - m1) * (240 - h) / 60 : m1) * 255;
 }
 var darker, brighter, reI, reN, reP, reHex, reRgbInteger, reRgbPercent, reRgbaInteger, reRgbaPercent, reHslPercent, reHslaPercent, named, init_color = __esm({
-  "node_modules/d3-color/src/color.js"() {
+  "node_modules/d3-transition/node_modules/d3-color/src/color.js"() {
     init_define();
     darker = 0.7, brighter = 1 / darker, reI = "\\s*([+-]?\\d+)\\s*", reN = "\\s*([+-]?\\d*\\.?\\d+(?:[eE][+-]?\\d+)?)\\s*", reP = "\\s*([+-]?\\d*\\.?\\d+(?:[eE][+-]?\\d+)?)%\\s*", reHex = /^#([0-9a-f]{3,8})$/, reRgbInteger = new RegExp("^rgb\\(" + [reI, reI, reI] + "\\)$"), reRgbPercent = new RegExp("^rgb\\(" + [reP, reP, reP] + "\\)$"), reRgbaInteger = new RegExp("^rgba\\(" + [reI, reI, reI, reN] + "\\)$"), reRgbaPercent = new RegExp("^rgba\\(" + [reP, reP, reP, reN] + "\\)$"), reHslPercent = new RegExp("^hsl\\(" + [reN, reP, reP] + "\\)$"), reHslaPercent = new RegExp("^hsla\\(" + [reN, reP, reP, reN] + "\\)$"), named = {
       aliceblue: 15792383,
@@ -18672,6 +20497,7 @@ var darker, brighter, reI, reN, reP, reHex, reRgbInteger, reRgbPercent, reRgbaIn
         return this.rgb().displayable();
       },
       hex: color_formatHex,
+      // Deprecated! Use color.formatHex.
       formatHex: color_formatHex,
       formatHsl: color_formatHsl,
       formatRgb: color_formatRgb,
@@ -18691,6 +20517,7 @@ var darker, brighter, reI, reN, reP, reHex, reRgbInteger, reRgbPercent, reRgbaIn
         return -0.5 <= this.r && this.r < 255.5 && -0.5 <= this.g && this.g < 255.5 && -0.5 <= this.b && this.b < 255.5 && 0 <= this.opacity && this.opacity <= 1;
       },
       hex: rgb_formatHex,
+      // Deprecated! Use color.formatHex.
       formatHex: rgb_formatHex,
       formatRgb: rgb_formatRgb,
       toString: rgb_formatRgb
@@ -18722,14 +20549,14 @@ var darker, brighter, reI, reN, reP, reHex, reRgbInteger, reRgbPercent, reRgbaIn
   }
 });
 
-// node_modules/d3-color/src/index.js
-var init_src8 = __esm({
-  "node_modules/d3-color/src/index.js"() {
+// node_modules/d3-transition/node_modules/d3-color/src/index.js
+var init_src10 = __esm({
+  "node_modules/d3-transition/node_modules/d3-color/src/index.js"() {
     init_color();
   }
 });
 
-// node_modules/d3-interpolate/src/basis.js
+// node_modules/d3-transition/node_modules/d3-interpolate/src/basis.js
 function basis(t1, v0, v1, v2, v3) {
   var t2 = t1 * t1, t3 = t2 * t1;
   return ((1 - 3 * t1 + 3 * t2 - t3) * v0 + (4 - 6 * t2 + 3 * t3) * v1 + (1 + 3 * t1 + 3 * t2 - 3 * t3) * v2 + t3 * v3) / 6;
@@ -18742,11 +20569,11 @@ function basis_default(values) {
   };
 }
 var init_basis = __esm({
-  "node_modules/d3-interpolate/src/basis.js"() {
+  "node_modules/d3-transition/node_modules/d3-interpolate/src/basis.js"() {
   }
 });
 
-// node_modules/d3-interpolate/src/basisClosed.js
+// node_modules/d3-transition/node_modules/d3-interpolate/src/basisClosed.js
 function basisClosed_default(values) {
   var n = values.length;
   return function(t) {
@@ -18755,19 +20582,19 @@ function basisClosed_default(values) {
   };
 }
 var init_basisClosed = __esm({
-  "node_modules/d3-interpolate/src/basisClosed.js"() {
+  "node_modules/d3-transition/node_modules/d3-interpolate/src/basisClosed.js"() {
     init_basis();
   }
 });
 
-// node_modules/d3-interpolate/src/constant.js
+// node_modules/d3-transition/node_modules/d3-interpolate/src/constant.js
 var constant_default3, init_constant3 = __esm({
-  "node_modules/d3-interpolate/src/constant.js"() {
+  "node_modules/d3-transition/node_modules/d3-interpolate/src/constant.js"() {
     constant_default3 = (x) => () => x;
   }
 });
 
-// node_modules/d3-interpolate/src/color.js
+// node_modules/d3-transition/node_modules/d3-interpolate/src/color.js
 function linear(a, d) {
   return function(t) {
     return a + t * d;
@@ -18788,12 +20615,12 @@ function nogamma(a, b) {
   return d ? linear(a, d) : constant_default3(isNaN(a) ? b : a);
 }
 var init_color2 = __esm({
-  "node_modules/d3-interpolate/src/color.js"() {
+  "node_modules/d3-transition/node_modules/d3-interpolate/src/color.js"() {
     init_constant3();
   }
 });
 
-// node_modules/d3-interpolate/src/rgb.js
+// node_modules/d3-transition/node_modules/d3-interpolate/src/rgb.js
 function rgbSpline(spline) {
   return function(colors) {
     var n = colors.length, r = new Array(n), g = new Array(n), b = new Array(n), i, color4;
@@ -18805,8 +20632,8 @@ function rgbSpline(spline) {
   };
 }
 var rgb_default, rgbBasis, rgbBasisClosed, init_rgb = __esm({
-  "node_modules/d3-interpolate/src/rgb.js"() {
-    init_src8();
+  "node_modules/d3-transition/node_modules/d3-interpolate/src/rgb.js"() {
+    init_src10();
     init_basis();
     init_basisClosed();
     init_color2();
@@ -18824,18 +20651,18 @@ var rgb_default, rgbBasis, rgbBasisClosed, init_rgb = __esm({
   }
 });
 
-// node_modules/d3-interpolate/src/number.js
+// node_modules/d3-transition/node_modules/d3-interpolate/src/number.js
 function number_default(a, b) {
   return a = +a, b = +b, function(t) {
     return a * (1 - t) + b * t;
   };
 }
 var init_number = __esm({
-  "node_modules/d3-interpolate/src/number.js"() {
+  "node_modules/d3-transition/node_modules/d3-interpolate/src/number.js"() {
   }
 });
 
-// node_modules/d3-interpolate/src/string.js
+// node_modules/d3-transition/node_modules/d3-interpolate/src/string.js
 function zero(b) {
   return function() {
     return b;
@@ -18857,13 +20684,13 @@ function string_default(a, b) {
   });
 }
 var reA, reB, init_string2 = __esm({
-  "node_modules/d3-interpolate/src/string.js"() {
+  "node_modules/d3-transition/node_modules/d3-interpolate/src/string.js"() {
     init_number();
     reA = /[-+]?(?:\d+\.?\d*|\.?\d+)(?:[eE][-+]?\d+)?/g, reB = new RegExp(reA.source, "g");
   }
 });
 
-// node_modules/d3-interpolate/src/transform/decompose.js
+// node_modules/d3-transition/node_modules/d3-interpolate/src/transform/decompose.js
 function decompose_default(a, b, c, d, e, f) {
   var scaleX, scaleY, skewX;
   return (scaleX = Math.sqrt(a * a + b * b)) && (a /= scaleX, b /= scaleX), (skewX = a * c + b * d) && (c -= a * skewX, d -= b * skewX), (scaleY = Math.sqrt(c * c + d * d)) && (c /= scaleY, d /= scaleY, skewX /= scaleY), a * d < b * c && (a = -a, b = -b, skewX = -skewX, scaleX = -scaleX), {
@@ -18876,7 +20703,7 @@ function decompose_default(a, b, c, d, e, f) {
   };
 }
 var degrees3, identity, init_decompose = __esm({
-  "node_modules/d3-interpolate/src/transform/decompose.js"() {
+  "node_modules/d3-transition/node_modules/d3-interpolate/src/transform/decompose.js"() {
     degrees3 = 180 / Math.PI, identity = {
       translateX: 0,
       translateY: 0,
@@ -18888,7 +20715,7 @@ var degrees3, identity, init_decompose = __esm({
   }
 });
 
-// node_modules/d3-interpolate/src/transform/parse.js
+// node_modules/d3-transition/node_modules/d3-interpolate/src/transform/parse.js
 function parseCss(value) {
   let m = new (typeof DOMMatrix == "function" ? DOMMatrix : WebKitCSSMatrix)(value + "");
   return m.isIdentity ? identity : decompose_default(m.a, m.b, m.c, m.d, m.e, m.f);
@@ -18897,12 +20724,12 @@ function parseSvg(value) {
   return value == null ? identity : (svgNode || (svgNode = document.createElementNS("http://www.w3.org/2000/svg", "g")), svgNode.setAttribute("transform", value), (value = svgNode.transform.baseVal.consolidate()) ? (value = value.matrix, decompose_default(value.a, value.b, value.c, value.d, value.e, value.f)) : identity);
 }
 var svgNode, init_parse = __esm({
-  "node_modules/d3-interpolate/src/transform/parse.js"() {
+  "node_modules/d3-transition/node_modules/d3-interpolate/src/transform/parse.js"() {
     init_decompose();
   }
 });
 
-// node_modules/d3-interpolate/src/transform/index.js
+// node_modules/d3-transition/node_modules/d3-interpolate/src/transform/index.js
 function interpolateTransform(parse2, pxComma, pxParen, degParen) {
   function pop(s) {
     return s.length ? s.pop() + " " : "";
@@ -18937,266 +20764,20 @@ function interpolateTransform(parse2, pxComma, pxParen, degParen) {
   };
 }
 var interpolateTransformCss, interpolateTransformSvg, init_transform3 = __esm({
-  "node_modules/d3-interpolate/src/transform/index.js"() {
+  "node_modules/d3-transition/node_modules/d3-interpolate/src/transform/index.js"() {
     init_number();
     init_parse();
     interpolateTransformCss = interpolateTransform(parseCss, "px, ", "px)", "deg)"), interpolateTransformSvg = interpolateTransform(parseSvg, ", ", ")", ")");
   }
 });
 
-// node_modules/d3-interpolate/src/zoom.js
-function cosh(x) {
-  return ((x = Math.exp(x)) + 1 / x) / 2;
-}
-function sinh(x) {
-  return ((x = Math.exp(x)) - 1 / x) / 2;
-}
-function tanh(x) {
-  return ((x = Math.exp(2 * x)) - 1) / (x + 1);
-}
-var epsilon22, zoom_default, init_zoom = __esm({
-  "node_modules/d3-interpolate/src/zoom.js"() {
-    epsilon22 = 1e-12;
-    zoom_default = function zoomRho(rho, rho2, rho4) {
-      function zoom(p02, p1) {
-        var ux0 = p02[0], uy0 = p02[1], w0 = p02[2], ux1 = p1[0], uy1 = p1[1], w1 = p1[2], dx = ux1 - ux0, dy = uy1 - uy0, d2 = dx * dx + dy * dy, i, S;
-        if (d2 < epsilon22)
-          S = Math.log(w1 / w0) / rho, i = function(t) {
-            return [
-              ux0 + t * dx,
-              uy0 + t * dy,
-              w0 * Math.exp(rho * t * S)
-            ];
-          };
-        else {
-          var d1 = Math.sqrt(d2), b0 = (w1 * w1 - w0 * w0 + rho4 * d2) / (2 * w0 * rho2 * d1), b1 = (w1 * w1 - w0 * w0 - rho4 * d2) / (2 * w1 * rho2 * d1), r0 = Math.log(Math.sqrt(b0 * b0 + 1) - b0), r1 = Math.log(Math.sqrt(b1 * b1 + 1) - b1);
-          S = (r1 - r0) / rho, i = function(t) {
-            var s = t * S, coshr0 = cosh(r0), u = w0 / (rho2 * d1) * (coshr0 * tanh(rho * s + r0) - sinh(r0));
-            return [
-              ux0 + u * dx,
-              uy0 + u * dy,
-              w0 * coshr0 / cosh(rho * s + r0)
-            ];
-          };
-        }
-        return i.duration = S * 1e3 * rho / Math.SQRT2, i;
-      }
-      return zoom.rho = function(_) {
-        var _1 = Math.max(1e-3, +_), _2 = _1 * _1, _4 = _2 * _2;
-        return zoomRho(_1, _2, _4);
-      }, zoom;
-    }(Math.SQRT2, 2, 4);
-  }
-});
-
-// node_modules/d3-interpolate/src/index.js
-var init_src9 = __esm({
-  "node_modules/d3-interpolate/src/index.js"() {
+// node_modules/d3-transition/node_modules/d3-interpolate/src/index.js
+var init_src11 = __esm({
+  "node_modules/d3-transition/node_modules/d3-interpolate/src/index.js"() {
     init_number();
     init_string2();
     init_transform3();
-    init_zoom();
     init_rgb();
-  }
-});
-
-// node_modules/d3-timer/src/timer.js
-function now() {
-  return clockNow || (setFrame(clearNow), clockNow = clock.now() + clockSkew);
-}
-function clearNow() {
-  clockNow = 0;
-}
-function Timer() {
-  this._call = this._time = this._next = null;
-}
-function timer(callback, delay2, time) {
-  var t = new Timer();
-  return t.restart(callback, delay2, time), t;
-}
-function timerFlush() {
-  now(), ++frame2;
-  for (var t = taskHead, e; t; )
-    (e = clockNow - t._time) >= 0 && t._call.call(null, e), t = t._next;
-  --frame2;
-}
-function wake() {
-  clockNow = (clockLast = clock.now()) + clockSkew, frame2 = timeout = 0;
-  try {
-    timerFlush();
-  } finally {
-    frame2 = 0, nap(), clockNow = 0;
-  }
-}
-function poke() {
-  var now3 = clock.now(), delay2 = now3 - clockLast;
-  delay2 > pokeDelay && (clockSkew -= delay2, clockLast = now3);
-}
-function nap() {
-  for (var t0, t1 = taskHead, t2, time = 1 / 0; t1; )
-    t1._call ? (time > t1._time && (time = t1._time), t0 = t1, t1 = t1._next) : (t2 = t1._next, t1._next = null, t1 = t0 ? t0._next = t2 : taskHead = t2);
-  taskTail = t0, sleep(time);
-}
-function sleep(time) {
-  if (!frame2) {
-    timeout && (timeout = clearTimeout(timeout));
-    var delay2 = time - clockNow;
-    delay2 > 24 ? (time < 1 / 0 && (timeout = setTimeout(wake, time - clock.now() - clockSkew)), interval && (interval = clearInterval(interval))) : (interval || (clockLast = clock.now(), interval = setInterval(poke, pokeDelay)), frame2 = 1, setFrame(wake));
-  }
-}
-var frame2, timeout, interval, pokeDelay, taskHead, taskTail, clockLast, clockNow, clockSkew, clock, setFrame, init_timer = __esm({
-  "node_modules/d3-timer/src/timer.js"() {
-    frame2 = 0, timeout = 0, interval = 0, pokeDelay = 1e3, clockLast = 0, clockNow = 0, clockSkew = 0, clock = typeof performance == "object" && performance.now ? performance : Date, setFrame = typeof window == "object" && window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : function(f) {
-      setTimeout(f, 17);
-    };
-    Timer.prototype = timer.prototype = {
-      constructor: Timer,
-      restart: function(callback, delay2, time) {
-        if (typeof callback != "function")
-          throw new TypeError("callback is not a function");
-        time = (time == null ? now() : +time) + (delay2 == null ? 0 : +delay2), !this._next && taskTail !== this && (taskTail ? taskTail._next = this : taskHead = this, taskTail = this), this._call = callback, this._time = time, sleep();
-      },
-      stop: function() {
-        this._call && (this._call = null, this._time = 1 / 0, sleep());
-      }
-    };
-  }
-});
-
-// node_modules/d3-timer/src/timeout.js
-function timeout_default(callback, delay2, time) {
-  var t = new Timer();
-  return delay2 = delay2 == null ? 0 : +delay2, t.restart((elapsed) => {
-    t.stop(), callback(elapsed + delay2);
-  }, delay2, time), t;
-}
-var init_timeout = __esm({
-  "node_modules/d3-timer/src/timeout.js"() {
-    init_timer();
-  }
-});
-
-// node_modules/d3-timer/src/index.js
-var init_src10 = __esm({
-  "node_modules/d3-timer/src/index.js"() {
-    init_timer();
-    init_timeout();
-  }
-});
-
-// node_modules/d3-transition/src/transition/schedule.js
-function schedule_default(node, name, id6, index2, group, timing) {
-  var schedules = node.__transition;
-  if (!schedules)
-    node.__transition = {};
-  else if (id6 in schedules)
-    return;
-  create(node, id6, {
-    name,
-    index: index2,
-    group,
-    on: emptyOn,
-    tween: emptyTween,
-    time: timing.time,
-    delay: timing.delay,
-    duration: timing.duration,
-    ease: timing.ease,
-    timer: null,
-    state: CREATED
-  });
-}
-function init(node, id6) {
-  var schedule = get2(node, id6);
-  if (schedule.state > CREATED)
-    throw new Error("too late; already scheduled");
-  return schedule;
-}
-function set2(node, id6) {
-  var schedule = get2(node, id6);
-  if (schedule.state > STARTED)
-    throw new Error("too late; already running");
-  return schedule;
-}
-function get2(node, id6) {
-  var schedule = node.__transition;
-  if (!schedule || !(schedule = schedule[id6]))
-    throw new Error("transition not found");
-  return schedule;
-}
-function create(node, id6, self2) {
-  var schedules = node.__transition, tween;
-  schedules[id6] = self2, self2.timer = timer(schedule, 0, self2.time);
-  function schedule(elapsed) {
-    self2.state = SCHEDULED, self2.timer.restart(start4, self2.delay, self2.time), self2.delay <= elapsed && start4(elapsed - self2.delay);
-  }
-  function start4(elapsed) {
-    var i, j, n, o;
-    if (self2.state !== SCHEDULED)
-      return stop();
-    for (i in schedules)
-      if (o = schedules[i], o.name === self2.name) {
-        if (o.state === STARTED)
-          return timeout_default(start4);
-        o.state === RUNNING ? (o.state = ENDED, o.timer.stop(), o.on.call("interrupt", node, node.__data__, o.index, o.group), delete schedules[i]) : +i < id6 && (o.state = ENDED, o.timer.stop(), o.on.call("cancel", node, node.__data__, o.index, o.group), delete schedules[i]);
-      }
-    if (timeout_default(function() {
-      self2.state === STARTED && (self2.state = RUNNING, self2.timer.restart(tick, self2.delay, self2.time), tick(elapsed));
-    }), self2.state = STARTING, self2.on.call("start", node, node.__data__, self2.index, self2.group), self2.state === STARTING) {
-      for (self2.state = STARTED, tween = new Array(n = self2.tween.length), i = 0, j = -1; i < n; ++i)
-        (o = self2.tween[i].value.call(node, node.__data__, self2.index, self2.group)) && (tween[++j] = o);
-      tween.length = j + 1;
-    }
-  }
-  function tick(elapsed) {
-    for (var t = elapsed < self2.duration ? self2.ease.call(null, elapsed / self2.duration) : (self2.timer.restart(stop), self2.state = ENDING, 1), i = -1, n = tween.length; ++i < n; )
-      tween[i].call(node, t);
-    self2.state === ENDING && (self2.on.call("end", node, node.__data__, self2.index, self2.group), stop());
-  }
-  function stop() {
-    self2.state = ENDED, self2.timer.stop(), delete schedules[id6];
-    for (var i in schedules)
-      return;
-    delete node.__transition;
-  }
-}
-var emptyOn, emptyTween, CREATED, SCHEDULED, STARTING, STARTED, RUNNING, ENDING, ENDED, init_schedule = __esm({
-  "node_modules/d3-transition/src/transition/schedule.js"() {
-    init_src5();
-    init_src10();
-    emptyOn = dispatch_default("start", "end", "cancel", "interrupt"), emptyTween = [], CREATED = 0, SCHEDULED = 1, STARTING = 2, STARTED = 3, RUNNING = 4, ENDING = 5, ENDED = 6;
-  }
-});
-
-// node_modules/d3-transition/src/interrupt.js
-function interrupt_default(node, name) {
-  var schedules = node.__transition, schedule, active, empty4 = !0, i;
-  if (!!schedules) {
-    name = name == null ? null : name + "";
-    for (i in schedules) {
-      if ((schedule = schedules[i]).name !== name) {
-        empty4 = !1;
-        continue;
-      }
-      active = schedule.state > STARTING && schedule.state < ENDING, schedule.state = ENDED, schedule.timer.stop(), schedule.on.call(active ? "interrupt" : "cancel", node, node.__data__, schedule.index, schedule.group), delete schedules[i];
-    }
-    empty4 && delete node.__transition;
-  }
-}
-var init_interrupt = __esm({
-  "node_modules/d3-transition/src/interrupt.js"() {
-    init_schedule();
-  }
-});
-
-// node_modules/d3-transition/src/selection/interrupt.js
-function interrupt_default2(name) {
-  return this.each(function() {
-    interrupt_default(this, name);
-  });
-}
-var init_interrupt2 = __esm({
-  "node_modules/d3-transition/src/selection/interrupt.js"() {
-    init_interrupt();
   }
 });
 
@@ -19266,8 +20847,8 @@ function interpolate_default2(a, b) {
 }
 var init_interpolate2 = __esm({
   "node_modules/d3-transition/src/transition/interpolate.js"() {
-    init_src8();
-    init_src9();
+    init_src10();
+    init_src11();
   }
 });
 
@@ -19316,7 +20897,7 @@ function attr_default2(name, value) {
 }
 var init_attr2 = __esm({
   "node_modules/d3-transition/src/transition/attr.js"() {
-    init_src9();
+    init_src11();
     init_src6();
     init_tween();
     init_interpolate2();
@@ -19610,7 +21191,7 @@ function style_default2(name, value, priority) {
 }
 var init_style2 = __esm({
   "node_modules/d3-transition/src/transition/style.js"() {
-    init_src9();
+    init_src11();
     init_src6();
     init_schedule();
     init_tween();
@@ -19816,7 +21397,7 @@ var init_cubic = __esm({
 });
 
 // node_modules/d3-ease/src/index.js
-var init_src11 = __esm({
+var init_src12 = __esm({
   "node_modules/d3-ease/src/index.js"() {
     init_cubic();
   }
@@ -19841,10 +21422,11 @@ var defaultTiming, init_transition3 = __esm({
   "node_modules/d3-transition/src/selection/transition.js"() {
     init_transition2();
     init_schedule();
-    init_src11();
-    init_src10();
+    init_src12();
+    init_src9();
     defaultTiming = {
       time: null,
+      // Set on use.
       delay: 0,
       duration: 250,
       ease: cubicInOut
@@ -19872,7 +21454,7 @@ var init_active = __esm({
 });
 
 // node_modules/d3-transition/src/index.js
-var init_src12 = __esm({
+var init_src13 = __esm({
   "node_modules/d3-transition/src/index.js"() {
     init_selection3();
     init_transition2();
@@ -20129,13 +21711,13 @@ function zoom_default2() {
     }
   }
   function dblclicked(event, ...args) {
-    if (!!filter5.apply(this, arguments)) {
+    if (filter5.apply(this, arguments)) {
       var t0 = this.__zoom, p02 = pointer_default(event.changedTouches ? event.changedTouches[0] : event, this), p1 = t0.invert(p02), k1 = t0.k * (event.shiftKey ? 0.5 : 2), t1 = constrain(translate(scale2(t0, k1), p02, p1), extent.apply(this, args), translateExtent);
       noevent_default2(event), duration > 0 ? select_default2(this).transition().duration(duration).call(schedule, t1, p02, event) : select_default2(this).call(zoom.transform, t1, p02, event);
     }
   }
   function touchstarted(event, ...args) {
-    if (!!filter5.apply(this, arguments)) {
+    if (filter5.apply(this, arguments)) {
       var touches = event.touches, n = touches.length, g = gesture(this, args, event.changedTouches.length === n).event(event), started, i, t, p;
       for (nopropagation(event), i = 0; i < n; ++i)
         t = touches[i], p = pointer_default(t, this), p = [p, this.__zoom.invert(p), t.identifier], g.touch0 ? !g.touch1 && g.touch0[2] !== p[2] && (g.touch1 = p, g.taps = 0) : (g.touch0 = p, started = !0, g.taps = 1 + !!touchstarting);
@@ -20145,7 +21727,7 @@ function zoom_default2() {
     }
   }
   function touchmoved(event, ...args) {
-    if (!!this.__zooming) {
+    if (this.__zooming) {
       var g = gesture(this, args).event(event), touches = event.changedTouches, n = touches.length, i, t, p, l;
       for (noevent_default2(event), i = 0; i < n; ++i)
         t = touches[i], p = pointer_default(t, this), g.touch0 && g.touch0[2] === t.identifier ? g.touch0[0] = p : g.touch1 && g.touch1[2] === t.identifier && (g.touch1[0] = p);
@@ -20160,7 +21742,7 @@ function zoom_default2() {
     }
   }
   function touchended(event, ...args) {
-    if (!!this.__zooming) {
+    if (this.__zooming) {
       var g = gesture(this, args).event(event), touches = event.changedTouches, n = touches.length, i, t;
       for (nopropagation(event), touchending && clearTimeout(touchending), touchending = setTimeout(function() {
         touchending = null;
@@ -20205,9 +21787,9 @@ var init_zoom2 = __esm({
   "node_modules/d3-zoom/src/zoom.js"() {
     init_src5();
     init_src7();
-    init_src9();
+    init_src8();
     init_src6();
-    init_src12();
+    init_src13();
     init_constant4();
     init_event();
     init_transform4();
@@ -20222,7 +21804,7 @@ __export(src_exports4, {
   zoomIdentity: () => identity2,
   zoomTransform: () => transform
 });
-var init_src13 = __esm({
+var init_src14 = __esm({
   "node_modules/d3-zoom/src/index.js"() {
     init_zoom2();
     init_transform4();
@@ -20233,7 +21815,7 @@ var init_src13 = __esm({
 var require_index_umd = __commonJS({
   "node_modules/react-simple-maps/dist/index.umd.js"(exports, module) {
     (function(e, t) {
-      typeof exports == "object" && typeof module < "u" ? t(exports, require_react(), require_prop_types(), (init_src3(), __toCommonJS(src_exports)), (init_src4(), __toCommonJS(src_exports2)), (init_src13(), __toCommonJS(src_exports4)), (init_src6(), __toCommonJS(src_exports3))) : typeof define == "function" && define.amd ? define(["exports", "react", "prop-types", "d3-geo", "topojson-client", "d3-zoom", "d3-selection"], t) : t((e = typeof globalThis < "u" ? globalThis : e || self).reactSimpleMaps = e.reactSimpleMaps || {}, e.React, e.PropTypes, e.d3, e.topojson, e.d3, e.d3);
+      typeof exports == "object" && typeof module < "u" ? t(exports, require_react(), require_prop_types(), (init_src3(), __toCommonJS(src_exports)), (init_src4(), __toCommonJS(src_exports2)), (init_src14(), __toCommonJS(src_exports4)), (init_src6(), __toCommonJS(src_exports3))) : typeof define == "function" && define.amd ? define(["exports", "react", "prop-types", "d3-geo", "topojson-client", "d3-zoom", "d3-selection"], t) : t((e = typeof globalThis < "u" ? globalThis : e || self).reactSimpleMaps = e.reactSimpleMaps || {}, e.React, e.PropTypes, e.d3, e.topojson, e.d3, e.d3);
     })(exports, function(e, t, r, o, n, a, u) {
       "use strict";
       function s(e2) {
@@ -20336,7 +21918,7 @@ var require_index_umd = __commonJS({
             return a2;
           }
         }(e2, t2) || function(e3, t3) {
-          if (!!e3) {
+          if (e3) {
             if (typeof e3 == "string")
               return b(e3, t3);
             var r2 = Object.prototype.toString.call(e3).slice(8, -1);
@@ -20540,8 +22122,8 @@ function createRequestHandler2({
   mode
 }) {
   let handleRequest3 = (0, import_cloudflare.createRequestHandler)(build, mode);
-  return (context) => {
-    let loadContext = getLoadContext == null ? void 0 : getLoadContext(context);
+  return async (context) => {
+    let loadContext = await (getLoadContext == null ? void 0 : getLoadContext(context));
     return handleRequest3(context.request, loadContext);
   };
 }
@@ -20642,13 +22224,15 @@ var RemixErrorBoundary = class extends import_react.default.Component {
 function RemixRootDefaultErrorBoundary({
   error
 }) {
-  return console.error(error), /* @__PURE__ */ import_react.default.createElement("html", {
+  return import_react.default.useEffect(() => {
+    console.error(error);
+  }, [error]), /* @__PURE__ */ import_react.default.createElement("html", {
     lang: "en"
   }, /* @__PURE__ */ import_react.default.createElement("head", null, /* @__PURE__ */ import_react.default.createElement("meta", {
     charSet: "utf-8"
   }), /* @__PURE__ */ import_react.default.createElement("meta", {
     name: "viewport",
-    content: "width=device-width,initial-scale=1,viewport-fit=cover"
+    content: "width=device-width, initial-scale=1, viewport-fit=cover"
   }), /* @__PURE__ */ import_react.default.createElement("title", null, "Application Error!")), /* @__PURE__ */ import_react.default.createElement("body", null, /* @__PURE__ */ import_react.default.createElement("main", {
     style: {
       fontFamily: "system-ui, sans-serif",
@@ -20658,14 +22242,14 @@ function RemixRootDefaultErrorBoundary({
     style: {
       fontSize: "24px"
     }
-  }, "Application Error"), /* @__PURE__ */ import_react.default.createElement("pre", {
+  }, "Application Error"), error.stack ? /* @__PURE__ */ import_react.default.createElement("pre", {
     style: {
       padding: "2rem",
       background: "hsla(10, 50%, 50%, 0.1)",
       color: "red",
       overflow: "auto"
     }
-  }, error.stack)), /* @__PURE__ */ import_react.default.createElement("script", {
+  }, error.stack) : null), /* @__PURE__ */ import_react.default.createElement("script", {
     dangerouslySetInnerHTML: {
       __html: `
               console.log(
@@ -20720,7 +22304,7 @@ function RemixRootDefaultCatchBoundaryImpl({
     charSet: "utf-8"
   }), /* @__PURE__ */ import_react.default.createElement("meta", {
     name: "viewport",
-    content: "width=device-width,initial-scale=1,viewport-fit=cover"
+    content: "width=device-width, initial-scale=1, viewport-fit=cover"
   }), /* @__PURE__ */ import_react.default.createElement("title", null, "Unhandled Thrown Response!")), /* @__PURE__ */ import_react.default.createElement("body", null, /* @__PURE__ */ import_react.default.createElement("h1", {
     style: {
       fontFamily: "system-ui, sans-serif",
@@ -20793,27 +22377,36 @@ async function getStylesheetPrefetchLinks(matches, manifest, routeModules) {
 function getNewMatchesForLinks(page, nextMatches, currentMatches, manifest, location, mode) {
   let path = parsePathPatch(page), isNew = (match, index2) => currentMatches[index2] ? match.route.id !== currentMatches[index2].route.id : !0, matchPathChanged = (match, index2) => {
     var _currentMatches$index;
-    return currentMatches[index2].pathname !== match.pathname || ((_currentMatches$index = currentMatches[index2].route.path) === null || _currentMatches$index === void 0 ? void 0 : _currentMatches$index.endsWith("*")) && currentMatches[index2].params["*"] !== match.params["*"];
+    return (
+      // param change, /users/123 -> /users/456
+      currentMatches[index2].pathname !== match.pathname || // splat param changed, which is not present in match.path
+      // e.g. /files/images/avatar.jpg -> files/finances.xls
+      ((_currentMatches$index = currentMatches[index2].route.path) === null || _currentMatches$index === void 0 ? void 0 : _currentMatches$index.endsWith("*")) && currentMatches[index2].params["*"] !== match.params["*"]
+    );
   };
-  return mode === "data" && location.search !== path.search ? nextMatches.filter((match, index2) => {
-    if (!manifest.routes[match.route.id].hasLoader)
-      return !1;
-    if (isNew(match, index2) || matchPathChanged(match, index2))
+  return mode === "data" && location.search !== path.search ? (
+    // this is really similar to stuff in transition.ts, maybe somebody smarter
+    // than me (or in less of a hurry) can share some of it. You're the best.
+    nextMatches.filter((match, index2) => {
+      if (!manifest.routes[match.route.id].hasLoader)
+        return !1;
+      if (isNew(match, index2) || matchPathChanged(match, index2))
+        return !0;
+      if (match.route.shouldRevalidate) {
+        var _currentMatches$;
+        let routeChoice = match.route.shouldRevalidate({
+          currentUrl: new URL(location.pathname + location.search + location.hash, window.origin),
+          currentParams: ((_currentMatches$ = currentMatches[0]) === null || _currentMatches$ === void 0 ? void 0 : _currentMatches$.params) || {},
+          nextUrl: new URL(page, window.origin),
+          nextParams: match.params,
+          defaultShouldRevalidate: !0
+        });
+        if (typeof routeChoice == "boolean")
+          return routeChoice;
+      }
       return !0;
-    if (match.route.shouldRevalidate) {
-      var _currentMatches$;
-      let routeChoice = match.route.shouldRevalidate({
-        currentUrl: new URL(location.pathname + location.search + location.hash, window.origin),
-        currentParams: ((_currentMatches$ = currentMatches[0]) === null || _currentMatches$ === void 0 ? void 0 : _currentMatches$.params) || {},
-        nextUrl: new URL(page, window.origin),
-        nextParams: match.params,
-        defaultShouldRevalidate: !0
-      });
-      if (typeof routeChoice == "boolean")
-        return routeChoice;
-    }
-    return !0;
-  }) : nextMatches.filter((match, index2) => {
+    })
+  ) : nextMatches.filter((match, index2) => {
     let manifestRoute = manifest.routes[match.route.id];
     return (mode === "assets" || manifestRoute.hasLoader) && (isNew(match, index2) || matchPathChanged(match, index2));
   });
@@ -20899,15 +22492,18 @@ function RemixRoute({
   id: id6
 }) {
   let {
-    routeModules
+    routeModules,
+    future: future2
   } = useRemixContext();
   invariant3(routeModules, `Cannot initialize 'routeModules'. This normally occurs when you have server code in your client modules.
 Check this link for more details:
 https://remix.run/pages/gotchas#server-code-in-client-bundles`);
   let {
-    default: Component3
+    default: Component3,
+    ErrorBoundary,
+    CatchBoundary
   } = routeModules[id6];
-  return invariant3(Component3, `Route "${id6}" has no component! Please go add a \`default\` export in the route module file.
+  return !Component3 && (ErrorBoundary || !future2.v2_errorBoundary && CatchBoundary) && (Component3 = Outlet), invariant3(Component3, `Route "${id6}" has no component! Please go add a \`default\` export in the route module file.
 If you were trying to navigate or submit to a resource route, use \`<a>\` instead of \`<Link>\` or \`<Form reloadDocument>\`.`), /* @__PURE__ */ React3.createElement(Component3, null);
 }
 function RemixRouteError({
@@ -20931,14 +22527,14 @@ https://remix.run/pages/gotchas#server-code-in-client-bundles`);
   }
   if (id6 === "root" && (CatchBoundary || (CatchBoundary = RemixRootDefaultCatchBoundary), ErrorBoundary || (ErrorBoundary = RemixRootDefaultErrorBoundary)), isRouteErrorResponse(error)) {
     let tError = error;
-    if ((tError == null ? void 0 : tError.error) instanceof Error && tError.status !== 404 && ErrorBoundary)
+    if (tError != null && tError.error && tError.status !== 404 && ErrorBoundary)
       return /* @__PURE__ */ React3.createElement(ErrorBoundary, {
         error: tError.error
       });
     if (CatchBoundary)
       return /* @__PURE__ */ React3.createElement(RemixCatchBoundary, {
-        component: CatchBoundary,
-        catch: error
+        catch: error,
+        component: CatchBoundary
       });
   }
   if (error instanceof Error && ErrorBoundary)
@@ -20954,9 +22550,20 @@ function usePrefetchBehavior(prefetch, theirElementProps) {
     onMouseEnter,
     onMouseLeave,
     onTouchStart
-  } = theirElementProps;
+  } = theirElementProps, ref = React3.useRef(null);
   React3.useEffect(() => {
-    prefetch === "render" && setShouldPrefetch(!0);
+    if (prefetch === "render" && setShouldPrefetch(!0), prefetch === "viewport") {
+      let callback = (entries) => {
+        entries.forEach((entry2) => {
+          setShouldPrefetch(entry2.isIntersecting);
+        });
+      }, observer = new IntersectionObserver(callback, {
+        threshold: 0.5
+      });
+      return ref.current && observer.observe(ref.current), () => {
+        observer.disconnect();
+      };
+    }
   }, [prefetch]);
   let setIntent = () => {
     prefetch === "intent" && setMaybePrefetch(!0);
@@ -20972,7 +22579,7 @@ function usePrefetchBehavior(prefetch, theirElementProps) {
         clearTimeout(id6);
       };
     }
-  }, [maybePrefetch]), [shouldPrefetch, {
+  }, [maybePrefetch]), [shouldPrefetch, ref, {
     onFocus: composeEventHandlers(onFocus, setIntent),
     onBlur: composeEventHandlers(onBlur, cancelIntent),
     onMouseEnter: composeEventHandlers(onMouseEnter, setIntent),
@@ -20985,11 +22592,11 @@ var ABSOLUTE_URL_REGEX3 = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i, NavLink2 = /* @__PURE
   prefetch = "none",
   ...props
 }, forwardedRef) => {
-  let isAbsolute = typeof to == "string" && ABSOLUTE_URL_REGEX3.test(to), href = useHref(to), [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(prefetch, props);
-  return /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement(NavLink, _extends4({
-    ref: forwardedRef,
+  let isAbsolute = typeof to == "string" && ABSOLUTE_URL_REGEX3.test(to), href = useHref(to), [shouldPrefetch, ref, prefetchHandlers] = usePrefetchBehavior(prefetch, props);
+  return /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement(NavLink, _extends4({}, props, prefetchHandlers, {
+    ref: mergeRefs(forwardedRef, ref),
     to
-  }, props, prefetchHandlers)), shouldPrefetch && !isAbsolute ? /* @__PURE__ */ React3.createElement(PrefetchPageLinks, {
+  })), shouldPrefetch && !isAbsolute ? /* @__PURE__ */ React3.createElement(PrefetchPageLinks, {
     page: href
   }) : null);
 });
@@ -20999,11 +22606,11 @@ var Link2 = /* @__PURE__ */ React3.forwardRef(({
   prefetch = "none",
   ...props
 }, forwardedRef) => {
-  let isAbsolute = typeof to == "string" && ABSOLUTE_URL_REGEX3.test(to), href = useHref(to), [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(prefetch, props);
-  return /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement(Link, _extends4({
-    ref: forwardedRef,
+  let isAbsolute = typeof to == "string" && ABSOLUTE_URL_REGEX3.test(to), href = useHref(to), [shouldPrefetch, ref, prefetchHandlers] = usePrefetchBehavior(prefetch, props);
+  return /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement(Link, _extends4({}, props, prefetchHandlers, {
+    ref: mergeRefs(forwardedRef, ref),
     to
-  }, props, prefetchHandlers)), shouldPrefetch && !isAbsolute ? /* @__PURE__ */ React3.createElement(PrefetchPageLinks, {
+  })), shouldPrefetch && !isAbsolute ? /* @__PURE__ */ React3.createElement(PrefetchPageLinks, {
     page: href
   }) : null);
 });
@@ -21013,14 +22620,15 @@ function composeEventHandlers(theirHandler, ourHandler) {
     theirHandler && theirHandler(event), event.defaultPrevented || ourHandler(event);
   };
 }
-var linksWarning = "\u26A0\uFE0F REMIX FUTURE CHANGE: The behavior of links `imagesizes` and `imagesrcset` will be changing in v2. Only the React camel case versions will be valid. Please change to `imageSizes` and `imageSrcSet`.For instructions on making this change see https://remix.run/docs/en/v1.15.0/pages/v2#links-imagesizes-and-imagesrcset";
+var linksWarning = "\u26A0\uFE0F REMIX FUTURE CHANGE: The behavior of links `imagesizes` and `imagesrcset` will be changing in v2. Only the React camel case versions will be valid. Please change to `imageSizes` and `imageSrcSet`. For instructions on making this change see https://remix.run/docs/en/v1.15.0/pages/v2#links-imagesizes-and-imagesrcset";
 function Links() {
   let {
     manifest,
     routeModules
   } = useRemixContext(), {
-    matches
-  } = useDataRouterStateContext(), links2 = React3.useMemo(() => getLinksForMatches(matches, routeModules, manifest), [matches, routeModules, manifest]);
+    errors,
+    matches: routerMatches
+  } = useDataRouterStateContext(), matches = errors ? routerMatches.slice(0, routerMatches.findIndex((m) => errors[m.route.id]) + 1) : routerMatches, links2 = React3.useMemo(() => getLinksForMatches(matches, routeModules, manifest), [matches, routeModules, manifest]);
   return React3.useEffect(() => {
     links2.some((link2) => "imagesizes" in link2 || "imagesrcset" in link2) && logDeprecationOnce(linksWarning);
   }, [links2]), /* @__PURE__ */ React3.createElement(React3.Fragment, null, links2.map((link2) => {
@@ -21079,17 +22687,22 @@ function PrefetchPageLinksImpl({
     key: href,
     rel: "modulepreload",
     href
-  }, linkProps))), styleLinks.map((link2) => /* @__PURE__ */ React3.createElement("link", _extends4({
-    key: link2.href
-  }, link2))));
+  }, linkProps))), styleLinks.map((link2) => (
+    // these don't spread `linkProps` because they are full link descriptors
+    // already with their own props
+    /* @__PURE__ */ React3.createElement("link", _extends4({
+      key: link2.href
+    }, link2))
+  )));
 }
 function V1Meta() {
   let {
     routeModules
   } = useRemixContext(), {
-    matches,
+    errors,
+    matches: routerMatches,
     loaderData
-  } = useDataRouterStateContext(), location = useLocation(), meta2 = {}, parentsData = {};
+  } = useDataRouterStateContext(), location = useLocation(), matches = errors ? routerMatches.slice(0, routerMatches.findIndex((m) => errors[m.route.id]) + 1) : routerMatches, meta2 = {}, parentsData = {};
   for (let match of matches) {
     let routeId = match.route.id, data = loaderData[routeId], params = match.params, routeModule = routeModules[routeId];
     if (routeModule.meta) {
@@ -21102,6 +22715,8 @@ function V1Meta() {
       if (routeMeta && Array.isArray(routeMeta))
         throw new Error(
           "The route at " + match.route.path + " returns an array. This is only supported with the `v2_meta` future flag in the Remix config. Either set the flag to `true` or update the route's meta function to return an object.\n\nTo reference the v1 meta function API, see https://remix.run/route/meta"
+          // TODO: Add link to the docs once they are written
+          // + "\n\nTo reference future flags and the v2 meta API, see https://remix.run/file-conventions/remix-config#future-v2-meta."
         );
       Object.assign(meta2, routeMeta);
     }
@@ -21137,9 +22752,10 @@ function V2Meta() {
   let {
     routeModules
   } = useRemixContext(), {
-    matches: _matches,
+    errors,
+    matches: routerMatches,
     loaderData
-  } = useDataRouterStateContext(), location = useLocation(), meta2 = [], leafMeta = null, matches = [];
+  } = useDataRouterStateContext(), location = useLocation(), _matches = errors ? routerMatches.slice(0, routerMatches.findIndex((m) => errors[m.route.id]) + 1) : routerMatches, meta2 = [], leafMeta = null, matches = [];
   for (let i = 0; i < _matches.length; i++) {
     let _match = _matches[i], routeId = _match.route.id, data = loaderData[routeId], params = _match.params, routeModule = routeModules[routeId], routeMeta = [], match = {
       id: routeId,
@@ -21148,6 +22764,10 @@ function V2Meta() {
       params: _match.params,
       pathname: _match.pathname,
       handle: _match.route.handle,
+      // TODO: Remove in v2. Only leaving it for now because we used it in
+      // examples and there's no reason to crash someone's build for one line.
+      // They'll get a TS error from the type updates anyway.
+      // @ts-expect-error
       get route() {
         return console.warn("The meta function in " + _match.route.path + " accesses the `route` property on `matches`. This is deprecated and will be removed in Remix version 2. See"), _match.route;
       }
@@ -21182,12 +22802,12 @@ To reference the v1 meta function API, see https://remix.run/route/meta`);
         charSet: metaProps.charSet
       }) : null;
     if ("script:ld+json" in metaProps) {
-      let json4 = null;
+      let json5 = null;
       try {
-        json4 = JSON.stringify(metaProps["script:ld+json"]);
+        json5 = JSON.stringify(metaProps["script:ld+json"]);
       } catch {
       }
-      return json4 != null && /* @__PURE__ */ React3.createElement("script", {
+      return json5 != null && /* @__PURE__ */ React3.createElement("script", {
         key: "script:ld+json",
         type: "application/ld+json",
         dangerouslySetInnerHTML: {
@@ -21217,7 +22837,8 @@ function Scripts(props) {
   let {
     manifest,
     serverHandoffString,
-    abortDelay
+    abortDelay,
+    serializeError: serializeError2
   } = useRemixContext(), {
     router,
     static: isStatic,
@@ -21228,7 +22849,29 @@ function Scripts(props) {
   React3.useEffect(() => {
     isHydrated = !0;
   }, []);
-  let deferredScripts = [], initialScripts = React3.useMemo(() => {
+  let serializePreResolvedErrorImp = (key, error) => {
+    let toSerialize;
+    return serializeError2 && error instanceof Error ? toSerialize = serializeError2(error) : toSerialize = error, `${JSON.stringify(key)}:__remixContext.p(!1, ${escapeHtml2(JSON.stringify(toSerialize))})`;
+  }, serializePreresolvedDataImp = (routeId, key, data) => {
+    let serializedData;
+    try {
+      serializedData = JSON.stringify(data);
+    } catch (error) {
+      return serializePreResolvedErrorImp(key, error);
+    }
+    return `${JSON.stringify(key)}:__remixContext.p(${escapeHtml2(serializedData)})`;
+  }, serializeErrorImp = (routeId, key, error) => {
+    let toSerialize;
+    return serializeError2 && error instanceof Error ? toSerialize = serializeError2(error) : toSerialize = error, `__remixContext.r(${JSON.stringify(routeId)}, ${JSON.stringify(key)}, !1, ${escapeHtml2(JSON.stringify(toSerialize))})`;
+  }, serializeDataImp = (routeId, key, data) => {
+    let serializedData;
+    try {
+      serializedData = JSON.stringify(data);
+    } catch (error) {
+      return serializeErrorImp(routeId, key, error);
+    }
+    return `__remixContext.r(${JSON.stringify(routeId)}, ${JSON.stringify(key)}, ${escapeHtml2(serializedData)})`;
+  }, deferredScripts = [], initialScripts = React3.useMemo(() => {
     var _manifest$hmr;
     let contextScript = staticContext ? `window.__remixContext = ${serverHandoffString};` : " ", activeDeferreds = staticContext == null ? void 0 : staticContext.activeDeferreds;
     contextScript += activeDeferreds ? ["__remixContext.p = function(v,e,p,x) {", "  if (typeof e !== 'undefined') {", `    x=new Error(e.message);
@@ -21241,21 +22884,14 @@ function Scripts(props) {
             key: `${routeId} | ${key}`,
             deferredData,
             routeId,
-            dataKey: key
+            dataKey: key,
+            scriptProps: props,
+            serializeData: serializeDataImp,
+            serializeError: serializeErrorImp
           })), `${JSON.stringify(key)}:__remixContext.n(${JSON.stringify(routeId)}, ${JSON.stringify(key)})`;
         {
           let trackedPromise = deferredData.data[key];
-          if (typeof trackedPromise._error < "u") {
-            let toSerialize = {
-              message: trackedPromise._error.message,
-              stack: trackedPromise._error.stack
-            };
-            return `${JSON.stringify(key)}:__remixContext.p(!1, ${escapeHtml2(JSON.stringify(toSerialize))})`;
-          } else {
-            if (typeof trackedPromise._data > "u")
-              throw new Error(`The deferred data for ${key} was not resolved, did you forget to return data from a deferred promise?`);
-            return `${JSON.stringify(key)}:__remixContext.p(${escapeHtml2(JSON.stringify(trackedPromise._data))})`;
-          }
+          return typeof trackedPromise._error < "u" ? serializePreResolvedErrorImp(key, trackedPromise._error) : serializePreresolvedDataImp(routeId, key, trackedPromise._data);
         }
       }).join(`,
 `);
@@ -21282,7 +22918,10 @@ import(${JSON.stringify(manifest.entry.module)});` : " ";
   if (!isStatic && typeof __remixContext == "object" && __remixContext.a)
     for (let i = 0; i < __remixContext.a; i++)
       deferredScripts.push(/* @__PURE__ */ React3.createElement(DeferredHydrationScript, {
-        key: i
+        key: i,
+        scriptProps: props,
+        serializeData: serializeDataImp,
+        serializeError: serializeErrorImp
       }));
   let nextMatches = React3.useMemo(() => {
     if (navigation.location) {
@@ -21294,11 +22933,7 @@ import(${JSON.stringify(manifest.entry.module)});` : " ";
     let route = manifest.routes[match.route.id];
     return (route.imports || []).concat([route.module]);
   }).flat(1), preloads = isHydrated ? [] : manifest.entry.imports.concat(routePreloads);
-  return /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("link", {
-    rel: "modulepreload",
-    href: manifest.url,
-    crossOrigin: props.crossOrigin
-  }), /* @__PURE__ */ React3.createElement("link", {
+  return isHydrated ? null : /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("link", {
     rel: "modulepreload",
     href: manifest.entry.module,
     crossOrigin: props.crossOrigin
@@ -21307,56 +22942,65 @@ import(${JSON.stringify(manifest.entry.module)});` : " ";
     rel: "modulepreload",
     href: path,
     crossOrigin: props.crossOrigin
-  })), !isHydrated && initialScripts, !isHydrated && deferredScripts);
+  })), initialScripts, deferredScripts);
 }
 function DeferredHydrationScript({
   dataKey,
   deferredData,
-  routeId
+  routeId,
+  scriptProps,
+  serializeData,
+  serializeError: serializeError2
 }) {
   return typeof document > "u" && deferredData && dataKey && routeId && invariant3(deferredData.pendingKeys.includes(dataKey), `Deferred data for route ${routeId} with key ${dataKey} was not pending but tried to render a script for it.`), /* @__PURE__ */ React3.createElement(React3.Suspense, {
-    fallback: typeof document > "u" && deferredData && dataKey && routeId ? null : /* @__PURE__ */ React3.createElement("script", {
-      async: !0,
-      suppressHydrationWarning: !0,
-      dangerouslySetInnerHTML: {
-        __html: " "
-      }
-    })
+    fallback: (
+      // This makes absolutely no sense. The server renders null as a fallback,
+      // but when hydrating, we need to render a script tag to avoid a hydration issue.
+      // To reproduce a hydration mismatch, just render null as a fallback.
+      typeof document > "u" && deferredData && dataKey && routeId ? null : /* @__PURE__ */ React3.createElement("script", _extends4({}, scriptProps, {
+        async: !0,
+        suppressHydrationWarning: !0,
+        dangerouslySetInnerHTML: {
+          __html: " "
+        }
+      }))
+    )
   }, typeof document > "u" && deferredData && dataKey && routeId ? /* @__PURE__ */ React3.createElement(Await2, {
     resolve: deferredData.data[dataKey],
     errorElement: /* @__PURE__ */ React3.createElement(ErrorDeferredHydrationScript, {
       dataKey,
-      routeId
+      routeId,
+      scriptProps,
+      serializeError: serializeError2
     }),
-    children: (data) => /* @__PURE__ */ React3.createElement("script", {
+    children: (data) => /* @__PURE__ */ React3.createElement("script", _extends4({}, scriptProps, {
       async: !0,
       suppressHydrationWarning: !0,
       dangerouslySetInnerHTML: {
-        __html: `__remixContext.r(${JSON.stringify(routeId)}, ${JSON.stringify(dataKey)}, ${escapeHtml2(JSON.stringify(data))});`
+        __html: serializeData(routeId, dataKey, data)
       }
-    })
-  }) : /* @__PURE__ */ React3.createElement("script", {
+    }))
+  }) : /* @__PURE__ */ React3.createElement("script", _extends4({}, scriptProps, {
     async: !0,
     suppressHydrationWarning: !0,
     dangerouslySetInnerHTML: {
       __html: " "
     }
-  }));
+  })));
 }
 function ErrorDeferredHydrationScript({
   dataKey,
-  routeId
+  routeId,
+  scriptProps,
+  serializeError: serializeError2
 }) {
-  let error = useAsyncError(), toSerialize = {
-    message: error.message,
-    stack: error.stack
-  };
-  return /* @__PURE__ */ React3.createElement("script", {
+  let error = useAsyncError();
+  return /* @__PURE__ */ React3.createElement("script", _extends4({}, scriptProps, {
     suppressHydrationWarning: !0,
     dangerouslySetInnerHTML: {
-      __html: `__remixContext.r(${JSON.stringify(routeId)}, ${JSON.stringify(dataKey)}, !1, ${escapeHtml2(JSON.stringify(toSerialize))});`
+      __html: serializeError2(routeId, dataKey, error)
     }
-  });
+  }));
 }
 function dedupe2(array3) {
   return [...new Set(array3)];
@@ -21370,11 +23014,16 @@ function useMatches2() {
     pathname: match.pathname,
     params: match.params,
     data: match.data,
+    // Need to grab handle here since we don't have it at client-side route
+    // creation time
     handle: routeModules[match.id].handle
   })), [matches, routeModules]);
 }
+function useLoaderData2() {
+  return useLoaderData();
+}
 var LiveReload = function({
-  port = Number(8002),
+  port,
   timeoutMs = 1e3,
   nonce = void 0
 }) {
@@ -21385,11 +23034,21 @@ var LiveReload = function({
     dangerouslySetInnerHTML: {
       __html: js`
                 function remixLiveReloadConnect(config) {
-                  let protocol = location.protocol === "https:" ? "wss:" : "ws:";
-                  let host = location.hostname;
-                  let port = (window.__remixContext && window.__remixContext.dev && window.__remixContext.dev.liveReloadPort) || ${String(port)};
-                  let socketPath = protocol + "//" + host + ":" + port + "/socket";
-                  let ws = new WebSocket(socketPath);
+                  let REMIX_DEV_ORIGIN = ${JSON.stringify("")};
+                  let protocol =
+                    REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).protocol.replace(/^http/, "ws") :
+                    location.protocol === "https:" ? "wss:" : "ws:"; // remove in v2?
+                  let hostname = location.hostname;
+                  let url = new URL(protocol + "//" + hostname + "/socket");
+
+                  url.port =
+                    ${port} ||
+                    REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port :
+                    Number(${// TODO: remove in v2
+      8002}) ||
+                    8002;
+
+                  let ws = new WebSocket(url.href);
                   ws.onmessage = async (message) => {
                     let event = JSON.parse(message.data);
                     if (event.type === "LOG") {
@@ -21407,10 +23066,12 @@ var LiveReload = function({
                       }
                       if (!event.updates || !event.updates.length) return;
                       let updateAccepted = false;
+                      let needsRevalidation = new Set();
                       for (let update of event.updates) {
                         console.log("[HMR] " + update.reason + " [" + update.id +"]")
                         if (update.revalidate) {
-                          console.log("[HMR] Revalidating [" + update.id + "]");
+                          needsRevalidation.add(update.routeId);
+                          console.log("[HMR] Revalidating [" + update.routeId + "]");
                         }
                         let imported = await import(update.url +  '?t=' + event.assetsManifest.hmr.timestamp);
                         if (window.__hmr__.contexts[update.id]) {
@@ -21425,7 +23086,7 @@ var LiveReload = function({
                       }
                       if (event.assetsManifest && window.__hmr__.contexts["remix:manifest"]) {
                         let accepted = window.__hmr__.contexts["remix:manifest"].emit(
-                          event.assetsManifest
+                          { needsRevalidation, assetsManifest: event.assetsManifest }
                         );
                         if (accepted) {
                           console.log("[HMR] Updated accepted by", "remix:manifest");
@@ -21465,6 +23126,13 @@ var LiveReload = function({
     }
   });
 };
+function mergeRefs(...refs) {
+  return (value) => {
+    refs.forEach((ref) => {
+      typeof ref == "function" ? ref(value) : ref != null && (ref.current = value);
+    });
+  };
+}
 
 // node_modules/@remix-run/react/dist/esm/routes.js
 var React4 = __toESM(require_react());
@@ -21489,6 +23157,8 @@ function createServerRoutes(manifest, routeModules, future2, parentId = "", rout
       index: route.index,
       path: route.path,
       handle: routeModules[route.id].handle
+      // Note: we don't need loader/action/shouldRevalidate on these routes
+      // since they're for a static render
     }, children4 = createServerRoutes(manifest, routeModules, future2, route.id, routesByParentId);
     return children4.length > 0 && (dataRoute.children = children4), dataRoute;
   });
@@ -21517,6 +23187,8 @@ function ScrollRestoration2({
       let userKey = getKey(location, matches);
       return userKey !== location.key ? userKey : null;
     },
+    // Nah, we only need this the first time for the SSR render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   ), restoreScroll = ((STORAGE_KEY2, restoreKey) => {
     if (!window.history.state || !window.history.state.key) {
@@ -21559,6 +23231,7 @@ function RemixServer({
       routeModules,
       serverHandoffString,
       future: context.future,
+      serializeError: context.serializeError,
       abortDelay
     }
   }, /* @__PURE__ */ React6.createElement(RemixErrorBoundary, {
@@ -21572,31 +23245,47 @@ function RemixServer({
 }
 
 // node_modules/isbot/index.mjs
-function _iterableToArrayLimit(arr, i) {
-  var _i = arr == null ? null : typeof Symbol < "u" && arr[Symbol.iterator] || arr["@@iterator"];
-  if (_i != null) {
-    var _s, _e, _x, _r, _arr = [], _n = !0, _d = !1;
+function _iterableToArrayLimit(r, l) {
+  var t = r == null ? null : typeof Symbol < "u" && r[Symbol.iterator] || r["@@iterator"];
+  if (t != null) {
+    var e, n, i, u, a = [], f = !0, o = !1;
     try {
-      if (_x = (_i = _i.call(arr)).next, i === 0) {
-        if (Object(_i) !== _i)
+      if (i = (t = t.call(r)).next, l === 0) {
+        if (Object(t) !== t)
           return;
-        _n = !1;
+        f = !1;
       } else
-        for (; !(_n = (_s = _x.call(_i)).done) && (_arr.push(_s.value), _arr.length !== i); _n = !0)
+        for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0)
           ;
-    } catch (err) {
-      _d = !0, _e = err;
+    } catch (r2) {
+      o = !0, n = r2;
     } finally {
       try {
-        if (!_n && _i.return != null && (_r = _i.return(), Object(_r) !== _r))
+        if (!f && t.return != null && (u = t.return(), Object(u) !== u))
           return;
       } finally {
-        if (_d)
-          throw _e;
+        if (o)
+          throw n;
       }
     }
-    return _arr;
+    return a;
   }
+}
+function _toPrimitive(t, r) {
+  if (typeof t != "object" || !t)
+    return t;
+  var e = t[Symbol.toPrimitive];
+  if (e !== void 0) {
+    var i = e.call(t, r || "default");
+    if (typeof i != "object")
+      return i;
+    throw new TypeError("@@toPrimitive must return a primitive value.");
+  }
+  return (r === "string" ? String : Number)(t);
+}
+function _toPropertyKey(t) {
+  var i = _toPrimitive(t, "string");
+  return typeof i == "symbol" ? i : String(i);
 }
 function _classCallCheck(instance, Constructor) {
   if (!(instance instanceof Constructor))
@@ -21629,7 +23318,7 @@ function _arrayWithHoles(arr) {
     return arr;
 }
 function _unsupportedIterableToArray(o, minLen) {
-  if (!!o) {
+  if (o) {
     if (typeof o == "string")
       return _arrayLikeToArray(o, minLen);
     var n = Object.prototype.toString.call(o).slice(8, -1);
@@ -21648,22 +23337,6 @@ function _arrayLikeToArray(arr, len) {
 function _nonIterableRest() {
   throw new TypeError(`Invalid attempt to destructure non-iterable instance.
 In order to be iterable, non-array objects must have a [Symbol.iterator]() method.`);
-}
-function _toPrimitive(input, hint) {
-  if (typeof input != "object" || input === null)
-    return input;
-  var prim = input[Symbol.toPrimitive];
-  if (prim !== void 0) {
-    var res = prim.call(input, hint || "default");
-    if (typeof res != "object")
-      return res;
-    throw new TypeError("@@toPrimitive must return a primitive value.");
-  }
-  return (hint === "string" ? String : Number)(input);
-}
-function _toPropertyKey(arg) {
-  var key = _toPrimitive(arg, "string");
-  return typeof key == "symbol" ? key : String(key);
 }
 function _classPrivateFieldGet(receiver, privateMap) {
   var descriptor = _classExtractFieldDescriptor(receiver, privateMap, "get");
@@ -21708,7 +23381,9 @@ function _classPrivateMethodInitSpec(obj, privateSet) {
 var list = [
   " daum[ /]",
   " deusu/",
+  " yadirectfetcher",
   "(?:^| )site",
+  "(?:^|[^g])news",
   "@[a-z]",
   "\\(at\\)[a-z]",
   "\\(github\\.com/",
@@ -21719,14 +23394,17 @@ var list = [
   "^[^ ]{50,}$",
   "^active",
   "^ad muncher",
+  "^amaya",
   "^anglesharp/",
   "^anonymous",
   "^avsdevicesdk/",
   "^axios/",
   "^bidtellect/",
   "^biglotron",
+  "^btwebclient/",
   "^castro",
   "^clamav[ /]",
+  "^client/",
   "^cobweb/",
   "^coccoc",
   "^custom",
@@ -21799,7 +23477,6 @@ var list = [
   "check",
   "chrome-lighthouse",
   "chromeframe",
-  "client",
   "cloud",
   "crawl",
   "cryptoapi",
@@ -21813,7 +23490,6 @@ var list = [
   "feed",
   "firephp",
   "freesafeip",
-  "ghost",
   "gomezagent",
   "google",
   "headlesschrome/",
@@ -21823,6 +23499,7 @@ var list = [
   "hydra",
   "ibisbrowser",
   "images",
+  "inspect",
   "iplabel",
   "ips-agent",
   "java",
@@ -21832,7 +23509,6 @@ var list = [
   "monitor",
   "morningscore/",
   "neustar wpm",
-  "news",
   "nutch",
   "offbyone",
   "optimize",
@@ -21858,12 +23534,12 @@ var list = [
   "sparkler/",
   "speedcurve",
   "spider",
+  "splash",
   "statuscake",
   "stumbleupon\\.com",
   "supercleaner",
   "synapse",
   "synthetic",
-  "taginspector/",
   "torrent",
   "tracemyfile",
   "transcoder",
@@ -21886,10 +23562,15 @@ function amend(list2) {
     return list2;
   }
   return [
+    // Addresses: Cubot device
     ["bot", "(?<! cu)bot"],
+    // Addresses: Android webview
     ["google", "(?<! (?:channel/|google/))google(?!(app|/google| pixel))"],
+    // Addresses: libhttp browser
     ["http", "(?<!(?:lib))http"],
+    // Addresses: java based browsers
     ["java", "java(?!;)"],
+    // Addresses: Yandex Search App
     ["search", "(?<! ya(?:yandex)?)search"]
   ].forEach(function(_ref) {
     var _ref2 = _slicedToArray(_ref, 2), search = _ref2[0], replace = _ref2[1], index2 = list2.lastIndexOf(search);
@@ -21923,20 +23604,46 @@ var flags = "i", _list = /* @__PURE__ */ new WeakMap(), _pattern = /* @__PURE__ 
   }
   return _createClass(Isbot2, [{
     key: "pattern",
-    get: function() {
-      return new RegExp(_classPrivateFieldGet(this, _pattern));
-    }
+    get: (
+      /**
+       * Get a clone of the pattern
+       * @type RegExp
+       */
+      function() {
+        return new RegExp(_classPrivateFieldGet(this, _pattern));
+      }
+    )
+    /**
+     * Match given string against out pattern
+     * @param  {string} ua User Agent string
+     * @returns {boolean}
+     */
   }, {
     key: "test",
     value: function(ua) {
       return Boolean(ua) && _classPrivateFieldGet(this, _pattern).test(ua);
     }
   }, {
+    key: "isbot",
+    value: function(ua) {
+      return Boolean(ua) && _classPrivateFieldGet(this, _pattern).test(ua);
+    }
+    /**
+     * Get the match for strings' known crawler pattern
+     * @param  {string} ua User Agent string
+     * @returns {string|null}
+     */
+  }, {
     key: "find",
     value: function() {
       var ua = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : "", match = ua.match(_classPrivateFieldGet(this, _pattern));
       return match && match[0];
     }
+    /**
+     * Get the patterns that match user agent string if any
+     * @param  {string} ua User Agent string
+     * @returns {string[]}
+     */
   }, {
     key: "matches",
     value: function() {
@@ -21945,12 +23652,22 @@ var flags = "i", _list = /* @__PURE__ */ new WeakMap(), _pattern = /* @__PURE__ 
         return new RegExp(entry2, flags).test(ua);
       });
     }
+    /**
+     * Clear all patterns that match user agent
+     * @param  {string} ua User Agent string
+     * @returns {void}
+     */
   }, {
     key: "clear",
     value: function() {
       var ua = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : "";
       this.exclude(this.matches(ua));
     }
+    /**
+     * Extent patterns for known crawlers
+     * @param  {string[]} filters
+     * @returns {void}
+     */
   }, {
     key: "extend",
     value: function() {
@@ -21961,6 +23678,11 @@ var flags = "i", _list = /* @__PURE__ */ new WeakMap(), _pattern = /* @__PURE__ 
         return filter5.toLowerCase();
       })), _classPrivateMethodGet(this, _update, _update2).call(this);
     }
+    /**
+     * Exclude patterns from bot pattern rule
+     * @param  {string[]} filters
+     * @returns {void}
+     */
   }, {
     key: "exclude",
     value: function() {
@@ -21970,6 +23692,11 @@ var flags = "i", _list = /* @__PURE__ */ new WeakMap(), _pattern = /* @__PURE__ 
       }
       _classPrivateMethodGet(this, _update, _update2).call(this);
     }
+    /**
+     * Create a new Isbot instance using given list or self's list
+     * @param  {string[]} [list]
+     * @returns {Isbot}
+     */
   }, {
     key: "spawn",
     value: function(list2) {
@@ -22015,7 +23742,7 @@ __export(root_exports, {
 });
 
 // app/tailwind.css
-var tailwind_default = "/build/_assets/tailwind-DYSDWR2J.css";
+var tailwind_default = "/build/_assets/tailwind-DR5GYNCB.css";
 
 // app/components/navigationTabs/NavigationTabContainer.tsx
 var import_jsx_dev_runtime2 = __toESM(require_jsx_dev_runtime()), NavigationTabContainer = ({
@@ -22054,6 +23781,1779 @@ var import_jsx_dev_runtime3 = __toESM(require_jsx_dev_runtime()), NavigationTab 
   }, this);
 }, getRootPath = (path) => path.split("/")[1], sameRootPaths = (path1, path2) => getRootPath(path1) === getRootPath(path2);
 
+// node_modules/@tanstack/query-core/build/modern/subscribable.js
+var Subscribable = class {
+  constructor() {
+    this.listeners = /* @__PURE__ */ new Set(), this.subscribe = this.subscribe.bind(this);
+  }
+  subscribe(listener) {
+    return this.listeners.add(listener), this.onSubscribe(), () => {
+      this.listeners.delete(listener), this.onUnsubscribe();
+    };
+  }
+  hasListeners() {
+    return this.listeners.size > 0;
+  }
+  onSubscribe() {
+  }
+  onUnsubscribe() {
+  }
+};
+
+// node_modules/@tanstack/query-core/build/modern/utils.js
+var isServer = typeof window > "u" || "Deno" in globalThis;
+function noop() {
+}
+function functionalUpdate(updater, input) {
+  return typeof updater == "function" ? updater(input) : updater;
+}
+function isValidTimeout(value) {
+  return typeof value == "number" && value >= 0 && value !== 1 / 0;
+}
+function timeUntilStale(updatedAt, staleTime) {
+  return Math.max(updatedAt + (staleTime || 0) - Date.now(), 0);
+}
+function resolveStaleTime(staleTime, query) {
+  return typeof staleTime == "function" ? staleTime(query) : staleTime;
+}
+function resolveEnabled(enabled, query) {
+  return typeof enabled == "function" ? enabled(query) : enabled;
+}
+function matchQuery(filters, query) {
+  let {
+    type: type2 = "all",
+    exact,
+    fetchStatus,
+    predicate,
+    queryKey,
+    stale
+  } = filters;
+  if (queryKey) {
+    if (exact) {
+      if (query.queryHash !== hashQueryKeyByOptions(queryKey, query.options))
+        return !1;
+    } else if (!partialMatchKey(query.queryKey, queryKey))
+      return !1;
+  }
+  if (type2 !== "all") {
+    let isActive = query.isActive();
+    if (type2 === "active" && !isActive || type2 === "inactive" && isActive)
+      return !1;
+  }
+  return !(typeof stale == "boolean" && query.isStale() !== stale || fetchStatus && fetchStatus !== query.state.fetchStatus || predicate && !predicate(query));
+}
+function matchMutation(filters, mutation) {
+  let { exact, status, predicate, mutationKey } = filters;
+  if (mutationKey) {
+    if (!mutation.options.mutationKey)
+      return !1;
+    if (exact) {
+      if (hashKey(mutation.options.mutationKey) !== hashKey(mutationKey))
+        return !1;
+    } else if (!partialMatchKey(mutation.options.mutationKey, mutationKey))
+      return !1;
+  }
+  return !(status && mutation.state.status !== status || predicate && !predicate(mutation));
+}
+function hashQueryKeyByOptions(queryKey, options) {
+  return ((options == null ? void 0 : options.queryKeyHashFn) || hashKey)(queryKey);
+}
+function hashKey(queryKey) {
+  return JSON.stringify(
+    queryKey,
+    (_, val) => isPlainObject(val) ? Object.keys(val).sort().reduce((result, key) => (result[key] = val[key], result), {}) : val
+  );
+}
+function partialMatchKey(a, b) {
+  return a === b ? !0 : typeof a != typeof b ? !1 : a && b && typeof a == "object" && typeof b == "object" ? !Object.keys(b).some((key) => !partialMatchKey(a[key], b[key])) : !1;
+}
+function replaceEqualDeep(a, b) {
+  if (a === b)
+    return a;
+  let array3 = isPlainArray(a) && isPlainArray(b);
+  if (array3 || isPlainObject(a) && isPlainObject(b)) {
+    let aItems = array3 ? a : Object.keys(a), aSize = aItems.length, bItems = array3 ? b : Object.keys(b), bSize = bItems.length, copy = array3 ? [] : {}, equalItems = 0;
+    for (let i = 0; i < bSize; i++) {
+      let key = array3 ? i : bItems[i];
+      (!array3 && aItems.includes(key) || array3) && a[key] === void 0 && b[key] === void 0 ? (copy[key] = void 0, equalItems++) : (copy[key] = replaceEqualDeep(a[key], b[key]), copy[key] === a[key] && a[key] !== void 0 && equalItems++);
+    }
+    return aSize === bSize && equalItems === aSize ? a : copy;
+  }
+  return b;
+}
+function shallowEqualObjects(a, b) {
+  if (!b || Object.keys(a).length !== Object.keys(b).length)
+    return !1;
+  for (let key in a)
+    if (a[key] !== b[key])
+      return !1;
+  return !0;
+}
+function isPlainArray(value) {
+  return Array.isArray(value) && value.length === Object.keys(value).length;
+}
+function isPlainObject(o) {
+  if (!hasObjectPrototype(o))
+    return !1;
+  let ctor = o.constructor;
+  if (ctor === void 0)
+    return !0;
+  let prot = ctor.prototype;
+  return !(!hasObjectPrototype(prot) || !prot.hasOwnProperty("isPrototypeOf") || Object.getPrototypeOf(o) !== Object.prototype);
+}
+function hasObjectPrototype(o) {
+  return Object.prototype.toString.call(o) === "[object Object]";
+}
+function sleep(timeout3) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, timeout3);
+  });
+}
+function replaceData(prevData, data, options) {
+  if (typeof options.structuralSharing == "function")
+    return options.structuralSharing(prevData, data);
+  if (options.structuralSharing !== !1) {
+    try {
+      return replaceEqualDeep(prevData, data);
+    } catch (error) {
+      console.error(
+        `Structural sharing requires data to be JSON serializable. To fix this, turn off structuralSharing or return JSON-serializable data from your queryFn. [${options.queryHash}]: ${error}`
+      );
+    }
+    return replaceEqualDeep(prevData, data);
+  }
+  return data;
+}
+function addToEnd(items, item, max2 = 0) {
+  let newItems = [...items, item];
+  return max2 && newItems.length > max2 ? newItems.slice(1) : newItems;
+}
+function addToStart(items, item, max2 = 0) {
+  let newItems = [item, ...items];
+  return max2 && newItems.length > max2 ? newItems.slice(0, -1) : newItems;
+}
+var skipToken = Symbol();
+function ensureQueryFn(options, fetchOptions) {
+  return options.queryFn === skipToken && console.error(
+    `Attempted to invoke queryFn when set to skipToken. This is likely a configuration error. Query hash: '${options.queryHash}'`
+  ), !options.queryFn && (fetchOptions != null && fetchOptions.initialPromise) ? () => fetchOptions.initialPromise : !options.queryFn || options.queryFn === skipToken ? () => Promise.reject(new Error(`Missing queryFn: '${options.queryHash}'`)) : options.queryFn;
+}
+
+// node_modules/@tanstack/query-core/build/modern/focusManager.js
+var _focused, _cleanup, _setup, _a, FocusManager = (_a = class extends Subscribable {
+  constructor() {
+    super();
+    __privateAdd(this, _focused, void 0);
+    __privateAdd(this, _cleanup, void 0);
+    __privateAdd(this, _setup, void 0);
+    __privateSet(this, _setup, (onFocus) => {
+      if (!isServer && window.addEventListener) {
+        let listener = () => onFocus();
+        return window.addEventListener("visibilitychange", listener, !1), () => {
+          window.removeEventListener("visibilitychange", listener);
+        };
+      }
+    });
+  }
+  onSubscribe() {
+    __privateGet(this, _cleanup) || this.setEventListener(__privateGet(this, _setup));
+  }
+  onUnsubscribe() {
+    var _a10;
+    this.hasListeners() || ((_a10 = __privateGet(this, _cleanup)) == null || _a10.call(this), __privateSet(this, _cleanup, void 0));
+  }
+  setEventListener(setup) {
+    var _a10;
+    __privateSet(this, _setup, setup), (_a10 = __privateGet(this, _cleanup)) == null || _a10.call(this), __privateSet(this, _cleanup, setup((focused) => {
+      typeof focused == "boolean" ? this.setFocused(focused) : this.onFocus();
+    }));
+  }
+  setFocused(focused) {
+    __privateGet(this, _focused) !== focused && (__privateSet(this, _focused, focused), this.onFocus());
+  }
+  onFocus() {
+    let isFocused = this.isFocused();
+    this.listeners.forEach((listener) => {
+      listener(isFocused);
+    });
+  }
+  isFocused() {
+    var _a10;
+    return typeof __privateGet(this, _focused) == "boolean" ? __privateGet(this, _focused) : ((_a10 = globalThis.document) == null ? void 0 : _a10.visibilityState) !== "hidden";
+  }
+}, _focused = new WeakMap(), _cleanup = new WeakMap(), _setup = new WeakMap(), _a), focusManager = new FocusManager();
+
+// node_modules/@tanstack/query-core/build/modern/onlineManager.js
+var _online, _cleanup2, _setup2, _a2, OnlineManager = (_a2 = class extends Subscribable {
+  constructor() {
+    super();
+    __privateAdd(this, _online, !0);
+    __privateAdd(this, _cleanup2, void 0);
+    __privateAdd(this, _setup2, void 0);
+    __privateSet(this, _setup2, (onOnline) => {
+      if (!isServer && window.addEventListener) {
+        let onlineListener = () => onOnline(!0), offlineListener = () => onOnline(!1);
+        return window.addEventListener("online", onlineListener, !1), window.addEventListener("offline", offlineListener, !1), () => {
+          window.removeEventListener("online", onlineListener), window.removeEventListener("offline", offlineListener);
+        };
+      }
+    });
+  }
+  onSubscribe() {
+    __privateGet(this, _cleanup2) || this.setEventListener(__privateGet(this, _setup2));
+  }
+  onUnsubscribe() {
+    var _a10;
+    this.hasListeners() || ((_a10 = __privateGet(this, _cleanup2)) == null || _a10.call(this), __privateSet(this, _cleanup2, void 0));
+  }
+  setEventListener(setup) {
+    var _a10;
+    __privateSet(this, _setup2, setup), (_a10 = __privateGet(this, _cleanup2)) == null || _a10.call(this), __privateSet(this, _cleanup2, setup(this.setOnline.bind(this)));
+  }
+  setOnline(online) {
+    __privateGet(this, _online) !== online && (__privateSet(this, _online, online), this.listeners.forEach((listener) => {
+      listener(online);
+    }));
+  }
+  isOnline() {
+    return __privateGet(this, _online);
+  }
+}, _online = new WeakMap(), _cleanup2 = new WeakMap(), _setup2 = new WeakMap(), _a2), onlineManager = new OnlineManager();
+
+// node_modules/@tanstack/query-core/build/modern/thenable.js
+function pendingThenable() {
+  let resolve, reject, thenable = new Promise((_resolve, _reject) => {
+    resolve = _resolve, reject = _reject;
+  });
+  thenable.status = "pending", thenable.catch(() => {
+  });
+  function finalize(data) {
+    Object.assign(thenable, data), delete thenable.resolve, delete thenable.reject;
+  }
+  return thenable.resolve = (value) => {
+    finalize({
+      status: "fulfilled",
+      value
+    }), resolve(value);
+  }, thenable.reject = (reason) => {
+    finalize({
+      status: "rejected",
+      reason
+    }), reject(reason);
+  }, thenable;
+}
+
+// node_modules/@tanstack/query-core/build/modern/retryer.js
+function defaultRetryDelay(failureCount) {
+  return Math.min(1e3 * 2 ** failureCount, 3e4);
+}
+function canFetch(networkMode) {
+  return (networkMode ?? "online") === "online" ? onlineManager.isOnline() : !0;
+}
+var CancelledError = class extends Error {
+  constructor(options) {
+    super("CancelledError"), this.revert = options == null ? void 0 : options.revert, this.silent = options == null ? void 0 : options.silent;
+  }
+};
+function isCancelledError(value) {
+  return value instanceof CancelledError;
+}
+function createRetryer(config) {
+  let isRetryCancelled = !1, failureCount = 0, isResolved = !1, continueFn, thenable = pendingThenable(), cancel = (cancelOptions) => {
+    var _a10;
+    isResolved || (reject(new CancelledError(cancelOptions)), (_a10 = config.abort) == null || _a10.call(config));
+  }, cancelRetry = () => {
+    isRetryCancelled = !0;
+  }, continueRetry = () => {
+    isRetryCancelled = !1;
+  }, canContinue = () => focusManager.isFocused() && (config.networkMode === "always" || onlineManager.isOnline()) && config.canRun(), canStart = () => canFetch(config.networkMode) && config.canRun(), resolve = (value) => {
+    var _a10;
+    isResolved || (isResolved = !0, (_a10 = config.onSuccess) == null || _a10.call(config, value), continueFn == null || continueFn(), thenable.resolve(value));
+  }, reject = (value) => {
+    var _a10;
+    isResolved || (isResolved = !0, (_a10 = config.onError) == null || _a10.call(config, value), continueFn == null || continueFn(), thenable.reject(value));
+  }, pause = () => new Promise((continueResolve) => {
+    var _a10;
+    continueFn = (value) => {
+      (isResolved || canContinue()) && continueResolve(value);
+    }, (_a10 = config.onPause) == null || _a10.call(config);
+  }).then(() => {
+    var _a10;
+    continueFn = void 0, isResolved || (_a10 = config.onContinue) == null || _a10.call(config);
+  }), run = () => {
+    if (isResolved)
+      return;
+    let promiseOrValue, initialPromise = failureCount === 0 ? config.initialPromise : void 0;
+    try {
+      promiseOrValue = initialPromise ?? config.fn();
+    } catch (error) {
+      promiseOrValue = Promise.reject(error);
+    }
+    Promise.resolve(promiseOrValue).then(resolve).catch((error) => {
+      var _a10;
+      if (isResolved)
+        return;
+      let retry = config.retry ?? (isServer ? 0 : 3), retryDelay = config.retryDelay ?? defaultRetryDelay, delay2 = typeof retryDelay == "function" ? retryDelay(failureCount, error) : retryDelay, shouldRetry = retry === !0 || typeof retry == "number" && failureCount < retry || typeof retry == "function" && retry(failureCount, error);
+      if (isRetryCancelled || !shouldRetry) {
+        reject(error);
+        return;
+      }
+      failureCount++, (_a10 = config.onFail) == null || _a10.call(config, failureCount, error), sleep(delay2).then(() => canContinue() ? void 0 : pause()).then(() => {
+        isRetryCancelled ? reject(error) : run();
+      });
+    });
+  };
+  return {
+    promise: thenable,
+    cancel,
+    continue: () => (continueFn == null || continueFn(), thenable),
+    cancelRetry,
+    continueRetry,
+    canStart,
+    start: () => (canStart() ? run() : pause().then(run), thenable)
+  };
+}
+
+// node_modules/@tanstack/query-core/build/modern/notifyManager.js
+function createNotifyManager() {
+  let queue = [], transactions = 0, notifyFn = (callback) => {
+    callback();
+  }, batchNotifyFn = (callback) => {
+    callback();
+  }, scheduleFn = (cb) => setTimeout(cb, 0), schedule = (callback) => {
+    transactions ? queue.push(callback) : scheduleFn(() => {
+      notifyFn(callback);
+    });
+  }, flush = () => {
+    let originalQueue = queue;
+    queue = [], originalQueue.length && scheduleFn(() => {
+      batchNotifyFn(() => {
+        originalQueue.forEach((callback) => {
+          notifyFn(callback);
+        });
+      });
+    });
+  };
+  return {
+    batch: (callback) => {
+      let result;
+      transactions++;
+      try {
+        result = callback();
+      } finally {
+        transactions--, transactions || flush();
+      }
+      return result;
+    },
+    /**
+     * All calls to the wrapped function will be batched.
+     */
+    batchCalls: (callback) => (...args) => {
+      schedule(() => {
+        callback(...args);
+      });
+    },
+    schedule,
+    /**
+     * Use this method to set a custom notify function.
+     * This can be used to for example wrap notifications with `React.act` while running tests.
+     */
+    setNotifyFunction: (fn) => {
+      notifyFn = fn;
+    },
+    /**
+     * Use this method to set a custom function to batch notifications together into a single tick.
+     * By default React Query will use the batch function provided by ReactDOM or React Native.
+     */
+    setBatchNotifyFunction: (fn) => {
+      batchNotifyFn = fn;
+    },
+    setScheduler: (fn) => {
+      scheduleFn = fn;
+    }
+  };
+}
+var notifyManager = createNotifyManager();
+
+// node_modules/@tanstack/query-core/build/modern/removable.js
+var _gcTimeout, _a3, Removable = (_a3 = class {
+  constructor() {
+    __privateAdd(this, _gcTimeout, void 0);
+  }
+  destroy() {
+    this.clearGcTimeout();
+  }
+  scheduleGc() {
+    this.clearGcTimeout(), isValidTimeout(this.gcTime) && __privateSet(this, _gcTimeout, setTimeout(() => {
+      this.optionalRemove();
+    }, this.gcTime));
+  }
+  updateGcTime(newGcTime) {
+    this.gcTime = Math.max(
+      this.gcTime || 0,
+      newGcTime ?? (isServer ? 1 / 0 : 5 * 60 * 1e3)
+    );
+  }
+  clearGcTimeout() {
+    __privateGet(this, _gcTimeout) && (clearTimeout(__privateGet(this, _gcTimeout)), __privateSet(this, _gcTimeout, void 0));
+  }
+}, _gcTimeout = new WeakMap(), _a3);
+
+// node_modules/@tanstack/query-core/build/modern/query.js
+var _initialState, _revertState, _cache, _retryer, _defaultOptions, _abortSignalConsumed, _dispatch, dispatch_fn, _a4, Query = (_a4 = class extends Removable {
+  constructor(config) {
+    super();
+    __privateAdd(this, _dispatch);
+    __privateAdd(this, _initialState, void 0);
+    __privateAdd(this, _revertState, void 0);
+    __privateAdd(this, _cache, void 0);
+    __privateAdd(this, _retryer, void 0);
+    __privateAdd(this, _defaultOptions, void 0);
+    __privateAdd(this, _abortSignalConsumed, void 0);
+    __privateSet(this, _abortSignalConsumed, !1), __privateSet(this, _defaultOptions, config.defaultOptions), this.setOptions(config.options), this.observers = [], __privateSet(this, _cache, config.cache), this.queryKey = config.queryKey, this.queryHash = config.queryHash, __privateSet(this, _initialState, getDefaultState(this.options)), this.state = config.state ?? __privateGet(this, _initialState), this.scheduleGc();
+  }
+  get meta() {
+    return this.options.meta;
+  }
+  get promise() {
+    var _a10;
+    return (_a10 = __privateGet(this, _retryer)) == null ? void 0 : _a10.promise;
+  }
+  setOptions(options) {
+    this.options = { ...__privateGet(this, _defaultOptions), ...options }, this.updateGcTime(this.options.gcTime);
+  }
+  optionalRemove() {
+    !this.observers.length && this.state.fetchStatus === "idle" && __privateGet(this, _cache).remove(this);
+  }
+  setData(newData, options) {
+    let data = replaceData(this.state.data, newData, this.options);
+    return __privateMethod(this, _dispatch, dispatch_fn).call(this, {
+      data,
+      type: "success",
+      dataUpdatedAt: options == null ? void 0 : options.updatedAt,
+      manual: options == null ? void 0 : options.manual
+    }), data;
+  }
+  setState(state, setStateOptions) {
+    __privateMethod(this, _dispatch, dispatch_fn).call(this, { type: "setState", state, setStateOptions });
+  }
+  cancel(options) {
+    var _a10, _b;
+    let promise = (_a10 = __privateGet(this, _retryer)) == null ? void 0 : _a10.promise;
+    return (_b = __privateGet(this, _retryer)) == null || _b.cancel(options), promise ? promise.then(noop).catch(noop) : Promise.resolve();
+  }
+  destroy() {
+    super.destroy(), this.cancel({ silent: !0 });
+  }
+  reset() {
+    this.destroy(), this.setState(__privateGet(this, _initialState));
+  }
+  isActive() {
+    return this.observers.some(
+      (observer) => resolveEnabled(observer.options.enabled, this) !== !1
+    );
+  }
+  isDisabled() {
+    return this.getObserversCount() > 0 ? !this.isActive() : this.options.queryFn === skipToken || this.state.dataUpdateCount + this.state.errorUpdateCount === 0;
+  }
+  isStale() {
+    return this.state.isInvalidated ? !0 : this.getObserversCount() > 0 ? this.observers.some(
+      (observer) => observer.getCurrentResult().isStale
+    ) : this.state.data === void 0;
+  }
+  isStaleByTime(staleTime = 0) {
+    return this.state.isInvalidated || this.state.data === void 0 || !timeUntilStale(this.state.dataUpdatedAt, staleTime);
+  }
+  onFocus() {
+    var _a10;
+    let observer = this.observers.find((x) => x.shouldFetchOnWindowFocus());
+    observer == null || observer.refetch({ cancelRefetch: !1 }), (_a10 = __privateGet(this, _retryer)) == null || _a10.continue();
+  }
+  onOnline() {
+    var _a10;
+    let observer = this.observers.find((x) => x.shouldFetchOnReconnect());
+    observer == null || observer.refetch({ cancelRefetch: !1 }), (_a10 = __privateGet(this, _retryer)) == null || _a10.continue();
+  }
+  addObserver(observer) {
+    this.observers.includes(observer) || (this.observers.push(observer), this.clearGcTimeout(), __privateGet(this, _cache).notify({ type: "observerAdded", query: this, observer }));
+  }
+  removeObserver(observer) {
+    this.observers.includes(observer) && (this.observers = this.observers.filter((x) => x !== observer), this.observers.length || (__privateGet(this, _retryer) && (__privateGet(this, _abortSignalConsumed) ? __privateGet(this, _retryer).cancel({ revert: !0 }) : __privateGet(this, _retryer).cancelRetry()), this.scheduleGc()), __privateGet(this, _cache).notify({ type: "observerRemoved", query: this, observer }));
+  }
+  getObserversCount() {
+    return this.observers.length;
+  }
+  invalidate() {
+    this.state.isInvalidated || __privateMethod(this, _dispatch, dispatch_fn).call(this, { type: "invalidate" });
+  }
+  fetch(options, fetchOptions) {
+    var _a10, _b, _c;
+    if (this.state.fetchStatus !== "idle") {
+      if (this.state.data !== void 0 && (fetchOptions != null && fetchOptions.cancelRefetch))
+        this.cancel({ silent: !0 });
+      else if (__privateGet(this, _retryer))
+        return __privateGet(this, _retryer).continueRetry(), __privateGet(this, _retryer).promise;
+    }
+    if (options && this.setOptions(options), !this.options.queryFn) {
+      let observer = this.observers.find((x) => x.options.queryFn);
+      observer && this.setOptions(observer.options);
+    }
+    Array.isArray(this.options.queryKey) || console.error(
+      "As of v4, queryKey needs to be an Array. If you are using a string like 'repoData', please change it to an Array, e.g. ['repoData']"
+    );
+    let abortController = new AbortController(), addSignalProperty = (object3) => {
+      Object.defineProperty(object3, "signal", {
+        enumerable: !0,
+        get: () => (__privateSet(this, _abortSignalConsumed, !0), abortController.signal)
+      });
+    }, fetchFn = () => {
+      let queryFn = ensureQueryFn(this.options, fetchOptions), queryFnContext = {
+        queryKey: this.queryKey,
+        meta: this.meta
+      };
+      return addSignalProperty(queryFnContext), __privateSet(this, _abortSignalConsumed, !1), this.options.persister ? this.options.persister(
+        queryFn,
+        queryFnContext,
+        this
+      ) : queryFn(queryFnContext);
+    }, context = {
+      fetchOptions,
+      options: this.options,
+      queryKey: this.queryKey,
+      state: this.state,
+      fetchFn
+    };
+    addSignalProperty(context), (_a10 = this.options.behavior) == null || _a10.onFetch(
+      context,
+      this
+    ), __privateSet(this, _revertState, this.state), (this.state.fetchStatus === "idle" || this.state.fetchMeta !== ((_b = context.fetchOptions) == null ? void 0 : _b.meta)) && __privateMethod(this, _dispatch, dispatch_fn).call(this, { type: "fetch", meta: (_c = context.fetchOptions) == null ? void 0 : _c.meta });
+    let onError = (error) => {
+      var _a11, _b2, _c2, _d;
+      isCancelledError(error) && error.silent || __privateMethod(this, _dispatch, dispatch_fn).call(this, {
+        type: "error",
+        error
+      }), isCancelledError(error) || ((_b2 = (_a11 = __privateGet(this, _cache).config).onError) == null || _b2.call(
+        _a11,
+        error,
+        this
+      ), (_d = (_c2 = __privateGet(this, _cache).config).onSettled) == null || _d.call(
+        _c2,
+        this.state.data,
+        error,
+        this
+      )), this.scheduleGc();
+    };
+    return __privateSet(this, _retryer, createRetryer({
+      initialPromise: fetchOptions == null ? void 0 : fetchOptions.initialPromise,
+      fn: context.fetchFn,
+      abort: abortController.abort.bind(abortController),
+      onSuccess: (data) => {
+        var _a11, _b2, _c2, _d;
+        if (data === void 0) {
+          console.error(
+            `Query data cannot be undefined. Please make sure to return a value other than undefined from your query function. Affected query key: ${this.queryHash}`
+          ), onError(new Error(`${this.queryHash} data is undefined`));
+          return;
+        }
+        try {
+          this.setData(data);
+        } catch (error) {
+          onError(error);
+          return;
+        }
+        (_b2 = (_a11 = __privateGet(this, _cache).config).onSuccess) == null || _b2.call(_a11, data, this), (_d = (_c2 = __privateGet(this, _cache).config).onSettled) == null || _d.call(
+          _c2,
+          data,
+          this.state.error,
+          this
+        ), this.scheduleGc();
+      },
+      onError,
+      onFail: (failureCount, error) => {
+        __privateMethod(this, _dispatch, dispatch_fn).call(this, { type: "failed", failureCount, error });
+      },
+      onPause: () => {
+        __privateMethod(this, _dispatch, dispatch_fn).call(this, { type: "pause" });
+      },
+      onContinue: () => {
+        __privateMethod(this, _dispatch, dispatch_fn).call(this, { type: "continue" });
+      },
+      retry: context.options.retry,
+      retryDelay: context.options.retryDelay,
+      networkMode: context.options.networkMode,
+      canRun: () => !0
+    })), __privateGet(this, _retryer).start();
+  }
+}, _initialState = new WeakMap(), _revertState = new WeakMap(), _cache = new WeakMap(), _retryer = new WeakMap(), _defaultOptions = new WeakMap(), _abortSignalConsumed = new WeakMap(), _dispatch = new WeakSet(), dispatch_fn = function(action) {
+  let reducer = (state) => {
+    switch (action.type) {
+      case "failed":
+        return {
+          ...state,
+          fetchFailureCount: action.failureCount,
+          fetchFailureReason: action.error
+        };
+      case "pause":
+        return {
+          ...state,
+          fetchStatus: "paused"
+        };
+      case "continue":
+        return {
+          ...state,
+          fetchStatus: "fetching"
+        };
+      case "fetch":
+        return {
+          ...state,
+          ...fetchState(state.data, this.options),
+          fetchMeta: action.meta ?? null
+        };
+      case "success":
+        return {
+          ...state,
+          data: action.data,
+          dataUpdateCount: state.dataUpdateCount + 1,
+          dataUpdatedAt: action.dataUpdatedAt ?? Date.now(),
+          error: null,
+          isInvalidated: !1,
+          status: "success",
+          ...!action.manual && {
+            fetchStatus: "idle",
+            fetchFailureCount: 0,
+            fetchFailureReason: null
+          }
+        };
+      case "error":
+        let error = action.error;
+        return isCancelledError(error) && error.revert && __privateGet(this, _revertState) ? { ...__privateGet(this, _revertState), fetchStatus: "idle" } : {
+          ...state,
+          error,
+          errorUpdateCount: state.errorUpdateCount + 1,
+          errorUpdatedAt: Date.now(),
+          fetchFailureCount: state.fetchFailureCount + 1,
+          fetchFailureReason: error,
+          fetchStatus: "idle",
+          status: "error"
+        };
+      case "invalidate":
+        return {
+          ...state,
+          isInvalidated: !0
+        };
+      case "setState":
+        return {
+          ...state,
+          ...action.state
+        };
+    }
+  };
+  this.state = reducer(this.state), notifyManager.batch(() => {
+    this.observers.forEach((observer) => {
+      observer.onQueryUpdate();
+    }), __privateGet(this, _cache).notify({ query: this, type: "updated", action });
+  });
+}, _a4);
+function fetchState(data, options) {
+  return {
+    fetchFailureCount: 0,
+    fetchFailureReason: null,
+    fetchStatus: canFetch(options.networkMode) ? "fetching" : "paused",
+    ...data === void 0 && {
+      error: null,
+      status: "pending"
+    }
+  };
+}
+function getDefaultState(options) {
+  let data = typeof options.initialData == "function" ? options.initialData() : options.initialData, hasData = data !== void 0, initialDataUpdatedAt = hasData ? typeof options.initialDataUpdatedAt == "function" ? options.initialDataUpdatedAt() : options.initialDataUpdatedAt : 0;
+  return {
+    data,
+    dataUpdateCount: 0,
+    dataUpdatedAt: hasData ? initialDataUpdatedAt ?? Date.now() : 0,
+    error: null,
+    errorUpdateCount: 0,
+    errorUpdatedAt: 0,
+    fetchFailureCount: 0,
+    fetchFailureReason: null,
+    fetchMeta: null,
+    isInvalidated: !1,
+    status: hasData ? "success" : "pending",
+    fetchStatus: "idle"
+  };
+}
+
+// node_modules/@tanstack/query-core/build/modern/queryCache.js
+var _queries, _a5, QueryCache = (_a5 = class extends Subscribable {
+  constructor(config = {}) {
+    super();
+    __privateAdd(this, _queries, void 0);
+    this.config = config, __privateSet(this, _queries, /* @__PURE__ */ new Map());
+  }
+  build(client, options, state) {
+    let queryKey = options.queryKey, queryHash = options.queryHash ?? hashQueryKeyByOptions(queryKey, options), query = this.get(queryHash);
+    return query || (query = new Query({
+      cache: this,
+      queryKey,
+      queryHash,
+      options: client.defaultQueryOptions(options),
+      state,
+      defaultOptions: client.getQueryDefaults(queryKey)
+    }), this.add(query)), query;
+  }
+  add(query) {
+    __privateGet(this, _queries).has(query.queryHash) || (__privateGet(this, _queries).set(query.queryHash, query), this.notify({
+      type: "added",
+      query
+    }));
+  }
+  remove(query) {
+    let queryInMap = __privateGet(this, _queries).get(query.queryHash);
+    queryInMap && (query.destroy(), queryInMap === query && __privateGet(this, _queries).delete(query.queryHash), this.notify({ type: "removed", query }));
+  }
+  clear() {
+    notifyManager.batch(() => {
+      this.getAll().forEach((query) => {
+        this.remove(query);
+      });
+    });
+  }
+  get(queryHash) {
+    return __privateGet(this, _queries).get(queryHash);
+  }
+  getAll() {
+    return [...__privateGet(this, _queries).values()];
+  }
+  find(filters) {
+    let defaultedFilters = { exact: !0, ...filters };
+    return this.getAll().find(
+      (query) => matchQuery(defaultedFilters, query)
+    );
+  }
+  findAll(filters = {}) {
+    let queries = this.getAll();
+    return Object.keys(filters).length > 0 ? queries.filter((query) => matchQuery(filters, query)) : queries;
+  }
+  notify(event) {
+    notifyManager.batch(() => {
+      this.listeners.forEach((listener) => {
+        listener(event);
+      });
+    });
+  }
+  onFocus() {
+    notifyManager.batch(() => {
+      this.getAll().forEach((query) => {
+        query.onFocus();
+      });
+    });
+  }
+  onOnline() {
+    notifyManager.batch(() => {
+      this.getAll().forEach((query) => {
+        query.onOnline();
+      });
+    });
+  }
+}, _queries = new WeakMap(), _a5);
+
+// node_modules/@tanstack/query-core/build/modern/mutation.js
+var _observers, _mutationCache, _retryer2, _dispatch2, dispatch_fn2, _a6, Mutation = (_a6 = class extends Removable {
+  constructor(config) {
+    super();
+    __privateAdd(this, _dispatch2);
+    __privateAdd(this, _observers, void 0);
+    __privateAdd(this, _mutationCache, void 0);
+    __privateAdd(this, _retryer2, void 0);
+    this.mutationId = config.mutationId, __privateSet(this, _mutationCache, config.mutationCache), __privateSet(this, _observers, []), this.state = config.state || getDefaultState2(), this.setOptions(config.options), this.scheduleGc();
+  }
+  setOptions(options) {
+    this.options = options, this.updateGcTime(this.options.gcTime);
+  }
+  get meta() {
+    return this.options.meta;
+  }
+  addObserver(observer) {
+    __privateGet(this, _observers).includes(observer) || (__privateGet(this, _observers).push(observer), this.clearGcTimeout(), __privateGet(this, _mutationCache).notify({
+      type: "observerAdded",
+      mutation: this,
+      observer
+    }));
+  }
+  removeObserver(observer) {
+    __privateSet(this, _observers, __privateGet(this, _observers).filter((x) => x !== observer)), this.scheduleGc(), __privateGet(this, _mutationCache).notify({
+      type: "observerRemoved",
+      mutation: this,
+      observer
+    });
+  }
+  optionalRemove() {
+    __privateGet(this, _observers).length || (this.state.status === "pending" ? this.scheduleGc() : __privateGet(this, _mutationCache).remove(this));
+  }
+  continue() {
+    var _a10;
+    return ((_a10 = __privateGet(this, _retryer2)) == null ? void 0 : _a10.continue()) ?? // continuing a mutation assumes that variables are set, mutation must have been dehydrated before
+    this.execute(this.state.variables);
+  }
+  async execute(variables) {
+    var _a10, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t;
+    __privateSet(this, _retryer2, createRetryer({
+      fn: () => this.options.mutationFn ? this.options.mutationFn(variables) : Promise.reject(new Error("No mutationFn found")),
+      onFail: (failureCount, error) => {
+        __privateMethod(this, _dispatch2, dispatch_fn2).call(this, { type: "failed", failureCount, error });
+      },
+      onPause: () => {
+        __privateMethod(this, _dispatch2, dispatch_fn2).call(this, { type: "pause" });
+      },
+      onContinue: () => {
+        __privateMethod(this, _dispatch2, dispatch_fn2).call(this, { type: "continue" });
+      },
+      retry: this.options.retry ?? 0,
+      retryDelay: this.options.retryDelay,
+      networkMode: this.options.networkMode,
+      canRun: () => __privateGet(this, _mutationCache).canRun(this)
+    }));
+    let restored = this.state.status === "pending", isPaused = !__privateGet(this, _retryer2).canStart();
+    try {
+      if (!restored) {
+        __privateMethod(this, _dispatch2, dispatch_fn2).call(this, { type: "pending", variables, isPaused }), await ((_b = (_a10 = __privateGet(this, _mutationCache).config).onMutate) == null ? void 0 : _b.call(
+          _a10,
+          variables,
+          this
+        ));
+        let context = await ((_d = (_c = this.options).onMutate) == null ? void 0 : _d.call(_c, variables));
+        context !== this.state.context && __privateMethod(this, _dispatch2, dispatch_fn2).call(this, {
+          type: "pending",
+          context,
+          variables,
+          isPaused
+        });
+      }
+      let data = await __privateGet(this, _retryer2).start();
+      return await ((_f = (_e = __privateGet(this, _mutationCache).config).onSuccess) == null ? void 0 : _f.call(
+        _e,
+        data,
+        variables,
+        this.state.context,
+        this
+      )), await ((_h = (_g = this.options).onSuccess) == null ? void 0 : _h.call(_g, data, variables, this.state.context)), await ((_j = (_i = __privateGet(this, _mutationCache).config).onSettled) == null ? void 0 : _j.call(
+        _i,
+        data,
+        null,
+        this.state.variables,
+        this.state.context,
+        this
+      )), await ((_l = (_k = this.options).onSettled) == null ? void 0 : _l.call(_k, data, null, variables, this.state.context)), __privateMethod(this, _dispatch2, dispatch_fn2).call(this, { type: "success", data }), data;
+    } catch (error) {
+      try {
+        throw await ((_n = (_m = __privateGet(this, _mutationCache).config).onError) == null ? void 0 : _n.call(
+          _m,
+          error,
+          variables,
+          this.state.context,
+          this
+        )), await ((_p = (_o = this.options).onError) == null ? void 0 : _p.call(
+          _o,
+          error,
+          variables,
+          this.state.context
+        )), await ((_r = (_q = __privateGet(this, _mutationCache).config).onSettled) == null ? void 0 : _r.call(
+          _q,
+          void 0,
+          error,
+          this.state.variables,
+          this.state.context,
+          this
+        )), await ((_t = (_s = this.options).onSettled) == null ? void 0 : _t.call(
+          _s,
+          void 0,
+          error,
+          variables,
+          this.state.context
+        )), error;
+      } finally {
+        __privateMethod(this, _dispatch2, dispatch_fn2).call(this, { type: "error", error });
+      }
+    } finally {
+      __privateGet(this, _mutationCache).runNext(this);
+    }
+  }
+}, _observers = new WeakMap(), _mutationCache = new WeakMap(), _retryer2 = new WeakMap(), _dispatch2 = new WeakSet(), dispatch_fn2 = function(action) {
+  let reducer = (state) => {
+    switch (action.type) {
+      case "failed":
+        return {
+          ...state,
+          failureCount: action.failureCount,
+          failureReason: action.error
+        };
+      case "pause":
+        return {
+          ...state,
+          isPaused: !0
+        };
+      case "continue":
+        return {
+          ...state,
+          isPaused: !1
+        };
+      case "pending":
+        return {
+          ...state,
+          context: action.context,
+          data: void 0,
+          failureCount: 0,
+          failureReason: null,
+          error: null,
+          isPaused: action.isPaused,
+          status: "pending",
+          variables: action.variables,
+          submittedAt: Date.now()
+        };
+      case "success":
+        return {
+          ...state,
+          data: action.data,
+          failureCount: 0,
+          failureReason: null,
+          error: null,
+          status: "success",
+          isPaused: !1
+        };
+      case "error":
+        return {
+          ...state,
+          data: void 0,
+          error: action.error,
+          failureCount: state.failureCount + 1,
+          failureReason: action.error,
+          isPaused: !1,
+          status: "error"
+        };
+    }
+  };
+  this.state = reducer(this.state), notifyManager.batch(() => {
+    __privateGet(this, _observers).forEach((observer) => {
+      observer.onMutationUpdate(action);
+    }), __privateGet(this, _mutationCache).notify({
+      mutation: this,
+      type: "updated",
+      action
+    });
+  });
+}, _a6);
+function getDefaultState2() {
+  return {
+    context: void 0,
+    data: void 0,
+    error: null,
+    failureCount: 0,
+    failureReason: null,
+    isPaused: !1,
+    status: "idle",
+    variables: void 0,
+    submittedAt: 0
+  };
+}
+
+// node_modules/@tanstack/query-core/build/modern/mutationCache.js
+var _mutations, _mutationId, _a7, MutationCache = (_a7 = class extends Subscribable {
+  constructor(config = {}) {
+    super();
+    __privateAdd(this, _mutations, void 0);
+    __privateAdd(this, _mutationId, void 0);
+    this.config = config, __privateSet(this, _mutations, /* @__PURE__ */ new Map()), __privateSet(this, _mutationId, Date.now());
+  }
+  build(client, options, state) {
+    let mutation = new Mutation({
+      mutationCache: this,
+      mutationId: ++__privateWrapper(this, _mutationId)._,
+      options: client.defaultMutationOptions(options),
+      state
+    });
+    return this.add(mutation), mutation;
+  }
+  add(mutation) {
+    let scope = scopeFor(mutation), mutations = __privateGet(this, _mutations).get(scope) ?? [];
+    mutations.push(mutation), __privateGet(this, _mutations).set(scope, mutations), this.notify({ type: "added", mutation });
+  }
+  remove(mutation) {
+    var _a10;
+    let scope = scopeFor(mutation);
+    if (__privateGet(this, _mutations).has(scope)) {
+      let mutations = (_a10 = __privateGet(this, _mutations).get(scope)) == null ? void 0 : _a10.filter((x) => x !== mutation);
+      mutations && (mutations.length === 0 ? __privateGet(this, _mutations).delete(scope) : __privateGet(this, _mutations).set(scope, mutations));
+    }
+    this.notify({ type: "removed", mutation });
+  }
+  canRun(mutation) {
+    var _a10;
+    let firstPendingMutation = (_a10 = __privateGet(this, _mutations).get(scopeFor(mutation))) == null ? void 0 : _a10.find((m) => m.state.status === "pending");
+    return !firstPendingMutation || firstPendingMutation === mutation;
+  }
+  runNext(mutation) {
+    var _a10;
+    let foundMutation = (_a10 = __privateGet(this, _mutations).get(scopeFor(mutation))) == null ? void 0 : _a10.find((m) => m !== mutation && m.state.isPaused);
+    return (foundMutation == null ? void 0 : foundMutation.continue()) ?? Promise.resolve();
+  }
+  clear() {
+    notifyManager.batch(() => {
+      this.getAll().forEach((mutation) => {
+        this.remove(mutation);
+      });
+    });
+  }
+  getAll() {
+    return [...__privateGet(this, _mutations).values()].flat();
+  }
+  find(filters) {
+    let defaultedFilters = { exact: !0, ...filters };
+    return this.getAll().find(
+      (mutation) => matchMutation(defaultedFilters, mutation)
+    );
+  }
+  findAll(filters = {}) {
+    return this.getAll().filter((mutation) => matchMutation(filters, mutation));
+  }
+  notify(event) {
+    notifyManager.batch(() => {
+      this.listeners.forEach((listener) => {
+        listener(event);
+      });
+    });
+  }
+  resumePausedMutations() {
+    let pausedMutations = this.getAll().filter((x) => x.state.isPaused);
+    return notifyManager.batch(
+      () => Promise.all(
+        pausedMutations.map((mutation) => mutation.continue().catch(noop))
+      )
+    );
+  }
+}, _mutations = new WeakMap(), _mutationId = new WeakMap(), _a7);
+function scopeFor(mutation) {
+  var _a10;
+  return ((_a10 = mutation.options.scope) == null ? void 0 : _a10.id) ?? String(mutation.mutationId);
+}
+
+// node_modules/@tanstack/query-core/build/modern/infiniteQueryBehavior.js
+function infiniteQueryBehavior(pages) {
+  return {
+    onFetch: (context, query) => {
+      var _a10, _b, _c, _d, _e;
+      let options = context.options, direction = (_c = (_b = (_a10 = context.fetchOptions) == null ? void 0 : _a10.meta) == null ? void 0 : _b.fetchMore) == null ? void 0 : _c.direction, oldPages = ((_d = context.state.data) == null ? void 0 : _d.pages) || [], oldPageParams = ((_e = context.state.data) == null ? void 0 : _e.pageParams) || [], result = { pages: [], pageParams: [] }, currentPage = 0, fetchFn = async () => {
+        let cancelled = !1, addSignalProperty = (object3) => {
+          Object.defineProperty(object3, "signal", {
+            enumerable: !0,
+            get: () => (context.signal.aborted ? cancelled = !0 : context.signal.addEventListener("abort", () => {
+              cancelled = !0;
+            }), context.signal)
+          });
+        }, queryFn = ensureQueryFn(context.options, context.fetchOptions), fetchPage = async (data, param, previous) => {
+          if (cancelled)
+            return Promise.reject();
+          if (param == null && data.pages.length)
+            return Promise.resolve(data);
+          let queryFnContext = {
+            queryKey: context.queryKey,
+            pageParam: param,
+            direction: previous ? "backward" : "forward",
+            meta: context.options.meta
+          };
+          addSignalProperty(queryFnContext);
+          let page = await queryFn(
+            queryFnContext
+          ), { maxPages } = context.options, addTo = previous ? addToStart : addToEnd;
+          return {
+            pages: addTo(data.pages, page, maxPages),
+            pageParams: addTo(data.pageParams, param, maxPages)
+          };
+        };
+        if (direction && oldPages.length) {
+          let previous = direction === "backward", pageParamFn = previous ? getPreviousPageParam : getNextPageParam, oldData = {
+            pages: oldPages,
+            pageParams: oldPageParams
+          }, param = pageParamFn(options, oldData);
+          result = await fetchPage(oldData, param, previous);
+        } else {
+          let remainingPages = pages ?? oldPages.length;
+          do {
+            let param = currentPage === 0 ? oldPageParams[0] ?? options.initialPageParam : getNextPageParam(options, result);
+            if (currentPage > 0 && param == null)
+              break;
+            result = await fetchPage(result, param), currentPage++;
+          } while (currentPage < remainingPages);
+        }
+        return result;
+      };
+      context.options.persister ? context.fetchFn = () => {
+        var _a11, _b2;
+        return (_b2 = (_a11 = context.options).persister) == null ? void 0 : _b2.call(
+          _a11,
+          fetchFn,
+          {
+            queryKey: context.queryKey,
+            meta: context.options.meta,
+            signal: context.signal
+          },
+          query
+        );
+      } : context.fetchFn = fetchFn;
+    }
+  };
+}
+function getNextPageParam(options, { pages, pageParams }) {
+  let lastIndex = pages.length - 1;
+  return pages.length > 0 ? options.getNextPageParam(
+    pages[lastIndex],
+    pages,
+    pageParams[lastIndex],
+    pageParams
+  ) : void 0;
+}
+function getPreviousPageParam(options, { pages, pageParams }) {
+  var _a10;
+  return pages.length > 0 ? (_a10 = options.getPreviousPageParam) == null ? void 0 : _a10.call(options, pages[0], pages, pageParams[0], pageParams) : void 0;
+}
+
+// node_modules/@tanstack/query-core/build/modern/queryClient.js
+var _queryCache, _mutationCache2, _defaultOptions2, _queryDefaults, _mutationDefaults, _mountCount, _unsubscribeFocus, _unsubscribeOnline, _a8, QueryClient = (_a8 = class {
+  constructor(config = {}) {
+    __privateAdd(this, _queryCache, void 0);
+    __privateAdd(this, _mutationCache2, void 0);
+    __privateAdd(this, _defaultOptions2, void 0);
+    __privateAdd(this, _queryDefaults, void 0);
+    __privateAdd(this, _mutationDefaults, void 0);
+    __privateAdd(this, _mountCount, void 0);
+    __privateAdd(this, _unsubscribeFocus, void 0);
+    __privateAdd(this, _unsubscribeOnline, void 0);
+    __privateSet(this, _queryCache, config.queryCache || new QueryCache()), __privateSet(this, _mutationCache2, config.mutationCache || new MutationCache()), __privateSet(this, _defaultOptions2, config.defaultOptions || {}), __privateSet(this, _queryDefaults, /* @__PURE__ */ new Map()), __privateSet(this, _mutationDefaults, /* @__PURE__ */ new Map()), __privateSet(this, _mountCount, 0);
+  }
+  mount() {
+    __privateWrapper(this, _mountCount)._++, __privateGet(this, _mountCount) === 1 && (__privateSet(this, _unsubscribeFocus, focusManager.subscribe(async (focused) => {
+      focused && (await this.resumePausedMutations(), __privateGet(this, _queryCache).onFocus());
+    })), __privateSet(this, _unsubscribeOnline, onlineManager.subscribe(async (online) => {
+      online && (await this.resumePausedMutations(), __privateGet(this, _queryCache).onOnline());
+    })));
+  }
+  unmount() {
+    var _a10, _b;
+    __privateWrapper(this, _mountCount)._--, __privateGet(this, _mountCount) === 0 && ((_a10 = __privateGet(this, _unsubscribeFocus)) == null || _a10.call(this), __privateSet(this, _unsubscribeFocus, void 0), (_b = __privateGet(this, _unsubscribeOnline)) == null || _b.call(this), __privateSet(this, _unsubscribeOnline, void 0));
+  }
+  isFetching(filters) {
+    return __privateGet(this, _queryCache).findAll({ ...filters, fetchStatus: "fetching" }).length;
+  }
+  isMutating(filters) {
+    return __privateGet(this, _mutationCache2).findAll({ ...filters, status: "pending" }).length;
+  }
+  getQueryData(queryKey) {
+    var _a10;
+    let options = this.defaultQueryOptions({ queryKey });
+    return (_a10 = __privateGet(this, _queryCache).get(options.queryHash)) == null ? void 0 : _a10.state.data;
+  }
+  ensureQueryData(options) {
+    let cachedData = this.getQueryData(options.queryKey);
+    if (cachedData === void 0)
+      return this.fetchQuery(options);
+    {
+      let defaultedOptions = this.defaultQueryOptions(options), query = __privateGet(this, _queryCache).build(this, defaultedOptions);
+      return options.revalidateIfStale && query.isStaleByTime(resolveStaleTime(defaultedOptions.staleTime, query)) && this.prefetchQuery(defaultedOptions), Promise.resolve(cachedData);
+    }
+  }
+  getQueriesData(filters) {
+    return __privateGet(this, _queryCache).findAll(filters).map(({ queryKey, state }) => {
+      let data = state.data;
+      return [queryKey, data];
+    });
+  }
+  setQueryData(queryKey, updater, options) {
+    let defaultedOptions = this.defaultQueryOptions({ queryKey }), query = __privateGet(this, _queryCache).get(
+      defaultedOptions.queryHash
+    ), prevData = query == null ? void 0 : query.state.data, data = functionalUpdate(updater, prevData);
+    if (data !== void 0)
+      return __privateGet(this, _queryCache).build(this, defaultedOptions).setData(data, { ...options, manual: !0 });
+  }
+  setQueriesData(filters, updater, options) {
+    return notifyManager.batch(
+      () => __privateGet(this, _queryCache).findAll(filters).map(({ queryKey }) => [
+        queryKey,
+        this.setQueryData(queryKey, updater, options)
+      ])
+    );
+  }
+  getQueryState(queryKey) {
+    var _a10;
+    let options = this.defaultQueryOptions({ queryKey });
+    return (_a10 = __privateGet(this, _queryCache).get(options.queryHash)) == null ? void 0 : _a10.state;
+  }
+  removeQueries(filters) {
+    let queryCache = __privateGet(this, _queryCache);
+    notifyManager.batch(() => {
+      queryCache.findAll(filters).forEach((query) => {
+        queryCache.remove(query);
+      });
+    });
+  }
+  resetQueries(filters, options) {
+    let queryCache = __privateGet(this, _queryCache), refetchFilters = {
+      type: "active",
+      ...filters
+    };
+    return notifyManager.batch(() => (queryCache.findAll(filters).forEach((query) => {
+      query.reset();
+    }), this.refetchQueries(refetchFilters, options)));
+  }
+  cancelQueries(filters = {}, cancelOptions = {}) {
+    let defaultedCancelOptions = { revert: !0, ...cancelOptions }, promises = notifyManager.batch(
+      () => __privateGet(this, _queryCache).findAll(filters).map((query) => query.cancel(defaultedCancelOptions))
+    );
+    return Promise.all(promises).then(noop).catch(noop);
+  }
+  invalidateQueries(filters = {}, options = {}) {
+    return notifyManager.batch(() => {
+      if (__privateGet(this, _queryCache).findAll(filters).forEach((query) => {
+        query.invalidate();
+      }), filters.refetchType === "none")
+        return Promise.resolve();
+      let refetchFilters = {
+        ...filters,
+        type: filters.refetchType ?? filters.type ?? "active"
+      };
+      return this.refetchQueries(refetchFilters, options);
+    });
+  }
+  refetchQueries(filters = {}, options) {
+    let fetchOptions = {
+      ...options,
+      cancelRefetch: (options == null ? void 0 : options.cancelRefetch) ?? !0
+    }, promises = notifyManager.batch(
+      () => __privateGet(this, _queryCache).findAll(filters).filter((query) => !query.isDisabled()).map((query) => {
+        let promise = query.fetch(void 0, fetchOptions);
+        return fetchOptions.throwOnError || (promise = promise.catch(noop)), query.state.fetchStatus === "paused" ? Promise.resolve() : promise;
+      })
+    );
+    return Promise.all(promises).then(noop);
+  }
+  fetchQuery(options) {
+    let defaultedOptions = this.defaultQueryOptions(options);
+    defaultedOptions.retry === void 0 && (defaultedOptions.retry = !1);
+    let query = __privateGet(this, _queryCache).build(this, defaultedOptions);
+    return query.isStaleByTime(
+      resolveStaleTime(defaultedOptions.staleTime, query)
+    ) ? query.fetch(defaultedOptions) : Promise.resolve(query.state.data);
+  }
+  prefetchQuery(options) {
+    return this.fetchQuery(options).then(noop).catch(noop);
+  }
+  fetchInfiniteQuery(options) {
+    return options.behavior = infiniteQueryBehavior(options.pages), this.fetchQuery(options);
+  }
+  prefetchInfiniteQuery(options) {
+    return this.fetchInfiniteQuery(options).then(noop).catch(noop);
+  }
+  ensureInfiniteQueryData(options) {
+    return options.behavior = infiniteQueryBehavior(options.pages), this.ensureQueryData(options);
+  }
+  resumePausedMutations() {
+    return onlineManager.isOnline() ? __privateGet(this, _mutationCache2).resumePausedMutations() : Promise.resolve();
+  }
+  getQueryCache() {
+    return __privateGet(this, _queryCache);
+  }
+  getMutationCache() {
+    return __privateGet(this, _mutationCache2);
+  }
+  getDefaultOptions() {
+    return __privateGet(this, _defaultOptions2);
+  }
+  setDefaultOptions(options) {
+    __privateSet(this, _defaultOptions2, options);
+  }
+  setQueryDefaults(queryKey, options) {
+    __privateGet(this, _queryDefaults).set(hashKey(queryKey), {
+      queryKey,
+      defaultOptions: options
+    });
+  }
+  getQueryDefaults(queryKey) {
+    let defaults = [...__privateGet(this, _queryDefaults).values()], result = {};
+    return defaults.forEach((queryDefault) => {
+      partialMatchKey(queryKey, queryDefault.queryKey) && (result = { ...result, ...queryDefault.defaultOptions });
+    }), result;
+  }
+  setMutationDefaults(mutationKey, options) {
+    __privateGet(this, _mutationDefaults).set(hashKey(mutationKey), {
+      mutationKey,
+      defaultOptions: options
+    });
+  }
+  getMutationDefaults(mutationKey) {
+    let defaults = [...__privateGet(this, _mutationDefaults).values()], result = {};
+    return defaults.forEach((queryDefault) => {
+      partialMatchKey(mutationKey, queryDefault.mutationKey) && (result = { ...result, ...queryDefault.defaultOptions });
+    }), result;
+  }
+  defaultQueryOptions(options) {
+    if (options._defaulted)
+      return options;
+    let defaultedOptions = {
+      ...__privateGet(this, _defaultOptions2).queries,
+      ...this.getQueryDefaults(options.queryKey),
+      ...options,
+      _defaulted: !0
+    };
+    return defaultedOptions.queryHash || (defaultedOptions.queryHash = hashQueryKeyByOptions(
+      defaultedOptions.queryKey,
+      defaultedOptions
+    )), defaultedOptions.refetchOnReconnect === void 0 && (defaultedOptions.refetchOnReconnect = defaultedOptions.networkMode !== "always"), defaultedOptions.throwOnError === void 0 && (defaultedOptions.throwOnError = !!defaultedOptions.suspense), !defaultedOptions.networkMode && defaultedOptions.persister && (defaultedOptions.networkMode = "offlineFirst"), defaultedOptions.enabled !== !0 && defaultedOptions.queryFn === skipToken && (defaultedOptions.enabled = !1), defaultedOptions;
+  }
+  defaultMutationOptions(options) {
+    return options != null && options._defaulted ? options : {
+      ...__privateGet(this, _defaultOptions2).mutations,
+      ...(options == null ? void 0 : options.mutationKey) && this.getMutationDefaults(options.mutationKey),
+      ...options,
+      _defaulted: !0
+    };
+  }
+  clear() {
+    __privateGet(this, _queryCache).clear(), __privateGet(this, _mutationCache2).clear();
+  }
+}, _queryCache = new WeakMap(), _mutationCache2 = new WeakMap(), _defaultOptions2 = new WeakMap(), _queryDefaults = new WeakMap(), _mutationDefaults = new WeakMap(), _mountCount = new WeakMap(), _unsubscribeFocus = new WeakMap(), _unsubscribeOnline = new WeakMap(), _a8);
+
+// node_modules/@tanstack/query-core/build/modern/queryObserver.js
+var _client, _currentQuery, _currentQueryInitialState, _currentResult, _currentResultState, _currentResultOptions, _currentThenable, _selectError, _selectFn, _selectResult, _lastQueryWithDefinedData, _staleTimeoutId, _refetchIntervalId, _currentRefetchInterval, _trackedProps, _executeFetch, executeFetch_fn, _updateStaleTimeout, updateStaleTimeout_fn, _computeRefetchInterval, computeRefetchInterval_fn, _updateRefetchInterval, updateRefetchInterval_fn, _updateTimers, updateTimers_fn, _clearStaleTimeout, clearStaleTimeout_fn, _clearRefetchInterval, clearRefetchInterval_fn, _updateQuery, updateQuery_fn, _notify, notify_fn, _a9, QueryObserver = (_a9 = class extends Subscribable {
+  constructor(client, options) {
+    super();
+    __privateAdd(this, _executeFetch);
+    __privateAdd(this, _updateStaleTimeout);
+    __privateAdd(this, _computeRefetchInterval);
+    __privateAdd(this, _updateRefetchInterval);
+    __privateAdd(this, _updateTimers);
+    __privateAdd(this, _clearStaleTimeout);
+    __privateAdd(this, _clearRefetchInterval);
+    __privateAdd(this, _updateQuery);
+    __privateAdd(this, _notify);
+    __privateAdd(this, _client, void 0);
+    __privateAdd(this, _currentQuery, void 0);
+    __privateAdd(this, _currentQueryInitialState, void 0);
+    __privateAdd(this, _currentResult, void 0);
+    __privateAdd(this, _currentResultState, void 0);
+    __privateAdd(this, _currentResultOptions, void 0);
+    __privateAdd(this, _currentThenable, void 0);
+    __privateAdd(this, _selectError, void 0);
+    __privateAdd(this, _selectFn, void 0);
+    __privateAdd(this, _selectResult, void 0);
+    // This property keeps track of the last query with defined data.
+    // It will be used to pass the previous data and query to the placeholder function between renders.
+    __privateAdd(this, _lastQueryWithDefinedData, void 0);
+    __privateAdd(this, _staleTimeoutId, void 0);
+    __privateAdd(this, _refetchIntervalId, void 0);
+    __privateAdd(this, _currentRefetchInterval, void 0);
+    __privateAdd(this, _trackedProps, /* @__PURE__ */ new Set());
+    this.options = options, __privateSet(this, _client, client), __privateSet(this, _selectError, null), __privateSet(this, _currentThenable, pendingThenable()), this.options.experimental_prefetchInRender || __privateGet(this, _currentThenable).reject(
+      new Error("experimental_prefetchInRender feature flag is not enabled")
+    ), this.bindMethods(), this.setOptions(options);
+  }
+  bindMethods() {
+    this.refetch = this.refetch.bind(this);
+  }
+  onSubscribe() {
+    this.listeners.size === 1 && (__privateGet(this, _currentQuery).addObserver(this), shouldFetchOnMount(__privateGet(this, _currentQuery), this.options) ? __privateMethod(this, _executeFetch, executeFetch_fn).call(this) : this.updateResult(), __privateMethod(this, _updateTimers, updateTimers_fn).call(this));
+  }
+  onUnsubscribe() {
+    this.hasListeners() || this.destroy();
+  }
+  shouldFetchOnReconnect() {
+    return shouldFetchOn(
+      __privateGet(this, _currentQuery),
+      this.options,
+      this.options.refetchOnReconnect
+    );
+  }
+  shouldFetchOnWindowFocus() {
+    return shouldFetchOn(
+      __privateGet(this, _currentQuery),
+      this.options,
+      this.options.refetchOnWindowFocus
+    );
+  }
+  destroy() {
+    this.listeners = /* @__PURE__ */ new Set(), __privateMethod(this, _clearStaleTimeout, clearStaleTimeout_fn).call(this), __privateMethod(this, _clearRefetchInterval, clearRefetchInterval_fn).call(this), __privateGet(this, _currentQuery).removeObserver(this);
+  }
+  setOptions(options, notifyOptions) {
+    let prevOptions = this.options, prevQuery = __privateGet(this, _currentQuery);
+    if (this.options = __privateGet(this, _client).defaultQueryOptions(options), this.options.enabled !== void 0 && typeof this.options.enabled != "boolean" && typeof this.options.enabled != "function" && typeof resolveEnabled(this.options.enabled, __privateGet(this, _currentQuery)) != "boolean")
+      throw new Error(
+        "Expected enabled to be a boolean or a callback that returns a boolean"
+      );
+    __privateMethod(this, _updateQuery, updateQuery_fn).call(this), __privateGet(this, _currentQuery).setOptions(this.options), prevOptions._defaulted && !shallowEqualObjects(this.options, prevOptions) && __privateGet(this, _client).getQueryCache().notify({
+      type: "observerOptionsUpdated",
+      query: __privateGet(this, _currentQuery),
+      observer: this
+    });
+    let mounted = this.hasListeners();
+    mounted && shouldFetchOptionally(
+      __privateGet(this, _currentQuery),
+      prevQuery,
+      this.options,
+      prevOptions
+    ) && __privateMethod(this, _executeFetch, executeFetch_fn).call(this), this.updateResult(notifyOptions), mounted && (__privateGet(this, _currentQuery) !== prevQuery || resolveEnabled(this.options.enabled, __privateGet(this, _currentQuery)) !== resolveEnabled(prevOptions.enabled, __privateGet(this, _currentQuery)) || resolveStaleTime(this.options.staleTime, __privateGet(this, _currentQuery)) !== resolveStaleTime(prevOptions.staleTime, __privateGet(this, _currentQuery))) && __privateMethod(this, _updateStaleTimeout, updateStaleTimeout_fn).call(this);
+    let nextRefetchInterval = __privateMethod(this, _computeRefetchInterval, computeRefetchInterval_fn).call(this);
+    mounted && (__privateGet(this, _currentQuery) !== prevQuery || resolveEnabled(this.options.enabled, __privateGet(this, _currentQuery)) !== resolveEnabled(prevOptions.enabled, __privateGet(this, _currentQuery)) || nextRefetchInterval !== __privateGet(this, _currentRefetchInterval)) && __privateMethod(this, _updateRefetchInterval, updateRefetchInterval_fn).call(this, nextRefetchInterval);
+  }
+  getOptimisticResult(options) {
+    let query = __privateGet(this, _client).getQueryCache().build(__privateGet(this, _client), options), result = this.createResult(query, options);
+    return shouldAssignObserverCurrentProperties(this, result) && (__privateSet(this, _currentResult, result), __privateSet(this, _currentResultOptions, this.options), __privateSet(this, _currentResultState, __privateGet(this, _currentQuery).state)), result;
+  }
+  getCurrentResult() {
+    return __privateGet(this, _currentResult);
+  }
+  trackResult(result, onPropTracked) {
+    let trackedResult = {};
+    return Object.keys(result).forEach((key) => {
+      Object.defineProperty(trackedResult, key, {
+        configurable: !1,
+        enumerable: !0,
+        get: () => (this.trackProp(key), onPropTracked == null || onPropTracked(key), result[key])
+      });
+    }), trackedResult;
+  }
+  trackProp(key) {
+    __privateGet(this, _trackedProps).add(key);
+  }
+  getCurrentQuery() {
+    return __privateGet(this, _currentQuery);
+  }
+  refetch({ ...options } = {}) {
+    return this.fetch({
+      ...options
+    });
+  }
+  fetchOptimistic(options) {
+    let defaultedOptions = __privateGet(this, _client).defaultQueryOptions(options), query = __privateGet(this, _client).getQueryCache().build(__privateGet(this, _client), defaultedOptions);
+    return query.fetch().then(() => this.createResult(query, defaultedOptions));
+  }
+  fetch(fetchOptions) {
+    return __privateMethod(this, _executeFetch, executeFetch_fn).call(this, {
+      ...fetchOptions,
+      cancelRefetch: fetchOptions.cancelRefetch ?? !0
+    }).then(() => (this.updateResult(), __privateGet(this, _currentResult)));
+  }
+  createResult(query, options) {
+    var _a10;
+    let prevQuery = __privateGet(this, _currentQuery), prevOptions = this.options, prevResult = __privateGet(this, _currentResult), prevResultState = __privateGet(this, _currentResultState), prevResultOptions = __privateGet(this, _currentResultOptions), queryInitialState = query !== prevQuery ? query.state : __privateGet(this, _currentQueryInitialState), { state } = query, newState = { ...state }, isPlaceholderData = !1, data;
+    if (options._optimisticResults) {
+      let mounted = this.hasListeners(), fetchOnMount = !mounted && shouldFetchOnMount(query, options), fetchOptionally = mounted && shouldFetchOptionally(query, prevQuery, options, prevOptions);
+      (fetchOnMount || fetchOptionally) && (newState = {
+        ...newState,
+        ...fetchState(state.data, query.options)
+      }), options._optimisticResults === "isRestoring" && (newState.fetchStatus = "idle");
+    }
+    let { error, errorUpdatedAt, status } = newState;
+    if (options.select && newState.data !== void 0)
+      if (prevResult && newState.data === (prevResultState == null ? void 0 : prevResultState.data) && options.select === __privateGet(this, _selectFn))
+        data = __privateGet(this, _selectResult);
+      else
+        try {
+          __privateSet(this, _selectFn, options.select), data = options.select(newState.data), data = replaceData(prevResult == null ? void 0 : prevResult.data, data, options), __privateSet(this, _selectResult, data), __privateSet(this, _selectError, null);
+        } catch (selectError) {
+          __privateSet(this, _selectError, selectError);
+        }
+    else
+      data = newState.data;
+    if (options.placeholderData !== void 0 && data === void 0 && status === "pending") {
+      let placeholderData;
+      if (prevResult != null && prevResult.isPlaceholderData && options.placeholderData === (prevResultOptions == null ? void 0 : prevResultOptions.placeholderData))
+        placeholderData = prevResult.data;
+      else if (placeholderData = typeof options.placeholderData == "function" ? options.placeholderData(
+        (_a10 = __privateGet(this, _lastQueryWithDefinedData)) == null ? void 0 : _a10.state.data,
+        __privateGet(this, _lastQueryWithDefinedData)
+      ) : options.placeholderData, options.select && placeholderData !== void 0)
+        try {
+          placeholderData = options.select(placeholderData), __privateSet(this, _selectError, null);
+        } catch (selectError) {
+          __privateSet(this, _selectError, selectError);
+        }
+      placeholderData !== void 0 && (status = "success", data = replaceData(
+        prevResult == null ? void 0 : prevResult.data,
+        placeholderData,
+        options
+      ), isPlaceholderData = !0);
+    }
+    __privateGet(this, _selectError) && (error = __privateGet(this, _selectError), data = __privateGet(this, _selectResult), errorUpdatedAt = Date.now(), status = "error");
+    let isFetching = newState.fetchStatus === "fetching", isPending = status === "pending", isError = status === "error", isLoading = isPending && isFetching, hasData = data !== void 0, nextResult = {
+      status,
+      fetchStatus: newState.fetchStatus,
+      isPending,
+      isSuccess: status === "success",
+      isError,
+      isInitialLoading: isLoading,
+      isLoading,
+      data,
+      dataUpdatedAt: newState.dataUpdatedAt,
+      error,
+      errorUpdatedAt,
+      failureCount: newState.fetchFailureCount,
+      failureReason: newState.fetchFailureReason,
+      errorUpdateCount: newState.errorUpdateCount,
+      isFetched: newState.dataUpdateCount > 0 || newState.errorUpdateCount > 0,
+      isFetchedAfterMount: newState.dataUpdateCount > queryInitialState.dataUpdateCount || newState.errorUpdateCount > queryInitialState.errorUpdateCount,
+      isFetching,
+      isRefetching: isFetching && !isPending,
+      isLoadingError: isError && !hasData,
+      isPaused: newState.fetchStatus === "paused",
+      isPlaceholderData,
+      isRefetchError: isError && hasData,
+      isStale: isStale(query, options),
+      refetch: this.refetch,
+      promise: __privateGet(this, _currentThenable)
+    };
+    if (this.options.experimental_prefetchInRender) {
+      let finalizeThenableIfPossible = (thenable) => {
+        nextResult.status === "error" ? thenable.reject(nextResult.error) : nextResult.data !== void 0 && thenable.resolve(nextResult.data);
+      }, recreateThenable = () => {
+        let pending = __privateSet(this, _currentThenable, nextResult.promise = pendingThenable());
+        finalizeThenableIfPossible(pending);
+      }, prevThenable = __privateGet(this, _currentThenable);
+      switch (prevThenable.status) {
+        case "pending":
+          query.queryHash === prevQuery.queryHash && finalizeThenableIfPossible(prevThenable);
+          break;
+        case "fulfilled":
+          (nextResult.status === "error" || nextResult.data !== prevThenable.value) && recreateThenable();
+          break;
+        case "rejected":
+          (nextResult.status !== "error" || nextResult.error !== prevThenable.reason) && recreateThenable();
+          break;
+      }
+    }
+    return nextResult;
+  }
+  updateResult(notifyOptions) {
+    let prevResult = __privateGet(this, _currentResult), nextResult = this.createResult(__privateGet(this, _currentQuery), this.options);
+    if (__privateSet(this, _currentResultState, __privateGet(this, _currentQuery).state), __privateSet(this, _currentResultOptions, this.options), __privateGet(this, _currentResultState).data !== void 0 && __privateSet(this, _lastQueryWithDefinedData, __privateGet(this, _currentQuery)), shallowEqualObjects(nextResult, prevResult))
+      return;
+    __privateSet(this, _currentResult, nextResult);
+    let defaultNotifyOptions = {}, shouldNotifyListeners = () => {
+      if (!prevResult)
+        return !0;
+      let { notifyOnChangeProps } = this.options, notifyOnChangePropsValue = typeof notifyOnChangeProps == "function" ? notifyOnChangeProps() : notifyOnChangeProps;
+      if (notifyOnChangePropsValue === "all" || !notifyOnChangePropsValue && !__privateGet(this, _trackedProps).size)
+        return !0;
+      let includedProps = new Set(
+        notifyOnChangePropsValue ?? __privateGet(this, _trackedProps)
+      );
+      return this.options.throwOnError && includedProps.add("error"), Object.keys(__privateGet(this, _currentResult)).some((key) => {
+        let typedKey = key;
+        return __privateGet(this, _currentResult)[typedKey] !== prevResult[typedKey] && includedProps.has(typedKey);
+      });
+    };
+    (notifyOptions == null ? void 0 : notifyOptions.listeners) !== !1 && shouldNotifyListeners() && (defaultNotifyOptions.listeners = !0), __privateMethod(this, _notify, notify_fn).call(this, { ...defaultNotifyOptions, ...notifyOptions });
+  }
+  onQueryUpdate() {
+    this.updateResult(), this.hasListeners() && __privateMethod(this, _updateTimers, updateTimers_fn).call(this);
+  }
+}, _client = new WeakMap(), _currentQuery = new WeakMap(), _currentQueryInitialState = new WeakMap(), _currentResult = new WeakMap(), _currentResultState = new WeakMap(), _currentResultOptions = new WeakMap(), _currentThenable = new WeakMap(), _selectError = new WeakMap(), _selectFn = new WeakMap(), _selectResult = new WeakMap(), _lastQueryWithDefinedData = new WeakMap(), _staleTimeoutId = new WeakMap(), _refetchIntervalId = new WeakMap(), _currentRefetchInterval = new WeakMap(), _trackedProps = new WeakMap(), _executeFetch = new WeakSet(), executeFetch_fn = function(fetchOptions) {
+  __privateMethod(this, _updateQuery, updateQuery_fn).call(this);
+  let promise = __privateGet(this, _currentQuery).fetch(
+    this.options,
+    fetchOptions
+  );
+  return fetchOptions != null && fetchOptions.throwOnError || (promise = promise.catch(noop)), promise;
+}, _updateStaleTimeout = new WeakSet(), updateStaleTimeout_fn = function() {
+  __privateMethod(this, _clearStaleTimeout, clearStaleTimeout_fn).call(this);
+  let staleTime = resolveStaleTime(
+    this.options.staleTime,
+    __privateGet(this, _currentQuery)
+  );
+  if (isServer || __privateGet(this, _currentResult).isStale || !isValidTimeout(staleTime))
+    return;
+  let timeout3 = timeUntilStale(__privateGet(this, _currentResult).dataUpdatedAt, staleTime) + 1;
+  __privateSet(this, _staleTimeoutId, setTimeout(() => {
+    __privateGet(this, _currentResult).isStale || this.updateResult();
+  }, timeout3));
+}, _computeRefetchInterval = new WeakSet(), computeRefetchInterval_fn = function() {
+  return (typeof this.options.refetchInterval == "function" ? this.options.refetchInterval(__privateGet(this, _currentQuery)) : this.options.refetchInterval) ?? !1;
+}, _updateRefetchInterval = new WeakSet(), updateRefetchInterval_fn = function(nextInterval) {
+  __privateMethod(this, _clearRefetchInterval, clearRefetchInterval_fn).call(this), __privateSet(this, _currentRefetchInterval, nextInterval), !(isServer || resolveEnabled(this.options.enabled, __privateGet(this, _currentQuery)) === !1 || !isValidTimeout(__privateGet(this, _currentRefetchInterval)) || __privateGet(this, _currentRefetchInterval) === 0) && __privateSet(this, _refetchIntervalId, setInterval(() => {
+    (this.options.refetchIntervalInBackground || focusManager.isFocused()) && __privateMethod(this, _executeFetch, executeFetch_fn).call(this);
+  }, __privateGet(this, _currentRefetchInterval)));
+}, _updateTimers = new WeakSet(), updateTimers_fn = function() {
+  __privateMethod(this, _updateStaleTimeout, updateStaleTimeout_fn).call(this), __privateMethod(this, _updateRefetchInterval, updateRefetchInterval_fn).call(this, __privateMethod(this, _computeRefetchInterval, computeRefetchInterval_fn).call(this));
+}, _clearStaleTimeout = new WeakSet(), clearStaleTimeout_fn = function() {
+  __privateGet(this, _staleTimeoutId) && (clearTimeout(__privateGet(this, _staleTimeoutId)), __privateSet(this, _staleTimeoutId, void 0));
+}, _clearRefetchInterval = new WeakSet(), clearRefetchInterval_fn = function() {
+  __privateGet(this, _refetchIntervalId) && (clearInterval(__privateGet(this, _refetchIntervalId)), __privateSet(this, _refetchIntervalId, void 0));
+}, _updateQuery = new WeakSet(), updateQuery_fn = function() {
+  let query = __privateGet(this, _client).getQueryCache().build(__privateGet(this, _client), this.options);
+  if (query === __privateGet(this, _currentQuery))
+    return;
+  let prevQuery = __privateGet(this, _currentQuery);
+  __privateSet(this, _currentQuery, query), __privateSet(this, _currentQueryInitialState, query.state), this.hasListeners() && (prevQuery == null || prevQuery.removeObserver(this), query.addObserver(this));
+}, _notify = new WeakSet(), notify_fn = function(notifyOptions) {
+  notifyManager.batch(() => {
+    notifyOptions.listeners && this.listeners.forEach((listener) => {
+      listener(__privateGet(this, _currentResult));
+    }), __privateGet(this, _client).getQueryCache().notify({
+      query: __privateGet(this, _currentQuery),
+      type: "observerResultsUpdated"
+    });
+  });
+}, _a9);
+function shouldLoadOnMount(query, options) {
+  return resolveEnabled(options.enabled, query) !== !1 && query.state.data === void 0 && !(query.state.status === "error" && options.retryOnMount === !1);
+}
+function shouldFetchOnMount(query, options) {
+  return shouldLoadOnMount(query, options) || query.state.data !== void 0 && shouldFetchOn(query, options, options.refetchOnMount);
+}
+function shouldFetchOn(query, options, field) {
+  if (resolveEnabled(options.enabled, query) !== !1) {
+    let value = typeof field == "function" ? field(query) : field;
+    return value === "always" || value !== !1 && isStale(query, options);
+  }
+  return !1;
+}
+function shouldFetchOptionally(query, prevQuery, options, prevOptions) {
+  return (query !== prevQuery || resolveEnabled(prevOptions.enabled, query) === !1) && (!options.suspense || query.state.status !== "error") && isStale(query, options);
+}
+function isStale(query, options) {
+  return resolveEnabled(options.enabled, query) !== !1 && query.isStaleByTime(resolveStaleTime(options.staleTime, query));
+}
+function shouldAssignObserverCurrentProperties(observer, optimisticResult) {
+  return !shallowEqualObjects(observer.getCurrentResult(), optimisticResult);
+}
+
+// node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js
+var React7 = __toESM(require_react(), 1), import_jsx_runtime = __toESM(require_jsx_runtime(), 1), QueryClientContext = React7.createContext(
+  void 0
+), useQueryClient = (queryClient) => {
+  let client = React7.useContext(QueryClientContext);
+  if (queryClient)
+    return queryClient;
+  if (!client)
+    throw new Error("No QueryClient set, use QueryClientProvider to set one");
+  return client;
+}, QueryClientProvider = ({
+  client,
+  children: children4
+}) => (React7.useEffect(() => (client.mount(), () => {
+  client.unmount();
+}), [client]), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(QueryClientContext.Provider, { value: client, children: children4 }));
+
+// node_modules/@tanstack/react-query/build/modern/isRestoring.js
+var React8 = __toESM(require_react(), 1), IsRestoringContext = React8.createContext(!1), useIsRestoring = () => React8.useContext(IsRestoringContext), IsRestoringProvider = IsRestoringContext.Provider;
+
+// node_modules/@tanstack/react-query/build/modern/QueryErrorResetBoundary.js
+var React9 = __toESM(require_react(), 1), import_jsx_runtime2 = __toESM(require_jsx_runtime(), 1);
+function createValue() {
+  let isReset = !1;
+  return {
+    clearReset: () => {
+      isReset = !1;
+    },
+    reset: () => {
+      isReset = !0;
+    },
+    isReset: () => isReset
+  };
+}
+var QueryErrorResetBoundaryContext = React9.createContext(createValue()), useQueryErrorResetBoundary = () => React9.useContext(QueryErrorResetBoundaryContext);
+
+// node_modules/@tanstack/react-query/build/modern/errorBoundaryUtils.js
+var React10 = __toESM(require_react(), 1);
+
+// node_modules/@tanstack/react-query/build/modern/utils.js
+function shouldThrowError(throwError, params) {
+  return typeof throwError == "function" ? throwError(...params) : !!throwError;
+}
+function noop2() {
+}
+
+// node_modules/@tanstack/react-query/build/modern/errorBoundaryUtils.js
+var ensurePreventErrorBoundaryRetry = (options, errorResetBoundary) => {
+  (options.suspense || options.throwOnError || options.experimental_prefetchInRender) && (errorResetBoundary.isReset() || (options.retryOnMount = !1));
+}, useClearResetErrorBoundary = (errorResetBoundary) => {
+  React10.useEffect(() => {
+    errorResetBoundary.clearReset();
+  }, [errorResetBoundary]);
+}, getHasError = ({
+  result,
+  errorResetBoundary,
+  throwOnError,
+  query
+}) => result.isError && !errorResetBoundary.isReset() && !result.isFetching && query && shouldThrowError(throwOnError, [result.error, query]);
+
+// node_modules/@tanstack/react-query/build/modern/suspense.js
+var ensureSuspenseTimers = (defaultedOptions) => {
+  defaultedOptions.suspense && (defaultedOptions.staleTime === void 0 && (defaultedOptions.staleTime = 1e3), typeof defaultedOptions.gcTime == "number" && (defaultedOptions.gcTime = Math.max(defaultedOptions.gcTime, 1e3)));
+}, willFetch = (result, isRestoring) => result.isLoading && result.isFetching && !isRestoring, shouldSuspend = (defaultedOptions, result) => (defaultedOptions == null ? void 0 : defaultedOptions.suspense) && result.isPending, fetchOptimistic = (defaultedOptions, observer, errorResetBoundary) => observer.fetchOptimistic(defaultedOptions).catch(() => {
+  errorResetBoundary.clearReset();
+});
+
+// node_modules/@tanstack/react-query/build/modern/useBaseQuery.js
+var React11 = __toESM(require_react(), 1);
+function useBaseQuery(options, Observer, queryClient) {
+  var _a10, _b, _c, _d, _e;
+  if (typeof options != "object" || Array.isArray(options))
+    throw new Error(
+      'Bad argument type. Starting with v5, only the "Object" form is allowed when calling query related functions. Please use the error stack to find the culprit call. More info here: https://tanstack.com/query/latest/docs/react/guides/migrating-to-v5#supports-a-single-signature-one-object'
+    );
+  let client = useQueryClient(queryClient), isRestoring = useIsRestoring(), errorResetBoundary = useQueryErrorResetBoundary(), defaultedOptions = client.defaultQueryOptions(options);
+  (_b = (_a10 = client.getDefaultOptions().queries) == null ? void 0 : _a10._experimental_beforeQuery) == null || _b.call(
+    _a10,
+    defaultedOptions
+  ), defaultedOptions._optimisticResults = isRestoring ? "isRestoring" : "optimistic", ensureSuspenseTimers(defaultedOptions), ensurePreventErrorBoundaryRetry(defaultedOptions, errorResetBoundary), useClearResetErrorBoundary(errorResetBoundary);
+  let isNewCacheEntry = !client.getQueryCache().get(defaultedOptions.queryHash), [observer] = React11.useState(
+    () => new Observer(
+      client,
+      defaultedOptions
+    )
+  ), result = observer.getOptimisticResult(defaultedOptions);
+  if (React11.useSyncExternalStore(
+    React11.useCallback(
+      (onStoreChange) => {
+        let unsubscribe = isRestoring ? noop2 : observer.subscribe(notifyManager.batchCalls(onStoreChange));
+        return observer.updateResult(), unsubscribe;
+      },
+      [observer, isRestoring]
+    ),
+    () => observer.getCurrentResult(),
+    () => observer.getCurrentResult()
+  ), React11.useEffect(() => {
+    observer.setOptions(defaultedOptions, { listeners: !1 });
+  }, [defaultedOptions, observer]), shouldSuspend(defaultedOptions, result))
+    throw fetchOptimistic(defaultedOptions, observer, errorResetBoundary);
+  if (getHasError({
+    result,
+    errorResetBoundary,
+    throwOnError: defaultedOptions.throwOnError,
+    query: client.getQueryCache().get(defaultedOptions.queryHash)
+  }))
+    throw result.error;
+  if ((_d = (_c = client.getDefaultOptions().queries) == null ? void 0 : _c._experimental_afterQuery) == null || _d.call(
+    _c,
+    defaultedOptions,
+    result
+  ), defaultedOptions.experimental_prefetchInRender && !isServer && willFetch(result, isRestoring)) {
+    let promise = isNewCacheEntry ? (
+      // Fetch immediately on render in order to ensure `.promise` is resolved even if the component is unmounted
+      fetchOptimistic(defaultedOptions, observer, errorResetBoundary)
+    ) : (
+      // subscribe to the "cache promise" so that we can finalize the currentThenable once data comes in
+      (_e = client.getQueryCache().get(defaultedOptions.queryHash)) == null ? void 0 : _e.promise
+    );
+    promise == null || promise.catch(noop2).finally(() => {
+      observer.updateResult();
+    });
+  }
+  return defaultedOptions.notifyOnChangeProps ? result : observer.trackResult(result);
+}
+
+// node_modules/@tanstack/react-query/build/modern/useQuery.js
+function useQuery(options, queryClient) {
+  return useBaseQuery(options, QueryObserver, queryClient);
+}
+
 // app/root.tsx
 var import_jsx_dev_runtime4 = __toESM(require_jsx_dev_runtime()), links = () => [
   { rel: "stylesheet", href: tailwind_default }
@@ -22063,12 +25563,12 @@ function App() {
     /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)("head", { children: [
       /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)("title", { title: "Personal Site" }, void 0, !1, {
         fileName: "app/root.tsx",
-        lineNumber: 22,
+        lineNumber: 26,
         columnNumber: 9
       }, this),
       /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)("meta", { charSet: "utf-8" }, void 0, !1, {
         fileName: "app/root.tsx",
-        lineNumber: 23,
+        lineNumber: 27,
         columnNumber: 9
       }, this),
       /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(
@@ -22081,125 +25581,176 @@ function App() {
         !1,
         {
           fileName: "app/root.tsx",
-          lineNumber: 24,
+          lineNumber: 28,
           columnNumber: 9
         },
         this
       ),
       /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(Meta, {}, void 0, !1, {
         fileName: "app/root.tsx",
-        lineNumber: 28,
+        lineNumber: 32,
         columnNumber: 9
       }, this),
       /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(Links, {}, void 0, !1, {
         fileName: "app/root.tsx",
-        lineNumber: 29,
+        lineNumber: 33,
         columnNumber: 9
       }, this)
     ] }, void 0, !0, {
       fileName: "app/root.tsx",
-      lineNumber: 21,
+      lineNumber: 25,
       columnNumber: 7
     }, this),
     /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(
       "body",
       {
         className: "bg-slate-800 w-screen h-screen text-slate-300 overflow-hidden",
-        children: [
+        children: /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(QueryClientProvider, { client: new QueryClient(), children: [
           /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(NavigationTabContainer, { children: [
             /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(NavigationTab, { to: "/", displayString: "Home" }, void 0, !1, {
               fileName: "app/root.tsx",
-              lineNumber: 37,
-              columnNumber: 11
+              lineNumber: 42,
+              columnNumber: 13
             }, this),
             /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(NavigationTab, { to: "/travel", displayString: "Travel" }, void 0, !1, {
               fileName: "app/root.tsx",
-              lineNumber: 38,
-              columnNumber: 11
-            }, this)
+              lineNumber: 43,
+              columnNumber: 13
+            }, this),
+            /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(
+              NavigationTab,
+              {
+                to: "/weight",
+                displayString: "Weight Journey"
+              },
+              void 0,
+              !1,
+              {
+                fileName: "app/root.tsx",
+                lineNumber: 44,
+                columnNumber: 13
+              },
+              this
+            )
           ] }, void 0, !0, {
             fileName: "app/root.tsx",
-            lineNumber: 36,
-            columnNumber: 9
+            lineNumber: 41,
+            columnNumber: 11
           }, this),
           /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(Outlet, {}, void 0, !1, {
             fileName: "app/root.tsx",
-            lineNumber: 40,
-            columnNumber: 9
+            lineNumber: 49,
+            columnNumber: 11
           }, this),
           /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(ScrollRestoration2, {}, void 0, !1, {
             fileName: "app/root.tsx",
-            lineNumber: 41,
-            columnNumber: 9
+            lineNumber: 50,
+            columnNumber: 11
           }, this),
           /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(Scripts, {}, void 0, !1, {
             fileName: "app/root.tsx",
-            lineNumber: 42,
-            columnNumber: 9
+            lineNumber: 51,
+            columnNumber: 11
           }, this),
           /* @__PURE__ */ (0, import_jsx_dev_runtime4.jsxDEV)(LiveReload, {}, void 0, !1, {
             fileName: "app/root.tsx",
-            lineNumber: 43,
-            columnNumber: 9
+            lineNumber: 52,
+            columnNumber: 11
           }, this)
-        ]
+        ] }, void 0, !0, {
+          fileName: "app/root.tsx",
+          lineNumber: 40,
+          columnNumber: 9
+        }, this)
       },
       void 0,
-      !0,
+      !1,
       {
         fileName: "app/root.tsx",
-        lineNumber: 31,
+        lineNumber: 35,
         columnNumber: 7
       },
       this
     )
   ] }, void 0, !0, {
     fileName: "app/root.tsx",
-    lineNumber: 20,
+    lineNumber: 24,
     columnNumber: 5
   }, this);
 }
 
-// app/routes/travel.$country.tsx
-var travel_country_exports = {};
-__export(travel_country_exports, {
-  default: () => TravelCountry
+// app/routes/travel.$.tsx
+var travel_exports = {};
+__export(travel_exports, {
+  default: () => TravelCountry,
+  loader: () => loader
 });
+var import_react37 = __toESM(require_react());
+
+// app/hooks/useTravelMetaData.ts
+var import_react5 = __toESM(require_react()), nameMap = [
+  ["Turkiye", "Turkey"],
+  ["Korea", "South Korea"],
+  ["\xC5land", "Finland"]
+], getReplacedNameOrDefault = (countryName) => {
+  let replacedName = countryName;
+  return nameMap.forEach((namePair) => {
+    namePair[0] === countryName && (replacedName = namePair[1]);
+  }), replacedName;
+}, useTravelMetaData = () => {
+  let [imagesMetaData, setImagesMetaData] = (0, import_react5.useState)();
+  return (0, import_react5.useEffect)(() => {
+    fetch("/imageMetaData.json").then((r) => r.json()).then(
+      (r) => r.map(
+        (imageMetaData) => ({
+          ...imageMetaData,
+          country: getReplacedNameOrDefault(imageMetaData.country)
+        })
+      )
+    ).then((r) => setImagesMetaData(r));
+  }, []), imagesMetaData;
+};
 
 // node_modules/framer-motion/dist/es/motion/index.mjs
-var React7 = __toESM(require_react(), 1), import_react15 = __toESM(require_react(), 1);
+var React12 = __toESM(require_react(), 1), import_react16 = __toESM(require_react(), 1);
 
 // node_modules/framer-motion/dist/es/context/MotionConfigContext.mjs
-var import_react5 = __toESM(require_react(), 1), MotionConfigContext = (0, import_react5.createContext)({
+var import_react6 = __toESM(require_react(), 1), MotionConfigContext = (0, import_react6.createContext)({
   transformPagePoint: (p) => p,
   isStatic: !1,
   reducedMotion: "never"
 });
 
 // node_modules/framer-motion/dist/es/context/MotionContext/index.mjs
-var import_react6 = __toESM(require_react(), 1), MotionContext = (0, import_react6.createContext)({});
+var import_react7 = __toESM(require_react(), 1), MotionContext = (0, import_react7.createContext)({});
 
 // node_modules/framer-motion/dist/es/motion/utils/use-visual-element.mjs
-var import_react10 = __toESM(require_react(), 1);
+var import_react11 = __toESM(require_react(), 1);
 
 // node_modules/framer-motion/dist/es/context/PresenceContext.mjs
-var import_react7 = __toESM(require_react(), 1), PresenceContext = (0, import_react7.createContext)(null);
+var import_react8 = __toESM(require_react(), 1), PresenceContext = (0, import_react8.createContext)(null);
 
 // node_modules/framer-motion/dist/es/utils/use-isomorphic-effect.mjs
-var import_react8 = __toESM(require_react(), 1);
+var import_react9 = __toESM(require_react(), 1);
 
 // node_modules/framer-motion/dist/es/utils/is-browser.mjs
-var isBrowser3 = typeof document < "u";
+var isBrowser2 = typeof document < "u";
 
 // node_modules/framer-motion/dist/es/utils/use-isomorphic-effect.mjs
-var useIsomorphicLayoutEffect = isBrowser3 ? import_react8.useLayoutEffect : import_react8.useEffect;
+var useIsomorphicLayoutEffect2 = isBrowser2 ? import_react9.useLayoutEffect : import_react9.useEffect;
 
 // node_modules/framer-motion/dist/es/context/LazyContext.mjs
-var import_react9 = __toESM(require_react(), 1), LazyContext = (0, import_react9.createContext)({ strict: !1 });
+var import_react10 = __toESM(require_react(), 1), LazyContext = (0, import_react10.createContext)({ strict: !1 });
+
+// node_modules/framer-motion/dist/es/render/dom/utils/camel-to-dash.mjs
+var camelToDash = (str) => str.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
+
+// node_modules/framer-motion/dist/es/animation/optimized-appear/data-id.mjs
+var optimizedAppearDataId = "framerAppearId", optimizedAppearDataAttribute = "data-" + camelToDash(optimizedAppearDataId);
 
 // node_modules/framer-motion/dist/es/motion/utils/use-visual-element.mjs
 function useVisualElement(Component3, visualState, props, createVisualElement) {
-  let { visualElement: parent } = (0, import_react10.useContext)(MotionContext), lazyContext = (0, import_react10.useContext)(LazyContext), presenceContext = (0, import_react10.useContext)(PresenceContext), reducedMotionConfig = (0, import_react10.useContext)(MotionConfigContext).reducedMotion, visualElementRef = (0, import_react10.useRef)();
+  let { visualElement: parent } = (0, import_react11.useContext)(MotionContext), lazyContext = (0, import_react11.useContext)(LazyContext), presenceContext = (0, import_react11.useContext)(PresenceContext), reducedMotionConfig = (0, import_react11.useContext)(MotionConfigContext).reducedMotion, visualElementRef = (0, import_react11.useRef)();
   createVisualElement = createVisualElement || lazyContext.renderer, !visualElementRef.current && createVisualElement && (visualElementRef.current = createVisualElement(Component3, {
     visualState,
     parent,
@@ -22209,37 +25760,42 @@ function useVisualElement(Component3, visualState, props, createVisualElement) {
     reducedMotionConfig
   }));
   let visualElement = visualElementRef.current;
-  return (0, import_react10.useInsertionEffect)(() => {
+  (0, import_react11.useInsertionEffect)(() => {
     visualElement && visualElement.update(props, presenceContext);
-  }), useIsomorphicLayoutEffect(() => {
-    visualElement && visualElement.render();
-  }), (0, import_react10.useEffect)(() => {
-    visualElement && visualElement.updateFeatures();
-  }), (window.HandoffAppearAnimations ? useIsomorphicLayoutEffect : import_react10.useEffect)(() => {
-    visualElement && visualElement.animationState && visualElement.animationState.animateChanges();
+  });
+  let wantsHandoff = (0, import_react11.useRef)(Boolean(props[optimizedAppearDataAttribute] && !window.HandoffComplete));
+  return useIsomorphicLayoutEffect2(() => {
+    visualElement && (visualElement.render(), wantsHandoff.current && visualElement.animationState && visualElement.animationState.animateChanges());
+  }), (0, import_react11.useEffect)(() => {
+    visualElement && (visualElement.updateFeatures(), !wantsHandoff.current && visualElement.animationState && visualElement.animationState.animateChanges(), wantsHandoff.current && (wantsHandoff.current = !1, window.HandoffComplete = !0));
   }), visualElement;
 }
 
 // node_modules/framer-motion/dist/es/motion/utils/use-motion-ref.mjs
-var import_react11 = __toESM(require_react(), 1);
+var import_react12 = __toESM(require_react(), 1);
 
 // node_modules/framer-motion/dist/es/utils/is-ref-object.mjs
 function isRefObject(ref) {
-  return typeof ref == "object" && Object.prototype.hasOwnProperty.call(ref, "current");
+  return ref && typeof ref == "object" && Object.prototype.hasOwnProperty.call(ref, "current");
 }
 
 // node_modules/framer-motion/dist/es/motion/utils/use-motion-ref.mjs
 function useMotionRef(visualState, visualElement, externalRef) {
-  return (0, import_react11.useCallback)(
+  return (0, import_react12.useCallback)(
     (instance) => {
       instance && visualState.mount && visualState.mount(instance), visualElement && (instance ? visualElement.mount(instance) : visualElement.unmount()), externalRef && (typeof externalRef == "function" ? externalRef(instance) : isRefObject(externalRef) && (externalRef.current = instance));
     },
+    /**
+     * Only pass a new ref callback to React if we've received a visual element
+     * factory. Otherwise we'll be mounting/remounting every time externalRef
+     * or other dependencies change.
+     */
     [visualElement]
   );
 }
 
 // node_modules/framer-motion/dist/es/context/MotionContext/create.mjs
-var import_react12 = __toESM(require_react(), 1);
+var import_react13 = __toESM(require_react(), 1);
 
 // node_modules/framer-motion/dist/es/render/utils/is-variant-label.mjs
 function isVariantLabel(v) {
@@ -22248,7 +25804,7 @@ function isVariantLabel(v) {
 
 // node_modules/framer-motion/dist/es/animation/utils/is-animation-controls.mjs
 function isAnimationControls(v) {
-  return typeof v == "object" && typeof v.start == "function";
+  return v !== null && typeof v == "object" && typeof v.start == "function";
 }
 
 // node_modules/framer-motion/dist/es/render/utils/variant-props.mjs
@@ -22284,8 +25840,8 @@ function getCurrentTreeVariants(props, context) {
 
 // node_modules/framer-motion/dist/es/context/MotionContext/create.mjs
 function useCreateMotionContext(props) {
-  let { initial, animate } = getCurrentTreeVariants(props, (0, import_react12.useContext)(MotionContext));
-  return (0, import_react12.useMemo)(() => ({ initial, animate }), [variantLabelsAsDependency(initial), variantLabelsAsDependency(animate)]);
+  let { initial, animate } = getCurrentTreeVariants(props, (0, import_react13.useContext)(MotionContext));
+  return (0, import_react13.useMemo)(() => ({ initial, animate }), [variantLabelsAsDependency(initial), variantLabelsAsDependency(animate)]);
 }
 function variantLabelsAsDependency(prop) {
   return Array.isArray(prop) ? prop.join(" ") : prop;
@@ -22327,10 +25883,10 @@ function loadFeatures(features) {
 }
 
 // node_modules/framer-motion/dist/es/context/LayoutGroupContext.mjs
-var import_react13 = __toESM(require_react(), 1), LayoutGroupContext = (0, import_react13.createContext)({});
+var import_react14 = __toESM(require_react(), 1), LayoutGroupContext = (0, import_react14.createContext)({});
 
 // node_modules/framer-motion/dist/es/context/SwitchLayoutGroupContext.mjs
-var import_react14 = __toESM(require_react(), 1), SwitchLayoutGroupContext = (0, import_react14.createContext)({});
+var import_react15 = __toESM(require_react(), 1), SwitchLayoutGroupContext = (0, import_react15.createContext)({});
 
 // node_modules/framer-motion/dist/es/motion/utils/symbol.mjs
 var motionComponentSymbol = Symbol.for("motionComponentSymbol");
@@ -22340,32 +25896,33 @@ function createMotionComponent({ preloadedFeatures: preloadedFeatures2, createVi
   preloadedFeatures2 && loadFeatures(preloadedFeatures2);
   function MotionComponent(props, externalRef) {
     let MeasureLayout2, configAndProps = {
-      ...(0, import_react15.useContext)(MotionConfigContext),
+      ...(0, import_react16.useContext)(MotionConfigContext),
       ...props,
       layoutId: useLayoutId(props)
     }, { isStatic } = configAndProps, context = useCreateMotionContext(props), visualState = useVisualState(props, isStatic);
-    if (!isStatic && isBrowser3) {
+    if (!isStatic && isBrowser2) {
       context.visualElement = useVisualElement(Component3, visualState, configAndProps, createVisualElement);
-      let initialLayoutGroupConfig = (0, import_react15.useContext)(SwitchLayoutGroupContext), isStrict = (0, import_react15.useContext)(LazyContext).strict;
+      let initialLayoutGroupConfig = (0, import_react16.useContext)(SwitchLayoutGroupContext), isStrict = (0, import_react16.useContext)(LazyContext).strict;
       context.visualElement && (MeasureLayout2 = context.visualElement.loadFeatures(
+        // Note: Pass the full new combined props to correctly re-render dynamic feature components.
         configAndProps,
         isStrict,
         preloadedFeatures2,
         initialLayoutGroupConfig
       ));
     }
-    return React7.createElement(
+    return React12.createElement(
       MotionContext.Provider,
       { value: context },
-      MeasureLayout2 && context.visualElement ? React7.createElement(MeasureLayout2, { visualElement: context.visualElement, ...configAndProps }) : null,
+      MeasureLayout2 && context.visualElement ? React12.createElement(MeasureLayout2, { visualElement: context.visualElement, ...configAndProps }) : null,
       useRender(Component3, props, useMotionRef(visualState, context.visualElement, externalRef), visualState, isStatic, context.visualElement)
     );
   }
-  let ForwardRefComponent = (0, import_react15.forwardRef)(MotionComponent);
+  let ForwardRefComponent = (0, import_react16.forwardRef)(MotionComponent);
   return ForwardRefComponent[motionComponentSymbol] = Component3, ForwardRefComponent;
 }
 function useLayoutId({ layoutId }) {
-  let layoutGroupId = (0, import_react15.useContext)(LayoutGroupContext).id;
+  let layoutGroupId = (0, import_react16.useContext)(LayoutGroupContext).id;
   return layoutGroupId && layoutId !== void 0 ? layoutGroupId + "-" + layoutId : layoutId;
 }
 
@@ -22378,6 +25935,11 @@ function createMotionProxy(createConfig) {
     return custom;
   let componentCache = /* @__PURE__ */ new Map();
   return new Proxy(custom, {
+    /**
+     * Called when `motion` is referenced with a prop: `motion.div`, `motion.input` etc.
+     * The prop name is passed through as `key` and we can use that to generate a `motion`
+     * DOM component with that name.
+     */
     get: (_target, key) => (componentCache.has(key) || componentCache.set(key, custom(key)), componentCache.get(key))
   });
 }
@@ -22413,14 +25975,31 @@ var lowercaseSVGElements = [
 
 // node_modules/framer-motion/dist/es/render/dom/utils/is-svg-component.mjs
 function isSVGComponent(Component3) {
-  return typeof Component3 != "string" || Component3.includes("-") ? !1 : !!(lowercaseSVGElements.indexOf(Component3) > -1 || /[A-Z]/.test(Component3));
+  return (
+    /**
+     * If it's not a string, it's a custom React component. Currently we only support
+     * HTML custom React components.
+     */
+    typeof Component3 != "string" || /**
+     * If it contains a dash, the element is a custom HTML webcomponent.
+     */
+    Component3.includes("-") ? !1 : (
+      /**
+       * If it's in our list of lowercase SVG tags, it's an SVG component
+       */
+      !!(lowercaseSVGElements.indexOf(Component3) > -1 || /**
+       * If it contains a capital letter, it's an SVG component
+       */
+      /[A-Z]/.test(Component3))
+    )
+  );
 }
 
 // node_modules/framer-motion/dist/es/render/dom/use-render.mjs
-var import_react18 = __toESM(require_react(), 1);
+var import_react19 = __toESM(require_react(), 1);
 
 // node_modules/framer-motion/dist/es/render/html/use-props.mjs
-var import_react16 = __toESM(require_react(), 1);
+var import_react17 = __toESM(require_react(), 1);
 
 // node_modules/framer-motion/dist/es/projection/styles/scale-correction.mjs
 var scaleCorrectors = {};
@@ -22523,6 +26102,7 @@ var int = {
 
 // node_modules/framer-motion/dist/es/render/dom/value-types/number.mjs
 var numberValueTypes = {
+  // Border props
   borderWidth: px,
   borderTopWidth: px,
   borderRightWidth: px,
@@ -22534,6 +26114,7 @@ var numberValueTypes = {
   borderTopRightRadius: px,
   borderBottomRightRadius: px,
   borderBottomLeftRadius: px,
+  // Positioning props
   width: px,
   maxWidth: px,
   height: px,
@@ -22543,6 +26124,7 @@ var numberValueTypes = {
   right: px,
   bottom: px,
   left: px,
+  // Spacing props
   padding: px,
   paddingTop: px,
   paddingRight: px,
@@ -22553,6 +26135,7 @@ var numberValueTypes = {
   marginRight: px,
   marginBottom: px,
   marginLeft: px,
+  // Transform props
   rotate: degrees,
   rotateX: degrees,
   rotateY: degrees,
@@ -22577,7 +26160,9 @@ var numberValueTypes = {
   originX: progressPercentage,
   originY: progressPercentage,
   originZ: px,
+  // Misc
   zIndex: int,
+  // SVG
   fillOpacity: alpha,
   strokeOpacity: alpha,
   numOctaves: int
@@ -22620,7 +26205,7 @@ function copyRawValuesOnly(target, source, props) {
     !isMotionValue(source[key]) && !isForcedMotionValue(key, props) && (target[key] = source[key]);
 }
 function useInitialMotionValues({ transformTemplate }, visualState, isStatic) {
-  return (0, import_react16.useMemo)(() => {
+  return (0, import_react17.useMemo)(() => {
     let state = createHtmlRenderState();
     return buildHTMLStyles(state, visualState, { enableHardwareAcceleration: !isStatic }, transformTemplate), Object.assign({}, state.vars, state.style);
   }, [visualState]);
@@ -22648,9 +26233,6 @@ var validMotionProps = /* @__PURE__ */ new Set([
   "transformValues",
   "custom",
   "inherit",
-  "onLayoutAnimationStart",
-  "onLayoutAnimationComplete",
-  "onLayoutMeasure",
   "onBeforeLayoutMeasure",
   "onAnimationStart",
   "onAnimationComplete",
@@ -22667,17 +26249,18 @@ var validMotionProps = /* @__PURE__ */ new Set([
   "onHoverEnd",
   "onViewportEnter",
   "onViewportLeave",
+  "globalTapTarget",
   "ignoreStrict",
   "viewport"
 ]);
 function isValidMotionProp(key) {
-  return key.startsWith("while") || key.startsWith("drag") && key !== "draggable" || key.startsWith("layout") || key.startsWith("onTap") || key.startsWith("onPan") || validMotionProps.has(key);
+  return key.startsWith("while") || key.startsWith("drag") && key !== "draggable" || key.startsWith("layout") || key.startsWith("onTap") || key.startsWith("onPan") || key.startsWith("onLayout") || validMotionProps.has(key);
 }
 
 // node_modules/framer-motion/dist/es/render/dom/utils/filter-props.mjs
 var shouldForward = (key) => !isValidMotionProp(key);
 function loadExternalIsValidProp(isValidProp) {
-  !isValidProp || (shouldForward = (key) => key.startsWith("on") ? !isValidMotionProp(key) : isValidProp(key));
+  isValidProp && (shouldForward = (key) => key.startsWith("on") ? !isValidMotionProp(key) : isValidProp(key));
 }
 try {
   loadExternalIsValidProp((init_is_prop_valid_esm(), __toCommonJS(is_prop_valid_esm_exports)).default);
@@ -22686,12 +26269,13 @@ try {
 function filterProps(props, isDom, forwardMotionProps) {
   let filteredProps = {};
   for (let key in props)
-    key === "values" && typeof props.values == "object" || (shouldForward(key) || forwardMotionProps === !0 && isValidMotionProp(key) || !isDom && !isValidMotionProp(key) || props.draggable && key.startsWith("onDrag")) && (filteredProps[key] = props[key]);
+    key === "values" && typeof props.values == "object" || (shouldForward(key) || forwardMotionProps === !0 && isValidMotionProp(key) || !isDom && !isValidMotionProp(key) || // If trying to use native HTML drag events, forward drag listeners
+    props.draggable && key.startsWith("onDrag")) && (filteredProps[key] = props[key]);
   return filteredProps;
 }
 
 // node_modules/framer-motion/dist/es/render/svg/use-props.mjs
-var import_react17 = __toESM(require_react(), 1);
+var import_react18 = __toESM(require_react(), 1);
 
 // node_modules/framer-motion/dist/es/render/svg/utils/transform-origin.mjs
 function calcOrigin(origin, offset, size) {
@@ -22728,6 +26312,7 @@ function buildSVGAttrs(state, {
   pathLength,
   pathSpacing = 1,
   pathOffset = 0,
+  // This is object creation, which we try to avoid per-frame.
   ...latest
 }, options, isSVGTag2, transformTemplate) {
   if (buildHTMLStyles(state, latest, options, transformTemplate), isSVGTag2) {
@@ -22750,7 +26335,7 @@ var isSVGTag = (tag) => typeof tag == "string" && tag.toLowerCase() === "svg";
 
 // node_modules/framer-motion/dist/es/render/svg/use-props.mjs
 function useSVGProps(props, visualState, _isStatic, Component3) {
-  let visualProps = (0, import_react17.useMemo)(() => {
+  let visualProps = (0, import_react18.useMemo)(() => {
     let state = createSvgRenderState();
     return buildSVGAttrs(state, visualState, { enableHardwareAcceleration: !1 }, isSVGTag(Component3), props.transformTemplate), {
       ...state.attrs,
@@ -22771,16 +26356,13 @@ function createUseRender(forwardMotionProps = !1) {
       ...filterProps(props, typeof Component3 == "string", forwardMotionProps),
       ...visualProps,
       ref
-    }, { children: children4 } = props, renderedChildren = (0, import_react18.useMemo)(() => isMotionValue(children4) ? children4.get() : children4, [children4]);
-    return (0, import_react18.createElement)(Component3, {
+    }, { children: children4 } = props, renderedChildren = (0, import_react19.useMemo)(() => isMotionValue(children4) ? children4.get() : children4, [children4]);
+    return (0, import_react19.createElement)(Component3, {
       ...elementProps,
       children: renderedChildren
     });
   };
 }
-
-// node_modules/framer-motion/dist/es/render/dom/utils/camel-to-dash.mjs
-var camelToDash = (str) => str.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
 
 // node_modules/framer-motion/dist/es/render/html/utils/render.mjs
 function renderHTML(element, { style, vars }, styleProp, projection2) {
@@ -22843,7 +26425,7 @@ function scrapeMotionValuesFromProps2(props, prevProps) {
 }
 
 // node_modules/framer-motion/dist/es/motion/utils/use-visual-state.mjs
-var import_react20 = __toESM(require_react(), 1);
+var import_react21 = __toESM(require_react(), 1);
 
 // node_modules/framer-motion/dist/es/render/utils/resolve-variants.mjs
 function resolveVariantFromProps(props, definition, custom, currentValues = {}, currentVelocity = {}) {
@@ -22851,9 +26433,9 @@ function resolveVariantFromProps(props, definition, custom, currentValues = {}, 
 }
 
 // node_modules/framer-motion/dist/es/utils/use-constant.mjs
-var import_react19 = __toESM(require_react(), 1);
+var import_react20 = __toESM(require_react(), 1);
 function useConstant(init4) {
-  let ref = (0, import_react19.useRef)(null);
+  let ref = (0, import_react20.useRef)(null);
   return ref.current === null && (ref.current = init4()), ref.current;
 }
 
@@ -22878,7 +26460,7 @@ function makeState({ scrapeMotionValuesFromProps: scrapeMotionValuesFromProps3, 
   return onMount && (state.mount = (instance) => onMount(props, instance, state)), state;
 }
 var makeUseVisualState = (config) => (props, isStatic) => {
-  let context = (0, import_react20.useContext)(MotionContext), presenceContext = (0, import_react20.useContext)(PresenceContext), make = () => makeState(config, props, context, presenceContext);
+  let context = (0, import_react21.useContext)(MotionContext), presenceContext = (0, import_react21.useContext)(PresenceContext), make = () => makeState(config, props, context, presenceContext);
   return isStatic ? make() : useConstant(make);
 };
 function makeLatestValues(props, context, presenceContext, scrapeMotionValues) {
@@ -22908,23 +26490,109 @@ function makeLatestValues(props, context, presenceContext, scrapeMotionValues) {
   }), values;
 }
 
+// node_modules/framer-motion/dist/es/utils/noop.mjs
+var noop3 = (any) => any;
+
+// node_modules/framer-motion/dist/es/frameloop/render-step.mjs
+var Queue = class {
+  constructor() {
+    this.order = [], this.scheduled = /* @__PURE__ */ new Set();
+  }
+  add(process2) {
+    if (!this.scheduled.has(process2))
+      return this.scheduled.add(process2), this.order.push(process2), !0;
+  }
+  remove(process2) {
+    let index2 = this.order.indexOf(process2);
+    index2 !== -1 && (this.order.splice(index2, 1), this.scheduled.delete(process2));
+  }
+  clear() {
+    this.order.length = 0, this.scheduled.clear();
+  }
+};
+function createRenderStep(runNextFrame) {
+  let thisFrame = new Queue(), nextFrame = new Queue(), numToRun = 0, isProcessing = !1, flushNextFrame = !1, toKeepAlive = /* @__PURE__ */ new WeakSet(), step = {
+    /**
+     * Schedule a process to run on the next frame.
+     */
+    schedule: (callback, keepAlive = !1, immediate = !1) => {
+      let addToCurrentFrame = immediate && isProcessing, queue = addToCurrentFrame ? thisFrame : nextFrame;
+      return keepAlive && toKeepAlive.add(callback), queue.add(callback) && addToCurrentFrame && isProcessing && (numToRun = thisFrame.order.length), callback;
+    },
+    /**
+     * Cancel the provided callback from running on the next frame.
+     */
+    cancel: (callback) => {
+      nextFrame.remove(callback), toKeepAlive.delete(callback);
+    },
+    /**
+     * Execute all schedule callbacks.
+     */
+    process: (frameData2) => {
+      if (isProcessing) {
+        flushNextFrame = !0;
+        return;
+      }
+      if (isProcessing = !0, [thisFrame, nextFrame] = [nextFrame, thisFrame], nextFrame.clear(), numToRun = thisFrame.order.length, numToRun)
+        for (let i = 0; i < numToRun; i++) {
+          let callback = thisFrame.order[i];
+          callback(frameData2), toKeepAlive.has(callback) && (step.schedule(callback), runNextFrame());
+        }
+      isProcessing = !1, flushNextFrame && (flushNextFrame = !1, step.process(frameData2));
+    }
+  };
+  return step;
+}
+
+// node_modules/framer-motion/dist/es/frameloop/batcher.mjs
+var stepsOrder = [
+  "prepare",
+  "read",
+  "update",
+  "preRender",
+  "render",
+  "postRender"
+], maxElapsed = 40;
+function createRenderBatcher(scheduleNextBatch, allowKeepAlive) {
+  let runNextFrame = !1, useDefaultElapsed = !0, state = {
+    delta: 0,
+    timestamp: 0,
+    isProcessing: !1
+  }, steps2 = stepsOrder.reduce((acc, key) => (acc[key] = createRenderStep(() => runNextFrame = !0), acc), {}), processStep = (stepId) => steps2[stepId].process(state), processBatch = () => {
+    let timestamp = performance.now();
+    runNextFrame = !1, state.delta = useDefaultElapsed ? 1e3 / 60 : Math.max(Math.min(timestamp - state.timestamp, maxElapsed), 1), state.timestamp = timestamp, state.isProcessing = !0, stepsOrder.forEach(processStep), state.isProcessing = !1, runNextFrame && allowKeepAlive && (useDefaultElapsed = !1, scheduleNextBatch(processBatch));
+  }, wake3 = () => {
+    runNextFrame = !0, useDefaultElapsed = !0, state.isProcessing || scheduleNextBatch(processBatch);
+  };
+  return { schedule: stepsOrder.reduce((acc, key) => {
+    let step = steps2[key];
+    return acc[key] = (process2, keepAlive = !1, immediate = !1) => (runNextFrame || wake3(), step.schedule(process2, keepAlive, immediate)), acc;
+  }, {}), cancel: (process2) => stepsOrder.forEach((key) => steps2[key].cancel(process2)), state, steps: steps2 };
+}
+
+// node_modules/framer-motion/dist/es/frameloop/frame.mjs
+var { schedule: frame, cancel: cancelFrame, state: frameData, steps } = createRenderBatcher(typeof requestAnimationFrame < "u" ? requestAnimationFrame : noop3, !0);
+
 // node_modules/framer-motion/dist/es/render/svg/config-motion.mjs
 var svgMotionConfig = {
   useVisualState: makeUseVisualState({
     scrapeMotionValuesFromProps: scrapeMotionValuesFromProps2,
     createRenderState: createSvgRenderState,
     onMount: (props, instance, { renderState, latestValues }) => {
-      try {
-        renderState.dimensions = typeof instance.getBBox == "function" ? instance.getBBox() : instance.getBoundingClientRect();
-      } catch {
-        renderState.dimensions = {
-          x: 0,
-          y: 0,
-          width: 0,
-          height: 0
-        };
-      }
-      buildSVGAttrs(renderState, latestValues, { enableHardwareAcceleration: !1 }, isSVGTag(instance.tagName), props.transformTemplate), renderSVG(instance, renderState);
+      frame.read(() => {
+        try {
+          renderState.dimensions = typeof instance.getBBox == "function" ? instance.getBBox() : instance.getBoundingClientRect();
+        } catch {
+          renderState.dimensions = {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0
+          };
+        }
+      }), frame.render(() => {
+        buildSVGAttrs(renderState, latestValues, { enableHardwareAcceleration: !1 }, isSVGTag(instance.tagName), props.transformTemplate), renderSVG(instance, renderState);
+      });
     }
   })
 };
@@ -23014,63 +26682,10 @@ var Feature = class {
   }
 };
 
-// node_modules/framer-motion/dist/es/frameloop/create-render-step.mjs
-function createRenderStep(runNextFrame2) {
-  let toRun = [], toRunNextFrame = [], numToRun = 0, isProcessing = !1, flushNextFrame = !1, toKeepAlive = /* @__PURE__ */ new WeakSet(), step = {
-    schedule: (callback, keepAlive = !1, immediate = !1) => {
-      let addToCurrentFrame = immediate && isProcessing, buffer = addToCurrentFrame ? toRun : toRunNextFrame;
-      return keepAlive && toKeepAlive.add(callback), buffer.indexOf(callback) === -1 && (buffer.push(callback), addToCurrentFrame && isProcessing && (numToRun = toRun.length)), callback;
-    },
-    cancel: (callback) => {
-      let index2 = toRunNextFrame.indexOf(callback);
-      index2 !== -1 && toRunNextFrame.splice(index2, 1), toKeepAlive.delete(callback);
-    },
-    process: (frameData2) => {
-      if (isProcessing) {
-        flushNextFrame = !0;
-        return;
-      }
-      if (isProcessing = !0, [toRun, toRunNextFrame] = [toRunNextFrame, toRun], toRunNextFrame.length = 0, numToRun = toRun.length, numToRun)
-        for (let i = 0; i < numToRun; i++) {
-          let callback = toRun[i];
-          callback(frameData2), toKeepAlive.has(callback) && (step.schedule(callback), runNextFrame2());
-        }
-      isProcessing = !1, flushNextFrame && (flushNextFrame = !1, step.process(frameData2));
-    }
-  };
-  return step;
-}
-
-// node_modules/framer-motion/dist/es/frameloop/data.mjs
-var frameData = {
-  delta: 0,
-  timestamp: 0,
-  isProcessing: !1
-};
-
-// node_modules/framer-motion/dist/es/frameloop/index.mjs
-var maxElapsed = 40, useDefaultElapsed = !0, runNextFrame = !1, stepsOrder = [
-  "read",
-  "update",
-  "preRender",
-  "render",
-  "postRender"
-], steps = stepsOrder.reduce((acc, key) => (acc[key] = createRenderStep(() => runNextFrame = !0), acc), {}), processStep = (stepId) => steps[stepId].process(frameData), processFrame = (timestamp) => {
-  runNextFrame = !1, frameData.delta = useDefaultElapsed ? 1e3 / 60 : Math.max(Math.min(timestamp - frameData.timestamp, maxElapsed), 1), frameData.timestamp = timestamp, frameData.isProcessing = !0, stepsOrder.forEach(processStep), frameData.isProcessing = !1, runNextFrame && (useDefaultElapsed = !1, requestAnimationFrame(processFrame));
-}, startLoop = () => {
-  runNextFrame = !0, useDefaultElapsed = !0, frameData.isProcessing || requestAnimationFrame(processFrame);
-}, frame = stepsOrder.reduce((acc, key) => {
-  let step = steps[key];
-  return acc[key] = (process2, keepAlive = !1, immediate = !1) => (runNextFrame || startLoop(), step.schedule(process2, keepAlive, immediate)), acc;
-}, {});
-function cancelFrame(process2) {
-  stepsOrder.forEach((key) => steps[key].cancel(process2));
-}
-
 // node_modules/framer-motion/dist/es/gestures/hover.mjs
 function addHoverEvent(node, isActive) {
   let eventName = "pointer" + (isActive ? "enter" : "leave"), callbackName = "onHover" + (isActive ? "Start" : "End"), handleEvent = (event, info) => {
-    if (event.type === "touch" || isDragActive())
+    if (event.pointerType === "touch" || isDragActive())
       return;
     let props = node.getProps();
     node.animationState && props.whileHover && node.animationState.setActive("whileHover", isActive), props[callbackName] && frame.update(() => props[callbackName](event, info));
@@ -23114,9 +26729,6 @@ var FocusGesture = class extends Feature {
 // node_modules/framer-motion/dist/es/gestures/utils/is-node-or-child.mjs
 var isNodeOrChild = (parent, child) => child ? parent === child ? !0 : isNodeOrChild(parent, child.parentElement) : !1;
 
-// node_modules/framer-motion/dist/es/utils/noop.mjs
-var noop = (any) => any;
-
 // node_modules/framer-motion/dist/es/gestures/press.mjs
 function fireSyntheticPointerEvent(name, handler) {
   if (!handler)
@@ -23126,15 +26738,16 @@ function fireSyntheticPointerEvent(name, handler) {
 }
 var PressGesture = class extends Feature {
   constructor() {
-    super(...arguments), this.removeStartListeners = noop, this.removeEndListeners = noop, this.removeAccessibleListeners = noop, this.startPointerPress = (startEvent, startInfo) => {
-      if (this.removeEndListeners(), this.isPressing)
+    super(...arguments), this.removeStartListeners = noop3, this.removeEndListeners = noop3, this.removeAccessibleListeners = noop3, this.startPointerPress = (startEvent, startInfo) => {
+      if (this.isPressing)
         return;
+      this.removeEndListeners();
       let props = this.node.getProps(), removePointerUpListener = addPointerEvent(window, "pointerup", (endEvent, endInfo) => {
         if (!this.checkPressEnd())
           return;
-        let { onTap, onTapCancel } = this.node.getProps();
+        let { onTap, onTapCancel, globalTapTarget } = this.node.getProps();
         frame.update(() => {
-          isNodeOrChild(this.node.current, endEvent.target) ? onTap && onTap(endEvent, endInfo) : onTapCancel && onTapCancel(endEvent, endInfo);
+          !globalTapTarget && !isNodeOrChild(this.node.current, endEvent.target) ? onTapCancel && onTapCancel(endEvent, endInfo) : onTap && onTap(endEvent, endInfo);
         });
       }, { passive: !(props.onTap || props.onPointerUp) }), removePointerCancelListener = addPointerEvent(window, "pointercancel", (cancelEvent, cancelInfo) => this.cancelPress(cancelEvent, cancelInfo), { passive: !(props.onTapCancel || props.onPointerCancel) });
       this.removeEndListeners = pipe(removePointerUpListener, removePointerCancelListener), this.startPress(startEvent, startInfo);
@@ -23152,7 +26765,7 @@ var PressGesture = class extends Feature {
           this.startPress(event, info);
         });
       }, removeKeydownListener = addDomEvent(this.node.current, "keydown", handleKeydown), handleBlur = () => {
-        !this.isPressing || fireSyntheticPointerEvent("cancel", (cancelEvent, cancelInfo) => this.cancelPress(cancelEvent, cancelInfo));
+        this.isPressing && fireSyntheticPointerEvent("cancel", (cancelEvent, cancelInfo) => this.cancelPress(cancelEvent, cancelInfo));
       }, removeBlurListener = addDomEvent(this.node.current, "blur", handleBlur);
       this.removeAccessibleListeners = pipe(removeKeydownListener, removeBlurListener);
     };
@@ -23172,7 +26785,7 @@ var PressGesture = class extends Feature {
     onTapCancel && frame.update(() => onTapCancel(event, info));
   }
   mount() {
-    let props = this.node.getProps(), removePointerListener = addPointerEvent(this.node.current, "pointerdown", this.startPointerPress, { passive: !(props.onTapStart || props.onPointerStart) }), removeFocusListener = addDomEvent(this.node.current, "focus", this.startAccessiblePress);
+    let props = this.node.getProps(), removePointerListener = addPointerEvent(props.globalTapTarget ? window : this.node.current, "pointerdown", this.startPointerPress, { passive: !(props.onTapStart || props.onPointerStart) }), removeFocusListener = addDomEvent(this.node.current, "focus", this.startAccessiblePress);
     this.removeStartListeners = pipe(removePointerListener, removeFocusListener);
   }
   unmount() {
@@ -23283,11 +26896,8 @@ function resolveVariant(visualElement, definition, custom) {
   return resolveVariantFromProps(props, definition, custom !== void 0 ? custom : props.custom, getCurrent(visualElement), getVelocity(visualElement));
 }
 
-// node_modules/framer-motion/dist/es/animation/optimized-appear/data-id.mjs
-var optimizedAppearDataId = "framerAppearId", optimizedAppearDataAttribute = "data-" + camelToDash(optimizedAppearDataId);
-
 // node_modules/framer-motion/dist/es/utils/errors.mjs
-var warning2 = noop, invariant4 = noop;
+var warning2 = noop3, invariant4 = noop3;
 warning2 = (check, message) => {
   !check && typeof console < "u" && console.warn(message);
 }, invariant4 = (check, message) => {
@@ -23322,7 +26932,7 @@ var cubicBezierAsString = ([a, b, c, d]) => `cubic-bezier(${a}, ${b}, ${c}, ${d}
   backOut: cubicBezierAsString([0.33, 1.53, 0.69, 0.99])
 };
 function mapEasingToNativeEasing(easing) {
-  if (!!easing)
+  if (easing)
     return isBezierDefinition(easing) ? cubicBezierAsString(easing) : Array.isArray(easing) ? easing.map(mapEasingToNativeEasing) : supportedWaapiEasing[easing];
 }
 
@@ -23341,13 +26951,6 @@ function animateStyle(element, valueName, keyframes2, { delay: delay2 = 0, durat
   });
 }
 
-// node_modules/framer-motion/dist/es/animation/animators/waapi/supports.mjs
-var featureTests = {
-  waapi: () => Object.hasOwnProperty.call(Element.prototype, "animate")
-}, results = {}, supports = {};
-for (let key in featureTests)
-  supports[key] = () => (results[key] === void 0 && (results[key] = featureTests[key]()), results[key]);
-
 // node_modules/framer-motion/dist/es/animation/animators/waapi/utils/get-final-keyframe.mjs
 function getFinalKeyframe(keyframes2, { repeat, repeatType = "loop" }) {
   let index2 = repeat && repeatType !== "loop" && repeat % 2 === 1 ? 0 : keyframes2.length - 1;
@@ -23365,7 +26968,7 @@ function binarySubdivide(x, lowerBound, upperBound, mX1, mX2) {
 }
 function cubicBezier(mX1, mY1, mX2, mY2) {
   if (mX1 === mY1 && mX2 === mY2)
-    return noop;
+    return noop3;
   let getTForX = (aX) => binarySubdivide(aX, 0, 1, mX1, mX2);
   return (t) => t === 0 || t === 1 ? t : calcBezier(getTForX(t), mY1, mY2);
 }
@@ -23383,7 +26986,7 @@ var mirrorEasing = (easing) => (p) => p <= 0.5 ? easing(2 * p) / 2 : (2 - easing
 var reverseEasing = (easing) => (p) => 1 - easing(1 - p);
 
 // node_modules/framer-motion/dist/es/easing/circ.mjs
-var circIn = (p) => 1 - Math.sin(Math.acos(p)), circOut = reverseEasing(circIn), circInOut = mirrorEasing(circOut);
+var circIn = (p) => 1 - Math.sin(Math.acos(p)), circOut = reverseEasing(circIn), circInOut = mirrorEasing(circIn);
 
 // node_modules/framer-motion/dist/es/easing/back.mjs
 var backOut = cubicBezier(0.33, 1.53, 0.69, 0.99), backIn = reverseEasing(backOut), backInOut = mirrorEasing(backIn);
@@ -23393,7 +26996,7 @@ var anticipate = (p) => (p *= 2) < 1 ? 0.5 * backIn(p) : 0.5 * (2 - Math.pow(2, 
 
 // node_modules/framer-motion/dist/es/easing/utils/map.mjs
 var easingLookup = {
-  linear: noop,
+  linear: noop3,
   easeIn,
   easeInOut,
   easeOut,
@@ -23509,14 +27112,14 @@ var mixColor = (from, to) => {
 
 // node_modules/framer-motion/dist/es/value/types/complex/index.mjs
 function test(v) {
-  var _a, _b;
-  return isNaN(v) && isString(v) && (((_a = v.match(floatRegex)) === null || _a === void 0 ? void 0 : _a.length) || 0) + (((_b = v.match(colorRegex)) === null || _b === void 0 ? void 0 : _b.length) || 0) > 0;
+  var _a10, _b;
+  return isNaN(v) && isString(v) && (((_a10 = v.match(floatRegex)) === null || _a10 === void 0 ? void 0 : _a10.length) || 0) + (((_b = v.match(colorRegex)) === null || _b === void 0 ? void 0 : _b.length) || 0) > 0;
 }
 var cssVarTokeniser = {
   regex: cssVariableRegex,
   countKey: "Vars",
   token: "${v}",
-  parse: noop
+  parse: noop3
 }, colorTokeniser = {
   regex: colorRegex,
   countKey: "Colors",
@@ -23530,7 +27133,7 @@ var cssVarTokeniser = {
 };
 function tokenise(info, { regex, countKey, token, parse: parse2 }) {
   let matches = info.tokenised.match(regex);
-  !matches || (info["num" + countKey] = matches.length, info.tokenised = info.tokenised.replace(regex, token), info.values.push(...matches.map(parse2)));
+  matches && (info["num" + countKey] = matches.length, info.tokenised = info.tokenised.replace(regex, token), info.values.push(...matches.map(parse2)));
 }
 function analyseComplexValue(value) {
   let originalValue = value.toString(), info = {
@@ -23609,7 +27212,7 @@ function createMixers(output, ease2, customMixer) {
   for (let i = 0; i < numMixers; i++) {
     let mixer = mixerFactory(output[i], output[i + 1]);
     if (ease2) {
-      let easingFunction = Array.isArray(ease2) ? ease2[i] || noop : ease2;
+      let easingFunction = Array.isArray(ease2) ? ease2[i] || noop3 : ease2;
       mixer = pipe(easingFunction, mixer);
     }
     mixers.push(mixer);
@@ -23661,6 +27264,8 @@ function keyframes({ duration = 300, keyframes: keyframeValues, times, ease: eas
     done: !1,
     value: keyframeValues[0]
   }, absoluteTimes = convertOffsetToTimes(
+    // Only use the provided offsets if they're the correct length
+    // TODO Maybe we should warn here if there's a length mismatch
     times && times.length === keyframeValues.length ? times : defaultOffset(keyframeValues),
     duration
   ), mapTimeToKeyframe = interpolate(absoluteTimes, keyframeValues, {
@@ -23749,14 +27354,16 @@ function getSpringOptions(options) {
     springOptions = {
       ...springOptions,
       ...derived,
-      velocity: 0,
       mass: 1
     }, springOptions.isResolvedFromDuration = !0;
   }
   return springOptions;
 }
 function spring({ keyframes: keyframes2, restDelta, restSpeed, ...options }) {
-  let origin = keyframes2[0], target = keyframes2[keyframes2.length - 1], state = { done: !1, value: origin }, { stiffness, damping, mass, velocity, duration, isResolvedFromDuration } = getSpringOptions(options), initialVelocity = velocity ? -millisecondsToSeconds(velocity) : 0, dampingRatio = damping / (2 * Math.sqrt(stiffness * mass)), initialDelta = target - origin, undampedAngularFreq = millisecondsToSeconds(Math.sqrt(stiffness / mass)), isGranularScale = Math.abs(initialDelta) < 5;
+  let origin = keyframes2[0], target = keyframes2[keyframes2.length - 1], state = { done: !1, value: origin }, { stiffness, damping, mass, duration, velocity, isResolvedFromDuration } = getSpringOptions({
+    ...options,
+    velocity: -millisecondsToSeconds(options.velocity || 0)
+  }), initialVelocity = velocity || 0, dampingRatio = damping / (2 * Math.sqrt(stiffness * mass)), initialDelta = target - origin, undampedAngularFreq = millisecondsToSeconds(Math.sqrt(stiffness / mass)), isGranularScale = Math.abs(initialDelta) < 5;
   restSpeed || (restSpeed = isGranularScale ? 0.01 : 2), restDelta || (restDelta = isGranularScale ? 5e-3 : 0.5);
   let resolveSpring;
   if (dampingRatio < 1) {
@@ -23802,7 +27409,7 @@ function inertia({ keyframes: keyframes2, velocity = 0, power = 0.8, timeConstan
     let delta = calcDelta(t), latest = calcLatest(t);
     state.done = Math.abs(delta) <= restDelta, state.value = state.done ? target : latest;
   }, timeReachedBoundary, spring$1, checkCatchBoundary = (t) => {
-    !isOutOfBounds(state.value) || (timeReachedBoundary = t, spring$1 = spring({
+    isOutOfBounds(state.value) && (timeReachedBoundary = t, spring$1 = spring({
       keyframes: [state.value, nearestBoundary(state.value)],
       velocity: calcGeneratorVelocity(calcLatest, t, state.value),
       damping: bounceDamping,
@@ -23826,6 +27433,10 @@ var frameloopDriver = (update) => {
   return {
     start: () => frame.update(passTimestamp, !0),
     stop: () => cancelFrame(passTimestamp),
+    /**
+     * If we're processing this frame we can use the
+     * framelocked timestamp to keep things in sync.
+     */
     now: () => frameData.isProcessing ? frameData.timestamp : performance.now()
   };
 };
@@ -23848,13 +27459,13 @@ var types = {
 };
 function animateValue({ autoplay = !0, delay: delay2 = 0, driver = frameloopDriver, keyframes: keyframes$1, type: type2 = "keyframes", repeat = 0, repeatDelay = 0, repeatType = "loop", onPlay, onStop, onComplete, onUpdate, ...options }) {
   let speed = 1, hasStopped = !1, resolveFinishedPromise, currentFinishedPromise, updateFinishedPromise = () => {
-    resolveFinishedPromise && resolveFinishedPromise(), currentFinishedPromise = new Promise((resolve) => {
+    currentFinishedPromise = new Promise((resolve) => {
       resolveFinishedPromise = resolve;
     });
   };
   updateFinishedPromise();
   let animationDriver, generatorFactory = types[type2] || keyframes, mapNumbersToKeyframes;
-  generatorFactory !== keyframes && typeof keyframes$1[0] != "number" && (mapNumbersToKeyframes = interpolate([0, 100], keyframes$1, {
+  generatorFactory !== keyframes && typeof keyframes$1[0] != "number" && (invariant4(keyframes$1.length === 2, `Only two keyframes currently supported with spring and inertia animations. Trying to animate ${keyframes$1}`), mapNumbersToKeyframes = interpolate([0, 100], keyframes$1, {
     clamp: !1
   }), keyframes$1 = [0, 100]);
   let generator = generatorFactory({ ...options, keyframes: keyframes$1 }), mirroredGenerator;
@@ -23870,36 +27481,32 @@ function animateValue({ autoplay = !0, delay: delay2 = 0, driver = frameloopDriv
   let currentTime = 0, tick = (timestamp) => {
     if (startTime === null)
       return;
-    speed > 0 && (startTime = Math.min(startTime, timestamp)), holdTime !== null ? currentTime = holdTime : currentTime = (timestamp - startTime) * speed;
-    let timeWithoutDelay = currentTime - delay2, isInDelayPhase = timeWithoutDelay < 0;
+    speed > 0 && (startTime = Math.min(startTime, timestamp)), speed < 0 && (startTime = Math.min(timestamp - totalDuration / speed, startTime)), holdTime !== null ? currentTime = holdTime : currentTime = Math.round(timestamp - startTime) * speed;
+    let timeWithoutDelay = currentTime - delay2 * (speed >= 0 ? 1 : -1), isInDelayPhase = speed >= 0 ? timeWithoutDelay < 0 : timeWithoutDelay > totalDuration;
     currentTime = Math.max(timeWithoutDelay, 0), playState === "finished" && holdTime === null && (currentTime = totalDuration);
     let elapsed = currentTime, frameGenerator = generator;
     if (repeat) {
-      let progress2 = currentTime / resolvedDuration, currentIteration = Math.floor(progress2), iterationProgress = progress2 % 1;
-      !iterationProgress && progress2 >= 1 && (iterationProgress = 1), iterationProgress === 1 && currentIteration--, currentIteration = Math.min(currentIteration, repeat + 1);
-      let iterationIsOdd = Boolean(currentIteration % 2);
-      iterationIsOdd && (repeatType === "reverse" ? (iterationProgress = 1 - iterationProgress, repeatDelay && (iterationProgress -= repeatDelay / resolvedDuration)) : repeatType === "mirror" && (frameGenerator = mirroredGenerator));
-      let p = clamp(0, 1, iterationProgress);
-      currentTime > totalDuration && (p = repeatType === "reverse" && iterationIsOdd ? 1 : 0), elapsed = p * resolvedDuration;
+      let progress2 = Math.min(currentTime, totalDuration) / resolvedDuration, currentIteration = Math.floor(progress2), iterationProgress = progress2 % 1;
+      !iterationProgress && progress2 >= 1 && (iterationProgress = 1), iterationProgress === 1 && currentIteration--, currentIteration = Math.min(currentIteration, repeat + 1), Boolean(currentIteration % 2) && (repeatType === "reverse" ? (iterationProgress = 1 - iterationProgress, repeatDelay && (iterationProgress -= repeatDelay / resolvedDuration)) : repeatType === "mirror" && (frameGenerator = mirroredGenerator)), elapsed = clamp(0, 1, iterationProgress) * resolvedDuration;
     }
     let state = isInDelayPhase ? { done: !1, value: keyframes$1[0] } : frameGenerator.next(elapsed);
     mapNumbersToKeyframes && (state.value = mapNumbersToKeyframes(state.value));
     let { done } = state;
-    !isInDelayPhase && calculatedDuration !== null && (done = currentTime >= totalDuration);
-    let isAnimationFinished = holdTime === null && (playState === "finished" || playState === "running" && done || speed < 0 && currentTime <= 0);
+    !isInDelayPhase && calculatedDuration !== null && (done = speed >= 0 ? currentTime >= totalDuration : currentTime <= 0);
+    let isAnimationFinished = holdTime === null && (playState === "finished" || playState === "running" && done);
     return onUpdate && onUpdate(state.value), isAnimationFinished && finish(), state;
   }, stopAnimationDriver = () => {
     animationDriver && animationDriver.stop(), animationDriver = void 0;
   }, cancel = () => {
-    playState = "idle", stopAnimationDriver(), updateFinishedPromise(), startTime = cancelTime = null;
+    playState = "idle", stopAnimationDriver(), resolveFinishedPromise(), updateFinishedPromise(), startTime = cancelTime = null;
   }, finish = () => {
-    playState = "finished", onComplete && onComplete(), stopAnimationDriver(), updateFinishedPromise();
+    playState = "finished", onComplete && onComplete(), stopAnimationDriver(), resolveFinishedPromise();
   }, play = () => {
     if (hasStopped)
       return;
     animationDriver || (animationDriver = driver(tick));
     let now3 = animationDriver.now();
-    onPlay && onPlay(), holdTime !== null ? startTime = now3 - holdTime : (!startTime || playState === "finished") && (startTime = now3), cancelTime = startTime, holdTime = null, playState = "running", animationDriver.start();
+    onPlay && onPlay(), holdTime !== null ? startTime = now3 - holdTime : (!startTime || playState === "finished") && (startTime = now3), playState === "finished" && updateFinishedPromise(), cancelTime = startTime, holdTime = null, playState = "running", animationDriver.start();
   };
   autoplay && play();
   let controls = {
@@ -23943,8 +27550,14 @@ function animateValue({ autoplay = !0, delay: delay2 = 0, driver = frameloopDriv
   return controls;
 }
 
+// node_modules/framer-motion/dist/es/utils/memo.mjs
+function memo(callback) {
+  let result;
+  return () => (result === void 0 && (result = callback()), result);
+}
+
 // node_modules/framer-motion/dist/es/animation/animators/waapi/create-accelerated-animation.mjs
-var acceleratedValues = /* @__PURE__ */ new Set([
+var supportsWaapi = memo(() => Object.hasOwnProperty.call(Element.prototype, "animate")), acceleratedValues = /* @__PURE__ */ new Set([
   "opacity",
   "clipPath",
   "filter",
@@ -23952,9 +27565,9 @@ var acceleratedValues = /* @__PURE__ */ new Set([
   "backgroundColor"
 ]), sampleDelta = 10, maxDuration2 = 2e4, requiresPregeneratedKeyframes = (valueName, options) => options.type === "spring" || valueName === "backgroundColor" || !isWaapiSupportedEasing(options.ease);
 function createAcceleratedAnimation(value, valueName, { onUpdate, onComplete, ...options }) {
-  if (!(supports.waapi() && acceleratedValues.has(valueName) && !options.repeatDelay && options.repeatType !== "mirror" && options.damping !== 0 && options.type !== "inertia"))
+  if (!(supportsWaapi() && acceleratedValues.has(valueName) && !options.repeatDelay && options.repeatType !== "mirror" && options.damping !== 0 && options.type !== "inertia"))
     return !1;
-  let hasStopped = !1, resolveFinishedPromise, currentFinishedPromise, updateFinishedPromise = () => {
+  let hasStopped = !1, resolveFinishedPromise, currentFinishedPromise, pendingCancel = !1, updateFinishedPromise = () => {
     currentFinishedPromise = new Promise((resolve) => {
       resolveFinishedPromise = resolve;
     });
@@ -23974,16 +27587,29 @@ function createAcceleratedAnimation(value, valueName, { onUpdate, onComplete, ..
   let animation = animateStyle(value.owner.current, valueName, keyframes2, {
     ...options,
     duration,
+    /**
+     * This function is currently not called if ease is provided
+     * as a function so the cast is safe.
+     *
+     * However it would be possible for a future refinement to port
+     * in easing pregeneration from Motion One for browsers that
+     * support the upcoming `linear()` easing function.
+     */
     ease: ease2,
     times
-  }), cancelAnimation = () => animation.cancel(), safeCancel = () => {
-    frame.update(cancelAnimation), resolveFinishedPromise(), updateFinishedPromise();
+  }), cancelAnimation = () => {
+    pendingCancel = !1, animation.cancel();
+  }, safeCancel = () => {
+    pendingCancel = !0, frame.update(cancelAnimation), resolveFinishedPromise(), updateFinishedPromise();
   };
   return animation.onfinish = () => {
-    value.set(getFinalKeyframe(keyframes2, options)), onComplete && onComplete(), safeCancel();
+    pendingCancel || (value.set(getFinalKeyframe(keyframes2, options)), onComplete && onComplete(), safeCancel());
   }, {
     then(resolve, reject) {
       return currentFinishedPromise.then(resolve, reject);
+    },
+    attachTimeline(timeline) {
+      return animation.timeline = timeline, animation.onfinish = null, noop3;
     },
     get time() {
       return millisecondsToSeconds(animation.currentTime || 0);
@@ -24017,7 +27643,9 @@ function createAcceleratedAnimation(value, valueName, { onUpdate, onComplete, ..
       }
       safeCancel();
     },
-    complete: () => animation.finish(),
+    complete: () => {
+      pendingCancel || animation.finish();
+    },
     cancel: safeCancel
   };
 }
@@ -24028,12 +27656,12 @@ function createInstantAnimation({ keyframes: keyframes2, delay: delay2, onUpdate
     time: 0,
     speed: 1,
     duration: 0,
-    play: noop,
-    pause: noop,
-    stop: noop,
+    play: noop3,
+    pause: noop3,
+    stop: noop3,
     then: (resolve) => (resolve(), Promise.resolve()),
-    cancel: noop,
-    complete: noop
+    cancel: noop3,
+    complete: noop3
   });
   return delay2 ? animateValue({
     keyframes: [0, 1],
@@ -24064,7 +27692,9 @@ var underDampedSpring = {
 }, getDefaultTransition = (valueKey, { keyframes: keyframes2 }) => keyframes2.length > 2 ? keyframesTransition : transformProps.has(valueKey) ? valueKey.startsWith("scale") ? criticallyDampedSpring(keyframes2[1]) : underDampedSpring : ease;
 
 // node_modules/framer-motion/dist/es/animation/utils/is-animatable.mjs
-var isAnimatable = (key, value) => key === "zIndex" ? !1 : !!(typeof value == "number" || Array.isArray(value) || typeof value == "string" && (complex.test(value) || value === "0") && !value.startsWith("url("));
+var isAnimatable = (key, value) => key === "zIndex" ? !1 : !!(typeof value == "number" || Array.isArray(value) || typeof value == "string" && // It's animatable if we have a string
+(complex.test(value) || value === "0") && // And it contains numbers and/or colors
+!value.startsWith("url("));
 
 // node_modules/framer-motion/dist/es/value/types/complex/filter.mjs
 var maxDefaults = /* @__PURE__ */ new Set(["brightness", "contrast", "saturate", "opacity"]);
@@ -24089,11 +27719,13 @@ var functionRegex = /([a-z-]*)\(.*?\)/g, filter = {
 // node_modules/framer-motion/dist/es/render/dom/value-types/defaults.mjs
 var defaultValueTypes = {
   ...numberValueTypes,
+  // Color props
   color,
   backgroundColor: color,
   outlineColor: color,
   fill: color,
   stroke: color,
+  // Border props
   borderColor: color,
   borderTopColor: color,
   borderRightColor: color,
@@ -24143,6 +27775,11 @@ function getValueTransition(transition4, key) {
   return transition4[key] || transition4.default || transition4;
 }
 
+// node_modules/framer-motion/dist/es/utils/GlobalConfig.mjs
+var MotionGlobalConfig = {
+  skipAnimations: !1
+};
+
 // node_modules/framer-motion/dist/es/animation/interfaces/motion-value.mjs
 var animateMotionValue = (valueName, value, target, transition4 = {}) => (onComplete) => {
   let valueTransition = getValueTransition(transition4, valueName) || {}, delay2 = valueTransition.delay || transition4.delay || 0, { elapsed = 0 } = transition4;
@@ -24165,9 +27802,20 @@ var animateMotionValue = (valueName, value, target, transition4 = {}) => (onComp
   if (isTransitionDefined(valueTransition) || (options = {
     ...options,
     ...getDefaultTransition(valueName, options)
-  }), options.duration && (options.duration = secondsToMilliseconds(options.duration)), options.repeatDelay && (options.repeatDelay = secondsToMilliseconds(options.repeatDelay)), !isOriginAnimatable || !isTargetAnimatable || instantAnimationState.current || valueTransition.type === !1)
-    return createInstantAnimation(options);
-  if (value.owner && value.owner.current instanceof HTMLElement && !value.owner.getProps().onUpdate) {
+  }), options.duration && (options.duration = secondsToMilliseconds(options.duration)), options.repeatDelay && (options.repeatDelay = secondsToMilliseconds(options.repeatDelay)), !isOriginAnimatable || !isTargetAnimatable || instantAnimationState.current || valueTransition.type === !1 || MotionGlobalConfig.skipAnimations)
+    return createInstantAnimation(instantAnimationState.current ? { ...options, delay: 0 } : options);
+  if (
+    /**
+     * If this is a handoff animation, the optimised animation will be running via
+     * WAAPI. Therefore, this animation must be JS to ensure it runs "under" the
+     * optimised animation.
+     */
+    !transition4.isHandoff && value.owner && value.owner.current instanceof HTMLElement && /**
+     * If we're outputting values to onUpdate then we can't use WAAPI as there's
+     * no way to read the value from WAAPI every frame.
+     */
+    !value.owner.getProps().onUpdate
+  ) {
     let acceleratedAnimation = createAcceleratedAnimation(value, valueName, options);
     if (acceleratedAnimation)
       return acceleratedAnimation;
@@ -24202,7 +27850,7 @@ var SubscriptionManager = class {
   }
   notify(a, b, c) {
     let numSubscriptions = this.subscriptions.length;
-    if (!!numSubscriptions)
+    if (numSubscriptions)
       if (numSubscriptions === 1)
         this.subscriptions[0](a, b, c);
       else
@@ -24226,9 +27874,19 @@ function warnOnce2(condition, message, element) {
 }
 
 // node_modules/framer-motion/dist/es/value/index.mjs
-var isFloat = (value) => !isNaN(parseFloat(value)), MotionValue = class {
+var isFloat = (value) => !isNaN(parseFloat(value)), collectMotionValues = {
+  current: void 0
+}, MotionValue = class {
+  /**
+   * @param init - The initiating value
+   * @param config - Optional configuration options
+   *
+   * -  `transformer`: A function to transform incoming values with.
+   *
+   * @internal
+   */
   constructor(init4, options = {}) {
-    this.version = "10.12.16", this.timeDelta = 0, this.lastUpdated = 0, this.canTrackVelocity = !1, this.events = {}, this.updateAndNotify = (v, render = !0) => {
+    this.version = "10.18.0", this.timeDelta = 0, this.lastUpdated = 0, this.canTrackVelocity = !1, this.events = {}, this.updateAndNotify = (v, render = !0) => {
       this.prev = this.current, this.current = v;
       let { delta, timestamp } = frameData;
       this.lastUpdated !== timestamp && (this.timeDelta = delta, this.lastUpdated = timestamp, frame.postRender(this.scheduleVelocityCheck)), this.prev !== this.current && this.events.change && this.events.change.notify(this.current), this.events.velocityChange && this.events.velocityChange.notify(this.getVelocity()), render && this.events.renderRequest && this.events.renderRequest.notify(this.current);
@@ -24236,6 +27894,46 @@ var isFloat = (value) => !isNaN(parseFloat(value)), MotionValue = class {
       timestamp !== this.lastUpdated && (this.prev = this.current, this.events.velocityChange && this.events.velocityChange.notify(this.getVelocity()));
     }, this.hasAnimated = !1, this.prev = this.current = init4, this.canTrackVelocity = isFloat(this.current), this.owner = options.owner;
   }
+  /**
+   * Adds a function that will be notified when the `MotionValue` is updated.
+   *
+   * It returns a function that, when called, will cancel the subscription.
+   *
+   * When calling `onChange` inside a React component, it should be wrapped with the
+   * `useEffect` hook. As it returns an unsubscribe function, this should be returned
+   * from the `useEffect` function to ensure you don't add duplicate subscribers..
+   *
+   * ```jsx
+   * export const MyComponent = () => {
+   *   const x = useMotionValue(0)
+   *   const y = useMotionValue(0)
+   *   const opacity = useMotionValue(1)
+   *
+   *   useEffect(() => {
+   *     function updateOpacity() {
+   *       const maxXY = Math.max(x.get(), y.get())
+   *       const newOpacity = transform(maxXY, [0, 100], [1, 0])
+   *       opacity.set(newOpacity)
+   *     }
+   *
+   *     const unsubscribeX = x.on("change", updateOpacity)
+   *     const unsubscribeY = y.on("change", updateOpacity)
+   *
+   *     return () => {
+   *       unsubscribeX()
+   *       unsubscribeY()
+   *     }
+   *   }, [])
+   *
+   *   return <motion.div style={{ x }} />
+   * }
+   * ```
+   *
+   * @param subscriber - A function that receives the latest value.
+   * @returns A function that, when called, will cancel this subscription.
+   *
+   * @deprecated
+   */
   onChange(subscription) {
     return warnOnce2(!1, 'value.onChange(callback) is deprecated. Switch to value.on("change", callback).'), this.on("change", subscription);
   }
@@ -24252,27 +27950,83 @@ var isFloat = (value) => !isNaN(parseFloat(value)), MotionValue = class {
     for (let eventManagers in this.events)
       this.events[eventManagers].clear();
   }
+  /**
+   * Attaches a passive effect to the `MotionValue`.
+   *
+   * @internal
+   */
   attach(passiveEffect, stopPassiveEffect) {
     this.passiveEffect = passiveEffect, this.stopPassiveEffect = stopPassiveEffect;
   }
+  /**
+   * Sets the state of the `MotionValue`.
+   *
+   * @remarks
+   *
+   * ```jsx
+   * const x = useMotionValue(0)
+   * x.set(10)
+   * ```
+   *
+   * @param latest - Latest value to set.
+   * @param render - Whether to notify render subscribers. Defaults to `true`
+   *
+   * @public
+   */
   set(v, render = !0) {
     !render || !this.passiveEffect ? this.updateAndNotify(v, render) : this.passiveEffect(v, this.updateAndNotify);
   }
   setWithVelocity(prev, current, delta) {
     this.set(current), this.prev = prev, this.timeDelta = delta;
   }
+  /**
+   * Set the state of the `MotionValue`, stopping any active animations,
+   * effects, and resets velocity to `0`.
+   */
   jump(v) {
     this.updateAndNotify(v), this.prev = v, this.stop(), this.stopPassiveEffect && this.stopPassiveEffect();
   }
+  /**
+   * Returns the latest state of `MotionValue`
+   *
+   * @returns - The latest state of `MotionValue`
+   *
+   * @public
+   */
   get() {
-    return this.current;
+    return collectMotionValues.current && collectMotionValues.current.push(this), this.current;
   }
+  /**
+   * @public
+   */
   getPrevious() {
     return this.prev;
   }
+  /**
+   * Returns the latest velocity of `MotionValue`
+   *
+   * @returns - The latest velocity of `MotionValue`. Returns `0` if the state is non-numerical.
+   *
+   * @public
+   */
   getVelocity() {
-    return this.canTrackVelocity ? velocityPerSecond(parseFloat(this.current) - parseFloat(this.prev), this.timeDelta) : 0;
+    return this.canTrackVelocity ? (
+      // These casts could be avoided if parseFloat would be typed better
+      velocityPerSecond(parseFloat(this.current) - parseFloat(this.prev), this.timeDelta)
+    ) : 0;
   }
+  /**
+   * Registers a new animation to control this `MotionValue`. Only one
+   * animation can drive a `MotionValue` at one time.
+   *
+   * ```jsx
+   * value.start()
+   * ```
+   *
+   * @param animation - A function that starts the provided animation
+   *
+   * @internal
+   */
   start(startAnimation) {
     return this.stop(), new Promise((resolve) => {
       this.hasAnimated = !0, this.animation = startAnimation(resolve), this.events.animationStart && this.events.animationStart.notify();
@@ -24280,15 +28034,34 @@ var isFloat = (value) => !isNaN(parseFloat(value)), MotionValue = class {
       this.events.animationComplete && this.events.animationComplete.notify(), this.clearAnimation();
     });
   }
+  /**
+   * Stop the currently active animation.
+   *
+   * @public
+   */
   stop() {
     this.animation && (this.animation.stop(), this.events.animationCancel && this.events.animationCancel.notify()), this.clearAnimation();
   }
+  /**
+   * Returns `true` if this value is currently animating.
+   *
+   * @public
+   */
   isAnimating() {
     return !!this.animation;
   }
   clearAnimation() {
     delete this.animation;
   }
+  /**
+   * Destroy and clean up subscribers to this `MotionValue`.
+   *
+   * The `MotionValue` hooks like `useMotionValue` and `useTransform` automatically
+   * handle the lifecycle of the returned `MotionValue`, so this method is only necessary if you've manually
+   * created a `MotionValue` via the `motionValue` function.
+   *
+   * @public
+   */
   destroy() {
     this.clearListeners(), this.stop(), this.stopPassiveEffect && this.stopPassiveEffect();
   }
@@ -24325,12 +28098,12 @@ function setTarget(visualElement, definition) {
   }
 }
 function checkTargetForNewValues(visualElement, target, origin) {
-  var _a, _b;
+  var _a10, _b;
   let newValueKeys = Object.keys(target).filter((key) => !visualElement.hasValue(key)), numNewValues = newValueKeys.length;
-  if (!!numNewValues)
+  if (numNewValues)
     for (let i = 0; i < numNewValues; i++) {
       let key = newValueKeys[i], targetValue = target[key], value = null;
-      Array.isArray(targetValue) && (value = targetValue[0]), value === null && (value = (_b = (_a = origin[key]) !== null && _a !== void 0 ? _a : visualElement.readValue(key)) !== null && _b !== void 0 ? _b : target[key]), value != null && (typeof value == "string" && (isNumericalString(value) || isZeroValueString(value)) ? value = parseFloat(value) : !findValueType(value) && complex.test(targetValue) && (value = getAnimatableNone2(key, targetValue)), visualElement.addValue(key, motionValue(value, { owner: visualElement })), origin[key] === void 0 && (origin[key] = value), value !== null && visualElement.setBaseTarget(key, value));
+      Array.isArray(targetValue) && (value = targetValue[0]), value === null && (value = (_b = (_a10 = origin[key]) !== null && _a10 !== void 0 ? _a10 : visualElement.readValue(key)) !== null && _b !== void 0 ? _b : target[key]), value != null && (typeof value == "string" && (isNumericalString(value) || isZeroValueString(value)) ? value = parseFloat(value) : !findValueType(value) && complex.test(targetValue) && (value = getAnimatableNone2(key, targetValue)), visualElement.addValue(key, motionValue(value, { owner: visualElement })), origin[key] === void 0 && (origin[key] = value), value !== null && visualElement.setBaseTarget(key, value));
     }
 }
 function getOriginFromTransition(key, transition4) {
@@ -24355,6 +28128,15 @@ function shouldBlockAnimation({ protectedKeys, needsAnimating }, key) {
   let shouldBlock = protectedKeys.hasOwnProperty(key) && needsAnimating[key] !== !0;
   return needsAnimating[key] = !1, shouldBlock;
 }
+function hasKeyframesChanged(value, target) {
+  let current = value.get();
+  if (Array.isArray(target)) {
+    for (let i = 0; i < target.length; i++)
+      if (target[i] !== current)
+        return !0;
+  } else
+    return current !== target;
+}
 function animateTarget(visualElement, definition, { delay: delay2 = 0, transitionOverride, type: type2 } = {}) {
   let { transition: transition4 = visualElement.getDefaultTransition(), transitionEnd, ...target } = visualElement.makeTargetAnimatable(definition), willChange = visualElement.getValue("willChange");
   transitionOverride && (transition4 = transitionOverride);
@@ -24363,11 +28145,21 @@ function animateTarget(visualElement, definition, { delay: delay2 = 0, transitio
     let value = visualElement.getValue(key), valueTarget = target[key];
     if (!value || valueTarget === void 0 || animationTypeState && shouldBlockAnimation(animationTypeState, key))
       continue;
-    let valueTransition = { delay: delay2, elapsed: 0, ...transition4 };
-    if (window.HandoffAppearAnimations && !value.hasAnimated) {
+    let valueTransition = {
+      delay: delay2,
+      elapsed: 0,
+      ...getValueTransition(transition4 || {}, key)
+    };
+    if (window.HandoffAppearAnimations) {
       let appearId = visualElement.getProps()[optimizedAppearDataAttribute];
-      appearId && (valueTransition.elapsed = window.HandoffAppearAnimations(appearId, key, value, frame));
+      if (appearId) {
+        let elapsed = window.HandoffAppearAnimations(appearId, key, value, frame);
+        elapsed !== null && (valueTransition.elapsed = elapsed, valueTransition.isHandoff = !0);
+      }
     }
+    let canSkip = !valueTransition.isHandoff && !hasKeyframesChanged(value, valueTarget);
+    if (valueTransition.type === "spring" && (value.getVelocity() || valueTransition.velocity) && (canSkip = !1), value.animation && (canSkip = !1), canSkip)
+      continue;
     value.start(animateMotionValue(key, value, valueTarget, visualElement.shouldReduceMotion && transformProps.has(key) ? { type: !1 } : valueTransition));
     let animation = value.animation;
     isWillChangeMotionValue(willChange) && (willChange.add(key), animation.then(() => willChange.remove(key))), animations2.push(animation);
@@ -24443,21 +28235,29 @@ function createAnimationState(visualElement) {
       let type2 = reversePriorityOrder[i], typeState = state[type2], prop = props[type2] !== void 0 ? props[type2] : context[type2], propIsVariant = isVariantLabel(prop), activeDelta = type2 === changedActiveType ? typeState.isActive : null;
       activeDelta === !1 && (removedVariantIndex = i);
       let isInherited = prop === context[type2] && prop !== props[type2] && propIsVariant;
-      if (isInherited && isInitialRender && visualElement.manuallyAnimateOnMount && (isInherited = !1), typeState.protectedKeys = { ...encounteredKeys }, !typeState.isActive && activeDelta === null || !prop && !typeState.prevProp || isAnimationControls(prop) || typeof prop == "boolean")
+      if (isInherited && isInitialRender && visualElement.manuallyAnimateOnMount && (isInherited = !1), typeState.protectedKeys = { ...encounteredKeys }, // If it isn't active and hasn't *just* been set as inactive
+      !typeState.isActive && activeDelta === null || // If we didn't and don't have any defined prop for this animation type
+      !prop && !typeState.prevProp || // Or if the prop doesn't define an animation
+      isAnimationControls(prop) || typeof prop == "boolean")
         continue;
-      let variantDidChange = checkVariantsDidChange(typeState.prevProp, prop), shouldAnimateType = variantDidChange || type2 === changedActiveType && typeState.isActive && !isInherited && propIsVariant || i > removedVariantIndex && propIsVariant, definitionList = Array.isArray(prop) ? prop : [prop], resolvedValues = definitionList.reduce(buildResolvedTypeValues, {});
+      let shouldAnimateType = checkVariantsDidChange(typeState.prevProp, prop) || // If we're making this variant active, we want to always make it active
+      type2 === changedActiveType && typeState.isActive && !isInherited && propIsVariant || // If we removed a higher-priority variant (i is in reverse order)
+      i > removedVariantIndex && propIsVariant, handledRemovedValues = !1, definitionList = Array.isArray(prop) ? prop : [prop], resolvedValues = definitionList.reduce(buildResolvedTypeValues, {});
       activeDelta === !1 && (resolvedValues = {});
       let { prevResolvedValues = {} } = typeState, allKeys = {
         ...prevResolvedValues,
         ...resolvedValues
       }, markToAnimate = (key) => {
-        shouldAnimateType = !0, removedKeys.delete(key), typeState.needsAnimating[key] = !0;
+        shouldAnimateType = !0, removedKeys.has(key) && (handledRemovedValues = !0, removedKeys.delete(key)), typeState.needsAnimating[key] = !0;
       };
       for (let key in allKeys) {
         let next = resolvedValues[key], prev = prevResolvedValues[key];
-        encounteredKeys.hasOwnProperty(key) || (next !== prev ? isKeyframesTarget(next) && isKeyframesTarget(prev) ? !shallowCompare(next, prev) || variantDidChange ? markToAnimate(key) : typeState.protectedKeys[key] = !0 : next !== void 0 ? markToAnimate(key) : removedKeys.add(key) : next !== void 0 && removedKeys.has(key) ? markToAnimate(key) : typeState.protectedKeys[key] = !0);
+        if (encounteredKeys.hasOwnProperty(key))
+          continue;
+        let valueHasChanged = !1;
+        isKeyframesTarget(next) && isKeyframesTarget(prev) ? valueHasChanged = !shallowCompare(next, prev) : valueHasChanged = next !== prev, valueHasChanged ? next !== void 0 ? markToAnimate(key) : removedKeys.add(key) : next !== void 0 && removedKeys.has(key) ? markToAnimate(key) : typeState.protectedKeys[key] = !0;
       }
-      typeState.prevProp = prop, typeState.prevResolvedValues = resolvedValues, typeState.isActive && (encounteredKeys = { ...encounteredKeys, ...resolvedValues }), isInitialRender && visualElement.blockInitialAnimation && (shouldAnimateType = !1), shouldAnimateType && !isInherited && animations2.push(...definitionList.map((animation) => ({
+      typeState.prevProp = prop, typeState.prevResolvedValues = resolvedValues, typeState.isActive && (encounteredKeys = { ...encounteredKeys, ...resolvedValues }), isInitialRender && visualElement.blockInitialAnimation && (shouldAnimateType = !1), shouldAnimateType && (!isInherited || handledRemovedValues) && animations2.push(...definitionList.map((animation) => ({
         animation,
         options: { type: type2, ...options }
       })));
@@ -24470,15 +28270,15 @@ function createAnimationState(visualElement) {
       }), animations2.push({ animation: fallbackAnimation });
     }
     let shouldAnimate = Boolean(animations2.length);
-    return isInitialRender && props.initial === !1 && !visualElement.manuallyAnimateOnMount && (shouldAnimate = !1), isInitialRender = !1, shouldAnimate ? animate(animations2) : Promise.resolve();
+    return isInitialRender && (props.initial === !1 || props.initial === props.animate) && !visualElement.manuallyAnimateOnMount && (shouldAnimate = !1), isInitialRender = !1, shouldAnimate ? animate(animations2) : Promise.resolve();
   }
   function setActive(type2, isActive, options) {
-    var _a;
+    var _a10;
     if (state[type2].isActive === isActive)
       return Promise.resolve();
-    (_a = visualElement.variantChildren) === null || _a === void 0 || _a.forEach((child) => {
-      var _a2;
-      return (_a2 = child.animationState) === null || _a2 === void 0 ? void 0 : _a2.setActive(type2, isActive);
+    (_a10 = visualElement.variantChildren) === null || _a10 === void 0 || _a10.forEach((child) => {
+      var _a11;
+      return (_a11 = child.animationState) === null || _a11 === void 0 ? void 0 : _a11.setActive(type2, isActive);
     }), state[type2].isActive = isActive;
     let animations2 = animateChanges(options, type2);
     for (let key in state)
@@ -24517,6 +28317,11 @@ function createState() {
 
 // node_modules/framer-motion/dist/es/motion/features/animation/index.mjs
 var AnimationFeature = class extends Feature {
+  /**
+   * We dynamically generate the AnimationState manager as it contains a reference
+   * to the underlying animation library. We only want to load that if we load this,
+   * so people can optionally code split it out using the `m` component.
+   */
   constructor(node) {
     super(node), node.animationState || (node.animationState = createAnimationState(node));
   }
@@ -24524,6 +28329,9 @@ var AnimationFeature = class extends Feature {
     let { animate } = this.node.getProps();
     this.unmount(), isAnimationControls(animate) && (this.unmount = animate.subscribe(this.node));
   }
+  /**
+   * Subscribe any provided AnimationControls to the component's VisualElement
+   */
   mount() {
     this.updateAnimationControlsSubscription();
   }
@@ -24576,8 +28384,8 @@ function distance2D(a, b) {
 
 // node_modules/framer-motion/dist/es/gestures/pan/PanSession.mjs
 var PanSession = class {
-  constructor(event, handlers, { transformPagePoint } = {}) {
-    if (this.startEvent = null, this.lastMoveEvent = null, this.lastMoveEventInfo = null, this.handlers = {}, this.updatePoint = () => {
+  constructor(event, handlers, { transformPagePoint, contextWindow, dragSnapToOrigin = !1 } = {}) {
+    if (this.startEvent = null, this.lastMoveEvent = null, this.lastMoveEventInfo = null, this.handlers = {}, this.contextWindow = window, this.updatePoint = () => {
       if (!(this.lastMoveEvent && this.lastMoveEventInfo))
         return;
       let info2 = getPanInfo(this.lastMoveEventInfo, this.history), isPanStarted = this.startEvent !== null, isDistancePastThreshold = distance2D(info2.offset, { x: 0, y: 0 }) >= 3;
@@ -24590,17 +28398,19 @@ var PanSession = class {
     }, this.handlePointerMove = (event2, info2) => {
       this.lastMoveEvent = event2, this.lastMoveEventInfo = transformPoint(info2, this.transformPagePoint), frame.update(this.updatePoint, !0);
     }, this.handlePointerUp = (event2, info2) => {
-      if (this.end(), !(this.lastMoveEvent && this.lastMoveEventInfo))
+      this.end();
+      let { onEnd, onSessionEnd, resumeAnimation } = this.handlers;
+      if (this.dragSnapToOrigin && resumeAnimation && resumeAnimation(), !(this.lastMoveEvent && this.lastMoveEventInfo))
         return;
-      let { onEnd, onSessionEnd } = this.handlers, panInfo = getPanInfo(event2.type === "pointercancel" ? this.lastMoveEventInfo : transformPoint(info2, this.transformPagePoint), this.history);
+      let panInfo = getPanInfo(event2.type === "pointercancel" ? this.lastMoveEventInfo : transformPoint(info2, this.transformPagePoint), this.history);
       this.startEvent && onEnd && onEnd(event2, panInfo), onSessionEnd && onSessionEnd(event2, panInfo);
     }, !isPrimaryPointer(event))
       return;
-    this.handlers = handlers, this.transformPagePoint = transformPagePoint;
+    this.dragSnapToOrigin = dragSnapToOrigin, this.handlers = handlers, this.transformPagePoint = transformPagePoint, this.contextWindow = contextWindow || window;
     let info = extractEventInfo(event), initialInfo = transformPoint(info, this.transformPagePoint), { point } = initialInfo, { timestamp } = frameData;
     this.history = [{ ...point, timestamp }];
     let { onSessionStart } = handlers;
-    onSessionStart && onSessionStart(event, getPanInfo(initialInfo, this.history)), this.removeListeners = pipe(addPointerEvent(window, "pointermove", this.handlePointerMove), addPointerEvent(window, "pointerup", this.handlePointerUp), addPointerEvent(window, "pointercancel", this.handlePointerUp));
+    onSessionStart && onSessionStart(event, getPanInfo(initialInfo, this.history)), this.removeListeners = pipe(addPointerEvent(this.contextWindow, "pointermove", this.handlePointerMove), addPointerEvent(this.contextWindow, "pointerup", this.handlePointerUp), addPointerEvent(this.contextWindow, "pointercancel", this.handlePointerUp));
   }
   updateHandlers(handlers) {
     this.handlers = handlers;
@@ -24836,6 +28646,9 @@ function measurePageBox(element, rootProjectionNode2, transformPagePoint) {
   return scroll && (translateAxis(viewportBox.x, scroll.offset.x), translateAxis(viewportBox.y, scroll.offset.y)), viewportBox;
 }
 
+// node_modules/framer-motion/dist/es/utils/get-context-window.mjs
+var getContextWindow = ({ current }) => current ? current.ownerDocument.defaultView : null;
+
 // node_modules/framer-motion/dist/es/gestures/drag/VisualElementDragControls.mjs
 var elementDragControls = /* @__PURE__ */ new WeakMap(), VisualElementDragControls = class {
   constructor(visualElement) {
@@ -24846,7 +28659,8 @@ var elementDragControls = /* @__PURE__ */ new WeakMap(), VisualElementDragContro
     if (presenceContext && presenceContext.isPresent === !1)
       return;
     let onSessionStart = (event) => {
-      this.stopAnimation(), snapToCursor && this.snapToCursor(extractEventInfo(event, "page").point);
+      let { dragSnapToOrigin: dragSnapToOrigin2 } = this.getProps();
+      dragSnapToOrigin2 ? this.pauseAnimation() : this.stopAnimation(), snapToCursor && this.snapToCursor(extractEventInfo(event, "page").point);
     }, onStart = (event, info) => {
       let { drag: drag2, dragPropagation, onDragStart } = this.getProps();
       if (drag2 && !dragPropagation && (this.openGlobalLock && this.openGlobalLock(), this.openGlobalLock = getGlobalLock(drag2), !this.openGlobalLock))
@@ -24874,13 +28688,21 @@ var elementDragControls = /* @__PURE__ */ new WeakMap(), VisualElementDragContro
         return;
       }
       this.updateAxis("x", info.point, offset), this.updateAxis("y", info.point, offset), this.visualElement.render(), onDrag && onDrag(event, info);
-    }, onSessionEnd = (event, info) => this.stop(event, info);
+    }, onSessionEnd = (event, info) => this.stop(event, info), resumeAnimation = () => eachAxis((axis) => {
+      var _a10;
+      return this.getAnimationState(axis) === "paused" && ((_a10 = this.getAxisMotionValue(axis).animation) === null || _a10 === void 0 ? void 0 : _a10.play());
+    }), { dragSnapToOrigin } = this.getProps();
     this.panSession = new PanSession(originEvent, {
       onSessionStart,
       onStart,
       onMove,
-      onSessionEnd
-    }, { transformPagePoint: this.visualElement.getTransformPagePoint() });
+      onSessionEnd,
+      resumeAnimation
+    }, {
+      transformPagePoint: this.visualElement.getTransformPagePoint(),
+      dragSnapToOrigin,
+      contextWindow: getContextWindow(this.visualElement)
+    });
   }
   stop(event, info) {
     let isDragging = this.isDragging;
@@ -24906,7 +28728,8 @@ var elementDragControls = /* @__PURE__ */ new WeakMap(), VisualElementDragContro
     this.constraints && this.constraints[axis] && (next = applyConstraints(next, this.constraints[axis], this.elastic[axis])), axisValue.set(next);
   }
   resolveConstraints() {
-    let { dragConstraints, dragElastic } = this.getProps(), { layout: layout2 } = this.visualElement.projection || {}, prevConstraints = this.constraints;
+    var _a10;
+    let { dragConstraints, dragElastic } = this.getProps(), layout2 = this.visualElement.projection && !this.visualElement.projection.layout ? this.visualElement.projection.measure(!1) : (_a10 = this.visualElement.projection) === null || _a10 === void 0 ? void 0 : _a10.layout, prevConstraints = this.constraints;
     dragConstraints && isRefObject(dragConstraints) ? this.constraints || (this.constraints = this.resolveRefConstraints()) : dragConstraints && layout2 ? this.constraints = calcRelativeConstraints(layout2.layoutBox, dragConstraints) : this.constraints = !1, this.elastic = resolveDragElastic(dragElastic), prevConstraints !== this.constraints && layout2 && this.constraints && !this.hasMutatedConstraints && eachAxis((axis) => {
       this.getAxisMotionValue(axis) && (this.constraints[axis] = rebaseAxisConstraints(layout2.layoutBox[axis], this.constraints[axis]));
     });
@@ -24955,6 +28778,22 @@ var elementDragControls = /* @__PURE__ */ new WeakMap(), VisualElementDragContro
   stopAnimation() {
     eachAxis((axis) => this.getAxisMotionValue(axis).stop());
   }
+  pauseAnimation() {
+    eachAxis((axis) => {
+      var _a10;
+      return (_a10 = this.getAxisMotionValue(axis).animation) === null || _a10 === void 0 ? void 0 : _a10.pause();
+    });
+  }
+  getAnimationState(axis) {
+    var _a10;
+    return (_a10 = this.getAxisMotionValue(axis).animation) === null || _a10 === void 0 ? void 0 : _a10.state;
+  }
+  /**
+   * Drag works differently depending on which props are provided.
+   *
+   * - If _dragX and _dragY are provided, we output the gesture delta directly to those motion values.
+   * - Otherwise, we apply the delta to the x/y motion values.
+   */
   getAxisMotionValue(axis) {
     let dragKey = "_drag" + axis.toUpperCase(), props = this.visualElement.getProps(), externalMotionValue = props[dragKey];
     return externalMotionValue || this.visualElement.getValue(axis, (props.initial ? props.initial[axis] : void 0) || 0);
@@ -24971,6 +28810,11 @@ var elementDragControls = /* @__PURE__ */ new WeakMap(), VisualElementDragContro
       }
     });
   }
+  /**
+   * When the viewport resizes we want to check if the measured constraints
+   * have changed and, if so, reposition the element within those new constraints
+   * relative to where it was before the resize.
+   */
   scalePositionWithinConstraints() {
     if (!this.visualElement.current)
       return;
@@ -25009,7 +28853,7 @@ var elementDragControls = /* @__PURE__ */ new WeakMap(), VisualElementDragContro
     let stopResizeListener = addDomEvent(window, "resize", () => this.scalePositionWithinConstraints()), stopLayoutUpdateListener = projection2.addEventListener("didUpdate", ({ delta, hasLayoutChanged }) => {
       this.isDragging && hasLayoutChanged && (eachAxis((axis) => {
         let motionValue2 = this.getAxisMotionValue(axis);
-        !motionValue2 || (this.originPoint[axis] += delta[axis].translate, motionValue2.set(motionValue2.get() + delta[axis].translate));
+        motionValue2 && (this.originPoint[axis] += delta[axis].translate, motionValue2.set(motionValue2.get() + delta[axis].translate));
       }), this.visualElement.render());
     });
     return () => {
@@ -25040,11 +28884,11 @@ function getCurrentDirection(offset, lockThreshold = 10) {
 // node_modules/framer-motion/dist/es/gestures/drag/index.mjs
 var DragGesture = class extends Feature {
   constructor(node) {
-    super(node), this.removeGroupControls = noop, this.removeListeners = noop, this.controls = new VisualElementDragControls(node);
+    super(node), this.removeGroupControls = noop3, this.removeListeners = noop3, this.controls = new VisualElementDragControls(node);
   }
   mount() {
     let { dragControls } = this.node.getProps();
-    dragControls && (this.removeGroupControls = dragControls.subscribe(this.controls)), this.removeListeners = this.controls.addListeners() || noop;
+    dragControls && (this.removeGroupControls = dragControls.subscribe(this.controls)), this.removeListeners = this.controls.addListeners() || noop3;
   }
   unmount() {
     this.removeGroupControls(), this.removeListeners();
@@ -25056,10 +28900,13 @@ var asyncHandler = (handler) => (event, info) => {
   handler && frame.update(() => handler(event, info));
 }, PanGesture = class extends Feature {
   constructor() {
-    super(...arguments), this.removePointerDownListener = noop;
+    super(...arguments), this.removePointerDownListener = noop3;
   }
   onPointerDown(pointerDownEvent) {
-    this.session = new PanSession(pointerDownEvent, this.createPanHandlers(), { transformPagePoint: this.node.getTransformPagePoint() });
+    this.session = new PanSession(pointerDownEvent, this.createPanHandlers(), {
+      transformPagePoint: this.node.getTransformPagePoint(),
+      contextWindow: getContextWindow(this.node)
+    });
   }
   createPanHandlers() {
     let { onPanSessionStart, onPanStart, onPan, onPanEnd } = this.node.getProps();
@@ -25084,21 +28931,29 @@ var asyncHandler = (handler) => (event, info) => {
 };
 
 // node_modules/framer-motion/dist/es/motion/features/layout/MeasureLayout.mjs
-var import_react22 = __toESM(require_react(), 1);
+var import_react23 = __toESM(require_react(), 1);
 
 // node_modules/framer-motion/dist/es/components/AnimatePresence/use-presence.mjs
-var import_react21 = __toESM(require_react(), 1);
+var import_react22 = __toESM(require_react(), 1);
 function usePresence() {
-  let context = (0, import_react21.useContext)(PresenceContext);
+  let context = (0, import_react22.useContext)(PresenceContext);
   if (context === null)
     return [!0, null];
-  let { isPresent, onExitComplete, register } = context, id6 = (0, import_react21.useId)();
-  return (0, import_react21.useEffect)(() => register(id6), []), !isPresent && onExitComplete ? [!1, () => onExitComplete && onExitComplete(id6)] : [!0];
+  let { isPresent, onExitComplete, register } = context, id6 = (0, import_react22.useId)();
+  return (0, import_react22.useEffect)(() => register(id6), []), !isPresent && onExitComplete ? [!1, () => onExitComplete && onExitComplete(id6)] : [!0];
 }
 
 // node_modules/framer-motion/dist/es/projection/node/state.mjs
 var globalProjectionState = {
+  /**
+   * Global flag as to whether the tree has animated since the last time
+   * we resized the window
+   */
   hasAnimatedSinceResize: !0,
+  /**
+   * We set this to true once, on the first update. Any nodes added to the tree beyond that
+   * update will be given a `data-projection-id` attribute.
+   */
   hasEverUpdated: !1
 };
 
@@ -25134,7 +28989,12 @@ var correctBoxShadow = {
 };
 
 // node_modules/framer-motion/dist/es/motion/features/layout/MeasureLayout.mjs
-var MeasureLayoutWithContext = class extends import_react22.default.Component {
+var MeasureLayoutWithContext = class extends import_react23.default.Component {
+  /**
+   * This only mounts projection nodes for components that
+   * need measuring, we might want to do it for all components
+   * in order to incorporate transforms
+   */
   componentDidMount() {
     let { visualElement, layoutGroup, switchLayoutGroup, layoutId } = this.props, { projection: projection2 } = visualElement;
     addScaleCorrector(defaultScaleCorrectors), projection2 && (layoutGroup.group && layoutGroup.group.add(projection2), switchLayoutGroup && switchLayoutGroup.register && layoutId && switchLayoutGroup.register(projection2), projection2.root.didUpdate(), projection2.addEventListener("animationComplete", () => {
@@ -25170,8 +29030,8 @@ var MeasureLayoutWithContext = class extends import_react22.default.Component {
   }
 };
 function MeasureLayout(props) {
-  let [isPresent, safeToRemove] = usePresence(), layoutGroup = (0, import_react22.useContext)(LayoutGroupContext);
-  return import_react22.default.createElement(MeasureLayoutWithContext, { ...props, layoutGroup, switchLayoutGroup: (0, import_react22.useContext)(SwitchLayoutGroupContext), isPresent, safeToRemove });
+  let [isPresent, safeToRemove] = usePresence(), layoutGroup = (0, import_react23.useContext)(LayoutGroupContext);
+  return import_react23.default.createElement(MeasureLayoutWithContext, { ...props, layoutGroup, switchLayoutGroup: (0, import_react23.useContext)(SwitchLayoutGroupContext), isPresent, safeToRemove });
 }
 var defaultScaleCorrectors = {
   borderRadius: {
@@ -25195,6 +29055,7 @@ var borders = ["TopLeft", "TopRight", "BottomLeft", "BottomRight"], numBorders =
 function mixValues(target, follow, lead, progress2, shouldCrossfadeOpacity, isOnlyMember) {
   shouldCrossfadeOpacity ? (target.opacity = mix(
     0,
+    // TODO Reinstate this if only child
     lead.opacity !== void 0 ? lead.opacity : 1,
     easeCrossfadeIn(progress2)
   ), target.opacityExit = mix(follow.opacity !== void 0 ? follow.opacity : 1, 0, easeCrossfadeOut(progress2))) : isOnlyMember && (target.opacity = mix(follow.opacity !== void 0 ? follow.opacity : 1, lead.opacity !== void 0 ? lead.opacity : 1, progress2));
@@ -25209,7 +29070,7 @@ function mixValues(target, follow, lead, progress2, shouldCrossfadeOpacity, isOn
 function getRadius(values, radiusName) {
   return values[radiusName] !== void 0 ? values[radiusName] : values.borderRadius;
 }
-var easeCrossfadeIn = compress(0, 0.5, circOut), easeCrossfadeOut = compress(0.5, 0.95, noop);
+var easeCrossfadeIn = compress(0, 0.5, circOut), easeCrossfadeOut = compress(0.5, 0.95, noop3);
 function compress(min2, max2, easing) {
   return (p) => p < min2 ? 0 : p > max2 ? 1 : easing(progress(min2, max2, p));
 }
@@ -25249,6 +29110,9 @@ function isDeltaZero(delta) {
 }
 function boxEquals(a, b) {
   return a.x.min === b.x.min && a.x.max === b.x.max && a.y.min === b.y.min && a.y.max === b.y.max;
+}
+function boxEqualsRounded(a, b) {
+  return Math.round(a.x.min) === Math.round(b.x.min) && Math.round(a.x.max) === Math.round(b.x.max) && Math.round(a.y.min) === Math.round(b.y.min) && Math.round(a.y.max) === Math.round(b.y.max);
 }
 function aspectRatio(box) {
   return calcLength(box.x) / calcLength(box.y);
@@ -25301,6 +29165,10 @@ var NodeStack = class {
       node.instance && node.scheduleRender(!1);
     });
   }
+  /**
+   * Clear any leads that have been removed this render to prevent them from being
+   * used in future animations and to prevent memory leaks
+   */
   removeLeadSnapshot() {
     this.lead && this.lead.snapshot && (this.lead.snapshot = void 0);
   }
@@ -25362,7 +29230,7 @@ function animateSingleValue(value, keyframes2, options) {
 }
 
 // node_modules/framer-motion/dist/es/projection/node/create-projection-node.mjs
-var transformAxes = ["", "X", "Y", "Z"], animationTarget = 1e3, id2 = 0, projectionFrameData = {
+var transformAxes = ["", "X", "Y", "Z"], hiddenVisibility = { visibility: "hidden" }, animationTarget = 1e3, id2 = 0, projectionFrameData = {
   type: "projectionFrame",
   totalNodes: 0,
   resolvedTargetDeltas: 0,
@@ -25371,10 +29239,10 @@ var transformAxes = ["", "X", "Y", "Z"], animationTarget = 1e3, id2 = 0, project
 function createProjectionNode({ attachResizeListener, defaultParent, measureScroll, checkIsScrollRoot, resetTransform }) {
   return class {
     constructor(latestValues = {}, parent = defaultParent == null ? void 0 : defaultParent()) {
-      this.id = id2++, this.animationId = 0, this.children = /* @__PURE__ */ new Set(), this.options = {}, this.isTreeAnimating = !1, this.isAnimationBlocked = !1, this.isLayoutDirty = !1, this.isProjectionDirty = !1, this.isSharedProjectionDirty = !1, this.isTransformDirty = !1, this.updateManuallyBlocked = !1, this.updateBlockedByResize = !1, this.isUpdating = !1, this.isSVG = !1, this.needsReset = !1, this.shouldResetTransform = !1, this.treeScale = { x: 1, y: 1 }, this.eventHandlers = /* @__PURE__ */ new Map(), this.hasTreeAnimated = !1, this.updateScheduled = !1, this.checkUpdateFailed = () => {
+      this.id = id2++, this.animationId = 0, this.children = /* @__PURE__ */ new Set(), this.options = {}, this.isTreeAnimating = !1, this.isAnimationBlocked = !1, this.isLayoutDirty = !1, this.isProjectionDirty = !1, this.isSharedProjectionDirty = !1, this.isTransformDirty = !1, this.updateManuallyBlocked = !1, this.updateBlockedByResize = !1, this.isUpdating = !1, this.isSVG = !1, this.needsReset = !1, this.shouldResetTransform = !1, this.treeScale = { x: 1, y: 1 }, this.eventHandlers = /* @__PURE__ */ new Map(), this.hasTreeAnimated = !1, this.updateScheduled = !1, this.projectionUpdateScheduled = !1, this.checkUpdateFailed = () => {
         this.isUpdating && (this.isUpdating = !1, this.clearAllSnapshots());
       }, this.updateProjection = () => {
-        projectionFrameData.totalNodes = projectionFrameData.resolvedTargetDeltas = projectionFrameData.recalculatedProjection = 0, this.nodes.forEach(propagateDirtyNodes), this.nodes.forEach(resolveTargetDelta), this.nodes.forEach(calcProjection), this.nodes.forEach(cleanDirtyNodes), record(projectionFrameData);
+        this.projectionUpdateScheduled = !1, projectionFrameData.totalNodes = projectionFrameData.resolvedTargetDeltas = projectionFrameData.recalculatedProjection = 0, this.nodes.forEach(propagateDirtyNodes), this.nodes.forEach(resolveTargetDelta), this.nodes.forEach(calcProjection), this.nodes.forEach(cleanDirtyNodes), record(projectionFrameData);
       }, this.hasProjected = !1, this.isVisible = !0, this.animationProgress = 0, this.sharedNodes = /* @__PURE__ */ new Map(), this.latestValues = latestValues, this.root = parent ? parent.root || parent : this, this.path = parent ? [...parent.path, parent] : [], this.parent = parent, this.depth = parent ? parent.depth + 1 : 0;
       for (let i = 0; i < this.path.length; i++)
         this.path[i].shouldResetTransform = !0;
@@ -25390,6 +29258,9 @@ function createProjectionNode({ attachResizeListener, defaultParent, measureScro
     hasListeners(name) {
       return this.eventHandlers.has(name);
     }
+    /**
+     * Lifecycles
+     */
     mount(instance, isLayoutDirty = this.root.hasTreeAnimated) {
       if (this.instance)
         return;
@@ -25406,7 +29277,7 @@ function createProjectionNode({ attachResizeListener, defaultParent, measureScro
           this.target = void 0, this.relativeTarget = void 0;
           return;
         }
-        let layoutTransition = this.options.transition || visualElement.getDefaultTransition() || defaultLayoutTransition, { onLayoutAnimationStart, onLayoutAnimationComplete } = visualElement.getProps(), targetChanged = !this.targetLayout || !boxEquals(this.targetLayout, newLayout) || hasRelativeTargetChanged, hasOnlyRelativeTargetChanged = !hasLayoutChanged && hasRelativeTargetChanged;
+        let layoutTransition = this.options.transition || visualElement.getDefaultTransition() || defaultLayoutTransition, { onLayoutAnimationStart, onLayoutAnimationComplete } = visualElement.getProps(), targetChanged = !this.targetLayout || !boxEqualsRounded(this.targetLayout, newLayout) || hasRelativeTargetChanged, hasOnlyRelativeTargetChanged = !hasLayoutChanged && hasRelativeTargetChanged;
         if (this.options.layoutRoot || this.resumeFrom && this.resumeFrom.instance || hasOnlyRelativeTargetChanged || hasLayoutChanged && (targetChanged || !this.currentAnimation)) {
           this.resumeFrom && (this.resumingFrom = this.resumeFrom, this.resumingFrom.resumingFrom = void 0), this.setAnimationOrigin(delta, hasOnlyRelativeTargetChanged);
           let animationOptions = {
@@ -25425,6 +29296,7 @@ function createProjectionNode({ attachResizeListener, defaultParent, measureScro
       let stack = this.getStack();
       stack && stack.remove(this), this.parent && this.parent.children.delete(this), this.instance = void 0, cancelFrame(this.updateProjection);
     }
+    // only on the root
     blockUpdate() {
       this.updateManuallyBlocked = !0;
     }
@@ -25437,6 +29309,7 @@ function createProjectionNode({ attachResizeListener, defaultParent, measureScro
     isTreeAnimationBlocked() {
       return this.isAnimationBlocked || this.parent && this.parent.isTreeAnimationBlocked() || !1;
     }
+    // Note: currently only running on root node
     startUpdate() {
       this.isUpdateBlocked() || (this.isUpdating = !0, this.nodes && this.nodes.forEach(resetRotation), this.animationId++);
     }
@@ -25478,13 +29351,16 @@ function createProjectionNode({ attachResizeListener, defaultParent, measureScro
       this.nodes.forEach(clearSnapshot), this.sharedNodes.forEach(removeLeadSnapshots);
     }
     scheduleUpdateProjection() {
-      frame.preRender(this.updateProjection, !1, !0);
+      this.projectionUpdateScheduled || (this.projectionUpdateScheduled = !0, frame.preRender(this.updateProjection, !1, !0));
     }
     scheduleCheckAfterUnmount() {
       frame.postRender(() => {
         this.isLayoutDirty ? this.root.didUpdate() : this.root.checkUpdateFailed();
       });
     }
+    /**
+     * Update measurements
+     */
     updateSnapshot() {
       this.snapshot || !this.instance || (this.snapshot = this.measure());
     }
@@ -25586,14 +29462,14 @@ function createProjectionNode({ attachResizeListener, defaultParent, measureScro
       this.scroll = void 0, this.layout = void 0, this.snapshot = void 0, this.prevTransformTemplateValue = void 0, this.targetDelta = void 0, this.target = void 0, this.isLayoutDirty = !1;
     }
     forceRelativeParentToResolveTarget() {
-      !this.relativeParent || this.relativeParent.resolvedRelativeTargetAt !== frameData.timestamp && this.relativeParent.resolveTargetDelta(!0);
+      this.relativeParent && this.relativeParent.resolvedRelativeTargetAt !== frameData.timestamp && this.relativeParent.resolveTargetDelta(!0);
     }
     resolveTargetDelta(forceRecalculation = !1) {
-      var _a;
+      var _a10;
       let lead = this.getLead();
       this.isProjectionDirty || (this.isProjectionDirty = lead.isProjectionDirty), this.isTransformDirty || (this.isTransformDirty = lead.isTransformDirty), this.isSharedProjectionDirty || (this.isSharedProjectionDirty = lead.isSharedProjectionDirty);
       let isShared = Boolean(this.resumingFrom) || this !== lead;
-      if (!(forceRecalculation || isShared && this.isSharedProjectionDirty || this.isProjectionDirty || ((_a = this.parent) === null || _a === void 0 ? void 0 : _a.isProjectionDirty) || this.attemptToResolveRelativeTarget))
+      if (!(forceRecalculation || isShared && this.isSharedProjectionDirty || this.isProjectionDirty || !((_a10 = this.parent) === null || _a10 === void 0) && _a10.isProjectionDirty || this.attemptToResolveRelativeTarget))
         return;
       let { layout: layout2, layoutId } = this.options;
       if (!(!this.layout || !(layout2 || layoutId))) {
@@ -25619,9 +29495,9 @@ function createProjectionNode({ attachResizeListener, defaultParent, measureScro
       return Boolean((this.relativeTarget || this.targetDelta || this.options.layoutRoot) && this.layout);
     }
     calcProjection() {
-      var _a;
+      var _a10;
       let lead = this.getLead(), isShared = Boolean(this.resumingFrom) || this !== lead, canSkip = !0;
-      if ((this.isProjectionDirty || ((_a = this.parent) === null || _a === void 0 ? void 0 : _a.isProjectionDirty)) && (canSkip = !1), isShared && (this.isSharedProjectionDirty || this.isTransformDirty) && (canSkip = !1), this.resolvedRelativeTargetAt === frameData.timestamp && (canSkip = !1), canSkip)
+      if ((this.isProjectionDirty || !((_a10 = this.parent) === null || _a10 === void 0) && _a10.isProjectionDirty) && (canSkip = !1), isShared && (this.isSharedProjectionDirty || this.isTransformDirty) && (canSkip = !1), this.resolvedRelativeTargetAt === frameData.timestamp && (canSkip = !1), canSkip)
         return;
       let { layout: layout2, layoutId } = this.options;
       if (this.isTreeAnimating = Boolean(this.parent && this.parent.isTreeAnimating || this.currentAnimation || this.pendingAnimation), this.isTreeAnimating || (this.targetDelta = this.relativeTarget = void 0), !this.layout || !(layout2 || layoutId))
@@ -25709,14 +29585,14 @@ function createProjectionNode({ attachResizeListener, defaultParent, measureScro
       return stack ? stack.lead === this : !0;
     }
     getLead() {
-      var _a;
+      var _a10;
       let { layoutId } = this.options;
-      return layoutId ? ((_a = this.getStack()) === null || _a === void 0 ? void 0 : _a.lead) || this : this;
+      return layoutId ? ((_a10 = this.getStack()) === null || _a10 === void 0 ? void 0 : _a10.lead) || this : this;
     }
     getPrevLead() {
-      var _a;
+      var _a10;
       let { layoutId } = this.options;
-      return layoutId ? (_a = this.getStack()) === null || _a === void 0 ? void 0 : _a.prevLead : void 0;
+      return layoutId ? (_a10 = this.getStack()) === null || _a10 === void 0 ? void 0 : _a10.prevLead : void 0;
     }
     getStack() {
       let { layoutId } = this.options;
@@ -25748,27 +29624,26 @@ function createProjectionNode({ attachResizeListener, defaultParent, measureScro
         visualElement.setStaticValue(key, resetValues[key]);
       visualElement.scheduleRender();
     }
-    getProjectionStyles(styleProp = {}) {
-      var _a, _b;
-      let styles = {};
+    getProjectionStyles(styleProp) {
+      var _a10, _b;
       if (!this.instance || this.isSVG)
-        return styles;
-      if (this.isVisible)
-        styles.visibility = "";
-      else
-        return { visibility: "hidden" };
-      let transformTemplate = this.getTransformTemplate();
+        return;
+      if (!this.isVisible)
+        return hiddenVisibility;
+      let styles = {
+        visibility: ""
+      }, transformTemplate = this.getTransformTemplate();
       if (this.needsReset)
-        return this.needsReset = !1, styles.opacity = "", styles.pointerEvents = resolveMotionValue(styleProp.pointerEvents) || "", styles.transform = transformTemplate ? transformTemplate(this.latestValues, "") : "none", styles;
+        return this.needsReset = !1, styles.opacity = "", styles.pointerEvents = resolveMotionValue(styleProp == null ? void 0 : styleProp.pointerEvents) || "", styles.transform = transformTemplate ? transformTemplate(this.latestValues, "") : "none", styles;
       let lead = this.getLead();
       if (!this.projectionDelta || !this.layout || !lead.target) {
         let emptyStyles = {};
-        return this.options.layoutId && (emptyStyles.opacity = this.latestValues.opacity !== void 0 ? this.latestValues.opacity : 1, emptyStyles.pointerEvents = resolveMotionValue(styleProp.pointerEvents) || ""), this.hasProjected && !hasTransform(this.latestValues) && (emptyStyles.transform = transformTemplate ? transformTemplate({}, "") : "none", this.hasProjected = !1), emptyStyles;
+        return this.options.layoutId && (emptyStyles.opacity = this.latestValues.opacity !== void 0 ? this.latestValues.opacity : 1, emptyStyles.pointerEvents = resolveMotionValue(styleProp == null ? void 0 : styleProp.pointerEvents) || ""), this.hasProjected && !hasTransform(this.latestValues) && (emptyStyles.transform = transformTemplate ? transformTemplate({}, "") : "none", this.hasProjected = !1), emptyStyles;
       }
       let valuesToRender = lead.animationValues || lead.latestValues;
       this.applyTransformsToTarget(), styles.transform = buildProjectionTransform(this.projectionDeltaWithTransform, this.treeScale, valuesToRender), transformTemplate && (styles.transform = transformTemplate(valuesToRender, styles.transform));
       let { x, y } = this.projectionDelta;
-      styles.transformOrigin = `${x.origin * 100}% ${y.origin * 100}% 0`, lead.animationValues ? styles.opacity = lead === this ? (_b = (_a = valuesToRender.opacity) !== null && _a !== void 0 ? _a : this.latestValues.opacity) !== null && _b !== void 0 ? _b : 1 : this.preserveOpacity ? this.latestValues.opacity : valuesToRender.opacityExit : styles.opacity = lead === this ? valuesToRender.opacity !== void 0 ? valuesToRender.opacity : "" : valuesToRender.opacityExit !== void 0 ? valuesToRender.opacityExit : 0;
+      styles.transformOrigin = `${x.origin * 100}% ${y.origin * 100}% 0`, lead.animationValues ? styles.opacity = lead === this ? (_b = (_a10 = valuesToRender.opacity) !== null && _a10 !== void 0 ? _a10 : this.latestValues.opacity) !== null && _b !== void 0 ? _b : 1 : this.preserveOpacity ? this.latestValues.opacity : valuesToRender.opacityExit : styles.opacity = lead === this ? valuesToRender.opacity !== void 0 ? valuesToRender.opacity : "" : valuesToRender.opacityExit !== void 0 ? valuesToRender.opacityExit : 0;
       for (let key in scaleCorrectors) {
         if (valuesToRender[key] === void 0)
           continue;
@@ -25780,15 +29655,16 @@ function createProjectionNode({ attachResizeListener, defaultParent, measureScro
         } else
           styles[key] = corrected;
       }
-      return this.options.layoutId && (styles.pointerEvents = lead === this ? resolveMotionValue(styleProp.pointerEvents) || "" : "none"), styles;
+      return this.options.layoutId && (styles.pointerEvents = lead === this ? resolveMotionValue(styleProp == null ? void 0 : styleProp.pointerEvents) || "" : "none"), styles;
     }
     clearSnapshot() {
       this.resumeFrom = this.snapshot = void 0;
     }
+    // Only run on root
     resetTree() {
       this.root.nodes.forEach((node) => {
-        var _a;
-        return (_a = node.currentAnimation) === null || _a === void 0 ? void 0 : _a.stop();
+        var _a10;
+        return (_a10 = node.currentAnimation) === null || _a10 === void 0 ? void 0 : _a10.stop();
       }), this.root.nodes.forEach(clearMeasurements), this.root.sharedNodes.clear();
     }
   };
@@ -25797,8 +29673,8 @@ function updateLayout(node) {
   node.updateLayout();
 }
 function notifyLayoutUpdate(node) {
-  var _a;
-  let snapshot = ((_a = node.resumeFrom) === null || _a === void 0 ? void 0 : _a.snapshot) || node.snapshot;
+  var _a10;
+  let snapshot = ((_a10 = node.resumeFrom) === null || _a10 === void 0 ? void 0 : _a10.snapshot) || node.snapshot;
   if (node.isLead() && node.layout && snapshot && node.hasListeners("didUpdate")) {
     let { layoutBox: layout2, measuredBox: measuredLayout } = node.layout, { animationType } = node.options, isShared = snapshot.source !== node.layout.source;
     animationType === "size" ? eachAxis((axis) => {
@@ -25821,7 +29697,7 @@ function notifyLayoutUpdate(node) {
           let relativeSnapshot = createBox();
           calcRelativePosition(relativeSnapshot, snapshot.layoutBox, parentSnapshot.layoutBox);
           let relativeLayout = createBox();
-          calcRelativePosition(relativeLayout, layout2, parentLayout.layoutBox), boxEquals(relativeSnapshot, relativeLayout) || (hasRelativeTargetChanged = !0), relativeParent.options.layoutRoot && (node.relativeTarget = relativeLayout, node.relativeTargetOrigin = relativeSnapshot, node.relativeParent = relativeParent);
+          calcRelativePosition(relativeLayout, layout2, parentLayout.layoutBox), boxEqualsRounded(relativeSnapshot, relativeLayout) || (hasRelativeTargetChanged = !0), relativeParent.options.layoutRoot && (node.relativeTarget = relativeLayout, node.relativeTargetOrigin = relativeSnapshot, node.relativeParent = relativeParent);
         }
       }
     }
@@ -25888,9 +29764,9 @@ function hasOpacityCrossfade(node) {
 var defaultLayoutTransition = {
   duration: 0.45,
   ease: [0.4, 0, 0.1, 1]
-};
+}, userAgentContains = (string) => typeof navigator < "u" && navigator.userAgent.toLowerCase().includes(string), roundPoint = userAgentContains("applewebkit/") && !userAgentContains("chrome/") ? Math.round : noop3;
 function roundAxis(axis) {
-  axis.min = Math.round(axis.min), axis.max = Math.round(axis.max);
+  axis.min = roundPoint(axis.min), axis.max = roundPoint(axis.max);
 }
 function roundBox(box) {
   roundAxis(box.x), roundAxis(box.y);
@@ -25958,7 +29834,11 @@ function getVariableValue(current, element, depth = 1) {
   if (!token)
     return;
   let resolved = window.getComputedStyle(element).getPropertyValue(token);
-  return resolved ? resolved.trim() : isCSSVariableToken(fallback) ? getVariableValue(fallback, element, depth + 1) : fallback;
+  if (resolved) {
+    let trimmed = resolved.trim();
+    return isNumericalString(trimmed) ? parseFloat(trimmed) : trimmed;
+  } else
+    return isCSSVariableToken(fallback) ? getVariableValue(fallback, element, depth + 1) : fallback;
 }
 function resolveCSSVariables(visualElement, { ...target }, transitionEnd) {
   let element = visualElement.current;
@@ -25976,7 +29856,7 @@ function resolveCSSVariables(visualElement, { ...target }, transitionEnd) {
     if (!isCSSVariableToken(current))
       continue;
     let resolved = getVariableValue(current, element);
-    !resolved || (target[key] = resolved, transitionEnd || (transitionEnd = {}), transitionEnd[key] === void 0 && (transitionEnd[key] = current));
+    resolved && (target[key] = resolved, transitionEnd || (transitionEnd = {}), transitionEnd[key] === void 0 && (transitionEnd[key] = current));
   }
   return { target, transitionEnd };
 }
@@ -26012,15 +29892,20 @@ function removeNonTranslationalTransform(visualElement) {
   }), removedTransforms.length && visualElement.render(), removedTransforms;
 }
 var positionalValues = {
+  // Dimensions
   width: ({ x }, { paddingLeft = "0", paddingRight = "0" }) => x.max - x.min - parseFloat(paddingLeft) - parseFloat(paddingRight),
   height: ({ y }, { paddingTop = "0", paddingBottom = "0" }) => y.max - y.min - parseFloat(paddingTop) - parseFloat(paddingBottom),
   top: (_bbox, { top }) => parseFloat(top),
   left: (_bbox, { left }) => parseFloat(left),
   bottom: ({ y }, { top }) => parseFloat(top) + (y.max - y.min),
   right: ({ x }, { left }) => parseFloat(left) + (x.max - x.min),
+  // Transform
   x: getTranslateFromMatrix(4, 13),
   y: getTranslateFromMatrix(5, 14)
-}, convertChangedValueTypes = (target, visualElement, changedKeys) => {
+};
+positionalValues.translateX = positionalValues.x;
+positionalValues.translateY = positionalValues.y;
+var convertChangedValueTypes = (target, visualElement, changedKeys) => {
   let originBbox = visualElement.measureViewportBox(), element = visualElement.current, elementComputedStyle = getComputedStyle(element), { display } = elementComputedStyle, origin = {};
   display === "none" && visualElement.setStaticValue("display", target.display || "block"), changedKeys.forEach((key) => {
     origin[key] = positionalValues[key](originBbox, elementComputedStyle);
@@ -26050,12 +29935,12 @@ var positionalValues = {
         let current = value.get();
         typeof current == "string" && value.set(parseFloat(current)), typeof to == "string" ? target[key] = parseFloat(to) : Array.isArray(to) && toType === px && (target[key] = to.map(parseFloat));
       } else
-        (fromType == null ? void 0 : fromType.transform) && (toType == null ? void 0 : toType.transform) && (from === 0 || to === 0) ? from === 0 ? value.set(toType.transform(from)) : target[key] = fromType.transform(to) : (hasAttemptedToRemoveTransformValues || (removedTransformValues = removeNonTranslationalTransform(visualElement), hasAttemptedToRemoveTransformValues = !0), changedValueTypeKeys.push(key), transitionEnd[key] = transitionEnd[key] !== void 0 ? transitionEnd[key] : target[key], value.jump(to));
+        fromType != null && fromType.transform && (toType != null && toType.transform) && (from === 0 || to === 0) ? from === 0 ? value.set(toType.transform(from)) : target[key] = fromType.transform(to) : (hasAttemptedToRemoveTransformValues || (removedTransformValues = removeNonTranslationalTransform(visualElement), hasAttemptedToRemoveTransformValues = !0), changedValueTypeKeys.push(key), transitionEnd[key] = transitionEnd[key] !== void 0 ? transitionEnd[key] : target[key], value.jump(to));
   }), changedValueTypeKeys.length) {
     let scrollY = changedValueTypeKeys.indexOf("height") >= 0 ? window.pageYOffset : null, convertedTarget = convertChangedValueTypes(target, visualElement, changedValueTypeKeys);
     return removedTransformValues.length && removedTransformValues.forEach(([key, value]) => {
       visualElement.getValue(key).set(value);
-    }), visualElement.render(), isBrowser3 && scrollY !== null && window.scrollTo({ top: scrollY }), { target: convertedTarget, transitionEnd };
+    }), visualElement.render(), isBrowser2 && scrollY !== null && window.scrollTo({ top: scrollY }), { target: convertedTarget, transitionEnd };
   } else
     return { target, transitionEnd };
 };
@@ -26074,7 +29959,7 @@ var prefersReducedMotion = { current: null }, hasReducedMotionListener = { curre
 
 // node_modules/framer-motion/dist/es/utils/reduced-motion/index.mjs
 function initPrefersReducedMotion() {
-  if (hasReducedMotionListener.current = !0, !!isBrowser3)
+  if (hasReducedMotionListener.current = !0, !!isBrowser2)
     if (window.matchMedia) {
       let motionMediaQuery = window.matchMedia("(prefers-reduced-motion)"), setReducedMotionPreferences = () => prefersReducedMotion.current = motionMediaQuery.matches;
       motionMediaQuery.addListener(setReducedMotionPreferences), setReducedMotionPreferences();
@@ -26088,7 +29973,7 @@ function updateMotionValuesFromProps(element, next, prev) {
   for (let key in next) {
     let nextValue = next[key], prevValue = prev[key];
     if (isMotionValue(nextValue))
-      element.addValue(key, nextValue), isWillChangeMotionValue(willChange) && willChange.add(key), warnOnce2(nextValue.version === "10.12.16", `Attempting to mix Framer Motion versions ${nextValue.version} with 10.12.16 may not work as expected.`);
+      element.addValue(key, nextValue), isWillChangeMotionValue(willChange) && willChange.add(key), warnOnce2(nextValue.version === "10.18.0", `Attempting to mix Framer Motion versions ${nextValue.version} with 10.18.0 may not work as expected.`);
     else if (isMotionValue(prevValue))
       element.addValue(key, motionValue(nextValue, { owner: element })), isWillChangeMotionValue(willChange) && willChange.remove(key);
     else if (prevValue !== nextValue)
@@ -26120,7 +30005,7 @@ var featureNames = Object.keys(featureDefinitions), numFeatures = featureNames.l
 ], numVariantProps = variantProps.length, VisualElement = class {
   constructor({ parent, props, presenceContext, reducedMotionConfig, visualState }, options = {}) {
     this.current = null, this.children = /* @__PURE__ */ new Set(), this.isVariantNode = !1, this.isControllingVariants = !1, this.shouldReduceMotion = null, this.values = /* @__PURE__ */ new Map(), this.features = {}, this.valueSubscriptions = /* @__PURE__ */ new Map(), this.prevMotionValues = {}, this.events = {}, this.propEventSubscriptions = {}, this.notifyUpdate = () => this.notify("Update", this.latestValues), this.render = () => {
-      !this.current || (this.triggerBuild(), this.renderInstance(this.current, this.renderState, this.props.style, this.projection));
+      this.current && (this.triggerBuild(), this.renderInstance(this.current, this.renderState, this.props.style, this.projection));
     }, this.scheduleRender = () => frame.render(this.render, !1, !0);
     let { latestValues, renderState } = visualState;
     this.latestValues = latestValues, this.baseTarget = { ...latestValues }, this.initialValues = props.initial ? { ...latestValues } : {}, this.renderState = renderState, this.parent = parent, this.props = props, this.presenceContext = presenceContext, this.depth = parent ? parent.depth + 1 : 0, this.reducedMotionConfig = reducedMotionConfig, this.options = options, this.isControllingVariants = isControllingVariants(props), this.isVariantNode = isVariantNode(props), this.isVariantNode && (this.variantChildren = /* @__PURE__ */ new Set()), this.manuallyAnimateOnMount = Boolean(parent && parent.current);
@@ -26130,6 +30015,13 @@ var featureNames = Object.keys(featureDefinitions), numFeatures = featureNames.l
       latestValues[key] !== void 0 && isMotionValue(value) && (value.set(latestValues[key], !1), isWillChangeMotionValue(willChange) && willChange.add(key));
     }
   }
+  /**
+   * This method takes React props and returns found MotionValues. For example, HTML
+   * MotionValues will be found within the style prop, whereas for Three.js within attribute arrays.
+   *
+   * This isn't an abstract method as it needs calling in the constructor, but it is
+   * intended to be one.
+   */
   scrapeMotionValuesFromProps(_props, _prevProps) {
     return {};
   }
@@ -26165,7 +30057,7 @@ var featureNames = Object.keys(featureDefinitions), numFeatures = featureNames.l
       let name = featureNames[i], { isEnabled, Feature: FeatureConstructor, ProjectionNode, MeasureLayout: MeasureLayoutComponent } = featureDefinitions[name];
       ProjectionNode && (ProjectionNodeConstructor = ProjectionNode), isEnabled(renderedProps) && (!this.features[name] && FeatureConstructor && (this.features[name] = new FeatureConstructor(this)), MeasureLayoutComponent && (MeasureLayout2 = MeasureLayoutComponent));
     }
-    if (!this.projection && ProjectionNodeConstructor) {
+    if ((this.type === "html" || this.type === "svg") && !this.projection && ProjectionNodeConstructor) {
       this.projection = new ProjectionNodeConstructor(this.latestValues, this.parent && this.parent.projection);
       let { layoutId, layout: layout2, drag: drag2, dragConstraints, layoutScroll, layoutRoot } = renderedProps;
       this.projection.setOptions({
@@ -26174,6 +30066,13 @@ var featureNames = Object.keys(featureDefinitions), numFeatures = featureNames.l
         alwaysMeasureLayout: Boolean(drag2) || dragConstraints && isRefObject(dragConstraints),
         visualElement: this,
         scheduleRender: () => this.scheduleRender(),
+        /**
+         * TODO: Update options in an effect. This could be tricky as it'll be too late
+         * to update by the time layout animations run.
+         * We also need to fix this safeToRemove by linking it up to the one returned by usePresence,
+         * ensuring it gets called if there's no potential layout animations.
+         *
+         */
         animationType: typeof layout2 == "string" ? layout2 : "both",
         initialPromotionConfig: initialLayoutGroupConfig,
         layoutScroll,
@@ -26191,6 +30090,11 @@ var featureNames = Object.keys(featureDefinitions), numFeatures = featureNames.l
   triggerBuild() {
     this.build(this.renderState, this.latestValues, this.options, this.props);
   }
+  /**
+   * Measure the current viewport box with or without transforms.
+   * Only measures axis-aligned boxes, rotate and skew must be manually
+   * removed with a re-render to work.
+   */
   measureViewportBox() {
     return this.current ? this.measureInstanceViewportBox(this.current, this.props) : createBox();
   }
@@ -26200,9 +30104,20 @@ var featureNames = Object.keys(featureDefinitions), numFeatures = featureNames.l
   setStaticValue(key, value) {
     this.latestValues[key] = value;
   }
+  /**
+   * Make a target animatable by Popmotion. For instance, if we're
+   * trying to animate width from 100px to 100vw we need to measure 100vw
+   * in pixels to determine what we really need to animate to. This is also
+   * pluggable to support Framer's custom value types like Color,
+   * and CSS variables.
+   */
   makeTargetAnimatable(target, canMutate = !0) {
     return this.makeTargetAnimatableFromInstance(target, this.props, canMutate);
   }
+  /**
+   * Update the provided props. Ensure any newly-added motion values are
+   * added to our map, old ones removed, and listeners updated.
+   */
   update(props, presenceContext) {
     (props.transformTemplate || this.props.transformTemplate) && this.scheduleRender(), this.prevProps = this.props, this.props = props, this.prevPresenceContext = this.presenceContext, this.presenceContext = presenceContext;
     for (let i = 0; i < propEventHandlers.length; i++) {
@@ -26216,9 +30131,15 @@ var featureNames = Object.keys(featureDefinitions), numFeatures = featureNames.l
   getProps() {
     return this.props;
   }
+  /**
+   * Returns the variant definition with a given name.
+   */
   getVariant(name) {
     return this.props.variants ? this.props.variants[name] : void 0;
   }
+  /**
+   * Returns the defined default transition on this component.
+   */
   getDefaultTransition() {
     return this.props.transition;
   }
@@ -26242,19 +30163,31 @@ var featureNames = Object.keys(featureDefinitions), numFeatures = featureNames.l
     }
     return context;
   }
+  /**
+   * Add a child visual element to our set of children.
+   */
   addVariantChild(child) {
     let closestVariantNode = this.getClosestVariantNode();
     if (closestVariantNode)
       return closestVariantNode.variantChildren && closestVariantNode.variantChildren.add(child), () => closestVariantNode.variantChildren.delete(child);
   }
+  /**
+   * Add a motion value and bind it to this visual element.
+   */
   addValue(key, value) {
     value !== this.values.get(key) && (this.removeValue(key), this.bindToMotionValue(key, value)), this.values.set(key, value), this.latestValues[key] = value.get();
   }
+  /**
+   * Remove a motion value and unbind any active subscriptions.
+   */
   removeValue(key) {
     this.values.delete(key);
     let unsubscribe = this.valueSubscriptions.get(key);
     unsubscribe && (unsubscribe(), this.valueSubscriptions.delete(key)), delete this.latestValues[key], this.removeValueFromRenderState(key, this.renderState);
   }
+  /**
+   * Check whether we have a motion value for this key
+   */
   hasValue(key) {
     return this.values.has(key);
   }
@@ -26264,15 +30197,29 @@ var featureNames = Object.keys(featureDefinitions), numFeatures = featureNames.l
     let value = this.values.get(key);
     return value === void 0 && defaultValue !== void 0 && (value = motionValue(defaultValue, { owner: this }), this.addValue(key, value)), value;
   }
+  /**
+   * If we're trying to animate to a previously unencountered value,
+   * we need to check for it in our state and as a last resort read it
+   * directly from the instance (which might have performance implications).
+   */
   readValue(key) {
-    return this.latestValues[key] !== void 0 || !this.current ? this.latestValues[key] : this.readValueFromInstance(this.current, key, this.options);
+    var _a10;
+    return this.latestValues[key] !== void 0 || !this.current ? this.latestValues[key] : (_a10 = this.getBaseTargetFromProps(this.props, key)) !== null && _a10 !== void 0 ? _a10 : this.readValueFromInstance(this.current, key, this.options);
   }
+  /**
+   * Set the base target to later animate back to. This is currently
+   * only hydrated on creation and when we first read a value.
+   */
   setBaseTarget(key, value) {
     this.baseTarget[key] = value;
   }
+  /**
+   * Find the base target for a value thats been removed from all animation
+   * props.
+   */
   getBaseTarget(key) {
-    var _a;
-    let { initial } = this.props, valueFromInitial = typeof initial == "string" || typeof initial == "object" ? (_a = resolveVariantFromProps(this.props, initial)) === null || _a === void 0 ? void 0 : _a[key] : void 0;
+    var _a10;
+    let { initial } = this.props, valueFromInitial = typeof initial == "string" || typeof initial == "object" ? (_a10 = resolveVariantFromProps(this.props, initial)) === null || _a10 === void 0 ? void 0 : _a10[key] : void 0;
     if (initial && valueFromInitial !== void 0)
       return valueFromInitial;
     let target = this.getBaseTargetFromProps(this.props, key);
@@ -26317,6 +30264,9 @@ function getComputedStyle2(element) {
   return window.getComputedStyle(element);
 }
 var HTMLVisualElement = class extends DOMVisualElement {
+  constructor() {
+    super(...arguments), this.type = "html";
+  }
   readValueFromInstance(instance, key) {
     if (transformProps.has(key)) {
       let defaultType = getDefaultValueType(key);
@@ -26350,7 +30300,7 @@ var HTMLVisualElement = class extends DOMVisualElement {
 // node_modules/framer-motion/dist/es/render/svg/SVGVisualElement.mjs
 var SVGVisualElement = class extends DOMVisualElement {
   constructor() {
-    super(...arguments), this.isSVGTag = !1;
+    super(...arguments), this.type = "svg", this.isSVGTag = !1;
   }
   getBaseTargetFromProps(props, key) {
     return props[key];
@@ -26399,33 +30349,33 @@ var preloadedFeatures = {
 }, motion = /* @__PURE__ */ createMotionProxy((Component3, config) => createDomMotionConfig(Component3, config, preloadedFeatures, createDomVisualElement));
 
 // node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs
-var React10 = __toESM(require_react(), 1), import_react28 = __toESM(require_react(), 1);
+var React15 = __toESM(require_react(), 1), import_react29 = __toESM(require_react(), 1);
 
 // node_modules/framer-motion/dist/es/utils/use-force-update.mjs
-var import_react24 = __toESM(require_react(), 1);
+var import_react25 = __toESM(require_react(), 1);
 
 // node_modules/framer-motion/dist/es/utils/use-is-mounted.mjs
-var import_react23 = __toESM(require_react(), 1);
+var import_react24 = __toESM(require_react(), 1);
 function useIsMounted() {
-  let isMounted = (0, import_react23.useRef)(!1);
-  return useIsomorphicLayoutEffect(() => (isMounted.current = !0, () => {
+  let isMounted = (0, import_react24.useRef)(!1);
+  return useIsomorphicLayoutEffect2(() => (isMounted.current = !0, () => {
     isMounted.current = !1;
   }), []), isMounted;
 }
 
 // node_modules/framer-motion/dist/es/utils/use-force-update.mjs
 function useForceUpdate() {
-  let isMounted = useIsMounted(), [forcedRenderCount, setForcedRenderCount] = (0, import_react24.useState)(0), forceRender = (0, import_react24.useCallback)(() => {
+  let isMounted = useIsMounted(), [forcedRenderCount, setForcedRenderCount] = (0, import_react25.useState)(0), forceRender = (0, import_react25.useCallback)(() => {
     isMounted.current && setForcedRenderCount(forcedRenderCount + 1);
   }, [forcedRenderCount]);
-  return [(0, import_react24.useCallback)(() => frame.postRender(forceRender), [forceRender]), forcedRenderCount];
+  return [(0, import_react25.useCallback)(() => frame.postRender(forceRender), [forceRender]), forcedRenderCount];
 }
 
 // node_modules/framer-motion/dist/es/components/AnimatePresence/PresenceChild.mjs
-var React9 = __toESM(require_react(), 1), import_react26 = __toESM(require_react(), 1);
+var React14 = __toESM(require_react(), 1), import_react27 = __toESM(require_react(), 1);
 
 // node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs
-var React8 = __toESM(require_react(), 1), import_react25 = __toESM(require_react(), 1), PopChildMeasure = class extends React8.Component {
+var React13 = __toESM(require_react(), 1), import_react26 = __toESM(require_react(), 1), PopChildMeasure = class extends React13.Component {
   getSnapshotBeforeUpdate(prevProps) {
     let element = this.props.childRef.current;
     if (element && prevProps.isPresent && !this.props.isPresent) {
@@ -26434,6 +30384,9 @@ var React8 = __toESM(require_react(), 1), import_react25 = __toESM(require_react
     }
     return null;
   }
+  /**
+   * Required with getSnapshotBeforeUpdate to stop React complaining.
+   */
   componentDidUpdate() {
   }
   render() {
@@ -26441,13 +30394,13 @@ var React8 = __toESM(require_react(), 1), import_react25 = __toESM(require_react
   }
 };
 function PopChild({ children: children4, isPresent }) {
-  let id6 = (0, import_react25.useId)(), ref = (0, import_react25.useRef)(null), size = (0, import_react25.useRef)({
+  let id6 = (0, import_react26.useId)(), ref = (0, import_react26.useRef)(null), size = (0, import_react26.useRef)({
     width: 0,
     height: 0,
     top: 0,
     left: 0
   });
-  return (0, import_react25.useInsertionEffect)(() => {
+  return (0, import_react26.useInsertionEffect)(() => {
     let { width, height, top, left } = size.current;
     if (isPresent || !ref.current || !width || !height)
       return;
@@ -26464,12 +30417,12 @@ function PopChild({ children: children4, isPresent }) {
         `), () => {
       document.head.removeChild(style);
     };
-  }, [isPresent]), React8.createElement(PopChildMeasure, { isPresent, childRef: ref, sizeRef: size }, React8.cloneElement(children4, { ref }));
+  }, [isPresent]), React13.createElement(PopChildMeasure, { isPresent, childRef: ref, sizeRef: size }, React13.cloneElement(children4, { ref }));
 }
 
 // node_modules/framer-motion/dist/es/components/AnimatePresence/PresenceChild.mjs
 var PresenceChild = ({ children: children4, initial, isPresent, onExitComplete, custom, presenceAffectsLayout, mode }) => {
-  let presenceChildren = useConstant(newChildrenMap), id6 = (0, import_react26.useId)(), context = (0, import_react26.useMemo)(
+  let presenceChildren = useConstant(newChildrenMap), id6 = (0, import_react27.useId)(), context = (0, import_react27.useMemo)(
     () => ({
       id: id6,
       initial,
@@ -26484,22 +30437,27 @@ var PresenceChild = ({ children: children4, initial, isPresent, onExitComplete, 
       },
       register: (childId) => (presenceChildren.set(childId, !1), () => presenceChildren.delete(childId))
     }),
+    /**
+     * If the presence of a child affects the layout of the components around it,
+     * we want to make a new context value to ensure they get re-rendered
+     * so they can detect that layout change.
+     */
     presenceAffectsLayout ? void 0 : [isPresent]
   );
-  return (0, import_react26.useMemo)(() => {
+  return (0, import_react27.useMemo)(() => {
     presenceChildren.forEach((_, key) => presenceChildren.set(key, !1));
-  }, [isPresent]), React9.useEffect(() => {
+  }, [isPresent]), React14.useEffect(() => {
     !isPresent && !presenceChildren.size && onExitComplete && onExitComplete();
-  }, [isPresent]), mode === "popLayout" && (children4 = React9.createElement(PopChild, { isPresent }, children4)), React9.createElement(PresenceContext.Provider, { value: context }, children4);
+  }, [isPresent]), mode === "popLayout" && (children4 = React14.createElement(PopChild, { isPresent }, children4)), React14.createElement(PresenceContext.Provider, { value: context }, children4);
 };
 function newChildrenMap() {
   return /* @__PURE__ */ new Map();
 }
 
 // node_modules/framer-motion/dist/es/utils/use-unmount-effect.mjs
-var import_react27 = __toESM(require_react(), 1);
+var import_react28 = __toESM(require_react(), 1);
 function useUnmountEffect(callback) {
-  return (0, import_react27.useEffect)(() => () => callback(), []);
+  return (0, import_react28.useEffect)(() => () => callback(), []);
 }
 
 // node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs
@@ -26512,19 +30470,19 @@ function updateChildLookup(children4, allChildren) {
 }
 function onlyElements(children4) {
   let filtered = [];
-  return import_react28.Children.forEach(children4, (child) => {
-    (0, import_react28.isValidElement)(child) && filtered.push(child);
+  return import_react29.Children.forEach(children4, (child) => {
+    (0, import_react29.isValidElement)(child) && filtered.push(child);
   }), filtered;
 }
 var AnimatePresence = ({ children: children4, custom, initial = !0, onExitComplete, exitBeforeEnter, presenceAffectsLayout = !0, mode = "sync" }) => {
   invariant4(!exitBeforeEnter, "Replace exitBeforeEnter with mode='wait'");
-  let forceRender = (0, import_react28.useContext)(LayoutGroupContext).forceRender || useForceUpdate()[0], isMounted = useIsMounted(), filteredChildren = onlyElements(children4), childrenToRender = filteredChildren, exitingChildren = (0, import_react28.useRef)(/* @__PURE__ */ new Map()).current, presentChildren = (0, import_react28.useRef)(childrenToRender), allChildren = (0, import_react28.useRef)(/* @__PURE__ */ new Map()).current, isInitialRender = (0, import_react28.useRef)(!0);
-  if (useIsomorphicLayoutEffect(() => {
+  let forceRender = (0, import_react29.useContext)(LayoutGroupContext).forceRender || useForceUpdate()[0], isMounted = useIsMounted(), filteredChildren = onlyElements(children4), childrenToRender = filteredChildren, exitingChildren = (0, import_react29.useRef)(/* @__PURE__ */ new Map()).current, presentChildren = (0, import_react29.useRef)(childrenToRender), allChildren = (0, import_react29.useRef)(/* @__PURE__ */ new Map()).current, isInitialRender = (0, import_react29.useRef)(!0);
+  if (useIsomorphicLayoutEffect2(() => {
     isInitialRender.current = !1, updateChildLookup(filteredChildren, allChildren), presentChildren.current = childrenToRender;
   }), useUnmountEffect(() => {
     isInitialRender.current = !0, allChildren.clear(), exitingChildren.clear();
   }), isInitialRender.current)
-    return React10.createElement(React10.Fragment, null, childrenToRender.map((child) => React10.createElement(PresenceChild, { key: getChildKey(child), isPresent: !0, initial: initial ? void 0 : !1, presenceAffectsLayout, mode }, child)));
+    return React15.createElement(React15.Fragment, null, childrenToRender.map((child) => React15.createElement(PresenceChild, { key: getChildKey(child), isPresent: !0, initial: initial ? void 0 : !1, presenceAffectsLayout, mode }, child)));
   childrenToRender = [...childrenToRender];
   let presentKeys = presentChildren.current.map(getChildKey), targetKeys = filteredChildren.map(getChildKey), numPresent = presentKeys.length;
   for (let i = 0; i < numPresent; i++) {
@@ -26540,378 +30498,510 @@ var AnimatePresence = ({ children: children4, custom, initial = !0, onExitComple
     let insertionIndex = presentKeys.indexOf(key), exitingComponent = component;
     if (!exitingComponent) {
       let onExit = () => {
-        allChildren.delete(key), exitingChildren.delete(key);
-        let removeIndex = presentChildren.current.findIndex((presentChild) => presentChild.key === key);
-        if (presentChildren.current.splice(removeIndex, 1), !exitingChildren.size) {
-          if (presentChildren.current = filteredChildren, isMounted.current === !1)
+        exitingChildren.delete(key);
+        let leftOverKeys = Array.from(allChildren.keys()).filter((childKey) => !targetKeys.includes(childKey));
+        if (leftOverKeys.forEach((leftOverKey) => allChildren.delete(leftOverKey)), presentChildren.current = filteredChildren.filter((presentChild) => {
+          let presentChildKey = getChildKey(presentChild);
+          return (
+            // filter out the node exiting
+            presentChildKey === key || // filter out the leftover children
+            leftOverKeys.includes(presentChildKey)
+          );
+        }), !exitingChildren.size) {
+          if (isMounted.current === !1)
             return;
           forceRender(), onExitComplete && onExitComplete();
         }
       };
-      exitingComponent = React10.createElement(PresenceChild, { key: getChildKey(child), isPresent: !1, onExitComplete: onExit, custom, presenceAffectsLayout, mode }, child), exitingChildren.set(key, exitingComponent);
+      exitingComponent = React15.createElement(PresenceChild, { key: getChildKey(child), isPresent: !1, onExitComplete: onExit, custom, presenceAffectsLayout, mode }, child), exitingChildren.set(key, exitingComponent);
     }
     childrenToRender.splice(insertionIndex, 0, exitingComponent);
   }), childrenToRender = childrenToRender.map((child) => {
     let key = child.key;
-    return exitingChildren.has(key) ? child : React10.createElement(PresenceChild, { key: getChildKey(child), isPresent: !0, presenceAffectsLayout, mode }, child);
-  }), mode === "wait" && childrenToRender.length > 1 && console.warn(`You're attempting to animate multiple children within AnimatePresence, but its mode is set to "wait". This will lead to odd visual behaviour.`), React10.createElement(React10.Fragment, null, exitingChildren.size ? childrenToRender : childrenToRender.map((child) => (0, import_react28.cloneElement)(child)));
+    return exitingChildren.has(key) ? child : React15.createElement(PresenceChild, { key: getChildKey(child), isPresent: !0, presenceAffectsLayout, mode }, child);
+  }), mode === "wait" && childrenToRender.length > 1 && console.warn(`You're attempting to animate multiple children within AnimatePresence, but its mode is set to "wait". This will lead to odd visual behaviour.`), React15.createElement(React15.Fragment, null, exitingChildren.size ? childrenToRender : childrenToRender.map((child) => (0, import_react29.cloneElement)(child)));
 };
-
-// app/components/general/ImageCarousel.tsx
-var import_react33 = __toESM(require_react());
-
-// app/components/travel/countryModal/CountryModal.tsx
-var import_react31 = __toESM(require_react());
-
-// node_modules/react-icons/lib/esm/iconBase.js
-var import_react30 = __toESM(require_react());
-
-// node_modules/react-icons/lib/esm/iconContext.js
-var import_react29 = __toESM(require_react()), DefaultContext = {
-  color: void 0,
-  size: void 0,
-  className: void 0,
-  style: void 0,
-  attr: void 0
-}, IconContext = import_react29.default.createContext && import_react29.default.createContext(DefaultContext);
-
-// node_modules/react-icons/lib/esm/iconBase.js
-var __assign = function() {
-  return __assign = Object.assign || function(t) {
-    for (var s, i = 1, n = arguments.length; i < n; i++) {
-      s = arguments[i];
-      for (var p in s)
-        Object.prototype.hasOwnProperty.call(s, p) && (t[p] = s[p]);
-    }
-    return t;
-  }, __assign.apply(this, arguments);
-}, __rest = function(s, e) {
-  var t = {};
-  for (var p in s)
-    Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0 && (t[p] = s[p]);
-  if (s != null && typeof Object.getOwnPropertySymbols == "function")
-    for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++)
-      e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]) && (t[p[i]] = s[p[i]]);
-  return t;
-};
-function Tree2Element(tree) {
-  return tree && tree.map(function(node, i) {
-    return import_react30.default.createElement(node.tag, __assign({
-      key: i
-    }, node.attr), Tree2Element(node.child));
-  });
-}
-function GenIcon(data) {
-  return function(props) {
-    return import_react30.default.createElement(IconBase, __assign({
-      attr: __assign({}, data.attr)
-    }, props), Tree2Element(data.child));
-  };
-}
-function IconBase(props) {
-  var elem = function(conf) {
-    var attr = props.attr, size = props.size, title = props.title, svgProps = __rest(props, ["attr", "size", "title"]), computedSize = size || conf.size || "1em", className;
-    return conf.className && (className = conf.className), props.className && (className = (className ? className + " " : "") + props.className), import_react30.default.createElement("svg", __assign({
-      stroke: "currentColor",
-      fill: "currentColor",
-      strokeWidth: "0"
-    }, conf.attr, attr, svgProps, {
-      className,
-      style: __assign(__assign({
-        color: props.color || conf.color
-      }, conf.style), props.style),
-      height: computedSize,
-      width: computedSize,
-      xmlns: "http://www.w3.org/2000/svg"
-    }), title && import_react30.default.createElement("title", null, title), props.children);
-  };
-  return IconContext !== void 0 ? import_react30.default.createElement(IconContext.Consumer, null, function(conf) {
-    return elem(conf);
-  }) : elem(DefaultContext);
-}
-
-// node_modules/react-icons/fi/index.esm.js
-function FiMaximize(props) {
-  return GenIcon({ tag: "svg", attr: { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, child: [{ tag: "path", attr: { d: "M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" } }] })(props);
-}
-function FiX(props) {
-  return GenIcon({ tag: "svg", attr: { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, child: [{ tag: "line", attr: { x1: "18", y1: "6", x2: "6", y2: "18" } }, { tag: "line", attr: { x1: "6", y1: "6", x2: "18", y2: "18" } }] })(props);
-}
-
-// app/components/travel/countryModal/CountryModal.tsx
-var import_jsx_dev_runtime5 = __toESM(require_jsx_dev_runtime()), CountryModalHoverContext = import_react31.default.createContext(!1), CountryModal = ({ children: children4 }) => {
-  let modalRef = (0, import_react31.useRef)(null), [isHovering, setIsHovering] = (0, import_react31.useState)(!1);
-  (0, import_react31.useEffect)(() => {
-    !modalRef.current || (modalRef.current.addEventListener("mouseenter", () => {
-      setIsHovering(() => !0);
-    }), modalRef.current.addEventListener(
-      "mouseleave",
-      () => setIsHovering(() => !1)
-    ));
-  }, [modalRef]);
-  let sharedIconStyles = " h-4 w-4 md:h-6 md:w-6 z-20 stroke-slate-300 hover:stroke-slate-100 hover:scale-125 transition-all duration-200 ";
-  return /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(
-    "div",
-    {
-      className: "transition-all fixed bottom-3 right-3 md:bottom-4 md:right-4 lg:right-6 lg:bottom-6",
-      ref: modalRef,
-      children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(
-        motion.div,
-        {
-          initial: { opacity: 0, x: 30 },
-          animate: { opacity: 1, x: 0 },
-          exit: { opacity: 0, x: 30 },
-          className: "bg-slate-700 rounded-xl overflow-hidden drop-shadow-2xl",
-          children: [
-            /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(
-              "div",
-              {
-                className: "z-10 h-full w-full absolute bg-slate-900 transition-all " + (isHovering ? "opacity-30" : "opacity-0")
-              },
-              void 0,
-              !1,
-              {
-                fileName: "app/components/travel/countryModal/CountryModal.tsx",
-                lineNumber: 45,
-                columnNumber: 9
-              },
-              this
-            ),
-            /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(Link2, { to: "/travel", children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(
-              FiX,
-              {
-                className: "absolute top-2 right-2 transition-all" + sharedIconStyles + (isHovering ? "opacity-100 cursor-pointer" : "opacity-0")
-              },
-              void 0,
-              !1,
-              {
-                fileName: "app/components/travel/countryModal/CountryModal.tsx",
-                lineNumber: 52,
-                columnNumber: 11
-              },
-              this
-            ) }, void 0, !1, {
-              fileName: "app/components/travel/countryModal/CountryModal.tsx",
-              lineNumber: 51,
-              columnNumber: 9
-            }, this),
-            /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(
-              FiMaximize,
-              {
-                size: 24,
-                className: "absolute top-1/2 left-1/2 translate-x-[-50%] translate-y-[-50%] transition-all" + sharedIconStyles + (isHovering ? "opacity-100 cursor-pointer" : "opacity-0")
-              },
-              void 0,
-              !1,
-              {
-                fileName: "app/components/travel/countryModal/CountryModal.tsx",
-                lineNumber: 62,
-                columnNumber: 9
-              },
-              this
-            ),
-            /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(CountryModalHoverContext.Provider, { value: isHovering, children: children4 }, void 0, !1, {
-              fileName: "app/components/travel/countryModal/CountryModal.tsx",
-              lineNumber: 70,
-              columnNumber: 9
-            }, this)
-          ]
-        },
-        1,
-        !0,
-        {
-          fileName: "app/components/travel/countryModal/CountryModal.tsx",
-          lineNumber: 36,
-          columnNumber: 7
-        },
-        this
-      )
-    },
-    void 0,
-    !1,
-    {
-      fileName: "app/components/travel/countryModal/CountryModal.tsx",
-      lineNumber: 30,
-      columnNumber: 5
-    },
-    this
-  );
-};
-
-// app/components/general/ImageCarousel.tsx
-var import_jsx_dev_runtime6 = __toESM(require_jsx_dev_runtime()), imageAspectRatio = 384 / 683, ImageCarousel = ({ images }) => {
-  let [imageLoading, setImageLoading] = (0, import_react33.useState)(!0), [imageIndex, setImageIndex] = (0, import_react33.useState)(0), isHovering = (0, import_react33.useContext)(CountryModalHoverContext), currentImage = images[imageIndex];
-  return (0, import_react33.useEffect)(() => {
-    setImageLoading(!0);
-  }, [currentImage]), (0, import_react33.useEffect)(() => {
-    let interval3 = setInterval(() => {
-      !isHovering && setImageIndex((prev) => (prev + 1) % images.length);
-    }, 4e3);
-    return () => clearInterval(interval3);
-  }), /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
-    motion.div,
-    {
-      className: "w-full relative",
-      style: {
-        aspectRatio: imageAspectRatio
-      },
-      children: /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(AnimatePresence, { initial: !1, children: /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
-        motion.img,
-        {
-          initial: { opacity: 0 },
-          animate: {
-            opacity: imageLoading ? 0 : 1,
-            scale: isHovering ? 1.05 : 1
-          },
-          transition: {
-            duration: 0.3
-          },
-          exit: { opacity: 0 },
-          src: currentImage,
-          onLoad: () => setImageLoading(!1),
-          className: "pointer-events-none select-none absolute"
-        },
-        currentImage,
-        !1,
-        {
-          fileName: "app/components/general/ImageCarousel.tsx",
-          lineNumber: 36,
-          columnNumber: 9
-        },
-        this
-      ) }, void 0, !1, {
-        fileName: "app/components/general/ImageCarousel.tsx",
-        lineNumber: 35,
-        columnNumber: 7
-      }, this)
-    },
-    void 0,
-    !1,
-    {
-      fileName: "app/components/general/ImageCarousel.tsx",
-      lineNumber: 29,
-      columnNumber: 5
-    },
-    this
-  );
-};
-
-// app/hooks/useTravelMetaData.ts
-var import_react34 = __toESM(require_react()), nameMap = [
-  ["Turkiye", "Turkey"],
-  ["Korea", "South Korea"],
-  ["\xC5land", "Finland"]
-], getReplacedNameOrDefault = (countryName) => {
-  let replacedName = countryName;
-  return nameMap.forEach((namePair) => {
-    namePair[0] === countryName && (replacedName = namePair[1]);
-  }), replacedName;
-}, useTravelMetaData = () => {
-  let [imagesMetaData, setImagesMetaData] = (0, import_react34.useState)();
-  return (0, import_react34.useEffect)(() => {
-    fetch("/imageMetaData.json").then((r) => r.json()).then(
-      (r) => r.map(
-        (imageMetaData) => ({
-          ...imageMetaData,
-          country: getReplacedNameOrDefault(imageMetaData.country)
-        })
-      )
-    ).then((r) => setImagesMetaData(r));
-  }, []), imagesMetaData;
-};
-
-// app/routes/travel.$country.tsx
-var import_jsx_dev_runtime7 = __toESM(require_jsx_dev_runtime());
-function TravelCountry() {
-  let params = useParams(), mediaMetaData = useTravelMetaData(), selectedCountry = params.country;
-  return /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)("div", { children: [
-    /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(
-      ImageCarousel,
-      {
-        images: (mediaMetaData == null ? void 0 : mediaMetaData.filter(
-          (imageMetaData) => imageMetaData.country === selectedCountry
-        ).filter((imageMetaData) => imageMetaData.type === "image").map((image) => image.url)) || [""]
-      },
-      void 0,
-      !1,
-      {
-        fileName: "app/routes/travel.$country.tsx",
-        lineNumber: 13,
-        columnNumber: 7
-      },
-      this
-    ),
-    /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(AnimatePresence, { initial: !1, children: /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(
-      motion.div,
-      {
-        initial: { opacity: 0, x: -30 },
-        animate: { opacity: 1, x: 0 },
-        exit: { opacity: 0, x: 30 },
-        className: "z-20 m-2 text-sm md:m-3 md:text-base lg:m-4 lg:text-2xl absolute bottom-0 bg-auto drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,0.8)] ",
-        children: selectedCountry
-      },
-      selectedCountry,
-      !1,
-      {
-        fileName: "app/routes/travel.$country.tsx",
-        lineNumber: 25,
-        columnNumber: 9
-      },
-      this
-    ) }, void 0, !1, {
-      fileName: "app/routes/travel.$country.tsx",
-      lineNumber: 24,
-      columnNumber: 7
-    }, this)
-  ] }, void 0, !0, {
-    fileName: "app/routes/travel.$country.tsx",
-    lineNumber: 12,
-    columnNumber: 5
-  }, this);
-}
-
-// app/routes/_index.tsx
-var index_exports = {};
-__export(index_exports, {
-  default: () => _index3,
-  meta: () => meta
-});
-var import_jsx_dev_runtime8 = __toESM(require_jsx_dev_runtime()), meta = () => [{ title: "New Remix App" }];
-function _index3() {
-  return /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)("div", { style: { fontFamily: "system-ui, sans-serif", lineHeight: "1.4" }, children: [
-    /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)("h1", { className: "text-center mt-4", children: "Hi, I'm Enes" }, void 0, !1, {
-      fileName: "app/routes/_index.tsx",
-      lineNumber: 10,
-      columnNumber: 7
-    }, this),
-    /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)("div", { className: "mx-auto mt-16 max-w-7xl text-center", children: /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)("span", { children: "This is my personal page where I document things I'm doing (including this page)" }, void 0, !1, {
-      fileName: "app/routes/_index.tsx",
-      lineNumber: 12,
-      columnNumber: 9
-    }, this) }, void 0, !1, {
-      fileName: "app/routes/_index.tsx",
-      lineNumber: 11,
-      columnNumber: 7
-    }, this)
-  ] }, void 0, !0, {
-    fileName: "app/routes/_index.tsx",
-    lineNumber: 9,
-    columnNumber: 5
-  }, this);
-}
-
-// app/routes/travel.tsx
-var travel_exports = {};
-__export(travel_exports, {
-  default: () => Travel
-});
-var import_react38 = __toESM(require_react());
 
 // app/components/travel/TravelMap.tsx
 var import_react_simple_maps3 = __toESM(require_index_umd());
 
 // app/components/travel/geography/TravelledGeography.tsx
-var import_react_simple_maps = __toESM(require_index_umd()), import_react36 = __toESM(require_react());
+var import_react_simple_maps = __toESM(require_index_umd()), import_react30 = __toESM(require_react());
+
+// node_modules/d3-color/src/define.js
+function define_default2(constructor, factory, prototype) {
+  constructor.prototype = factory.prototype = prototype, prototype.constructor = constructor;
+}
+function extend2(parent, definition) {
+  var prototype = Object.create(parent.prototype);
+  for (var key in definition)
+    prototype[key] = definition[key];
+  return prototype;
+}
+
+// node_modules/d3-color/src/color.js
+function Color2() {
+}
+var darker2 = 0.7, brighter2 = 1 / darker2, reI2 = "\\s*([+-]?\\d+)\\s*", reN2 = "\\s*([+-]?(?:\\d*\\.)?\\d+(?:[eE][+-]?\\d+)?)\\s*", reP2 = "\\s*([+-]?(?:\\d*\\.)?\\d+(?:[eE][+-]?\\d+)?)%\\s*", reHex2 = /^#([0-9a-f]{3,8})$/, reRgbInteger2 = new RegExp(`^rgb\\(${reI2},${reI2},${reI2}\\)$`), reRgbPercent2 = new RegExp(`^rgb\\(${reP2},${reP2},${reP2}\\)$`), reRgbaInteger2 = new RegExp(`^rgba\\(${reI2},${reI2},${reI2},${reN2}\\)$`), reRgbaPercent2 = new RegExp(`^rgba\\(${reP2},${reP2},${reP2},${reN2}\\)$`), reHslPercent2 = new RegExp(`^hsl\\(${reN2},${reP2},${reP2}\\)$`), reHslaPercent2 = new RegExp(`^hsla\\(${reN2},${reP2},${reP2},${reN2}\\)$`), named2 = {
+  aliceblue: 15792383,
+  antiquewhite: 16444375,
+  aqua: 65535,
+  aquamarine: 8388564,
+  azure: 15794175,
+  beige: 16119260,
+  bisque: 16770244,
+  black: 0,
+  blanchedalmond: 16772045,
+  blue: 255,
+  blueviolet: 9055202,
+  brown: 10824234,
+  burlywood: 14596231,
+  cadetblue: 6266528,
+  chartreuse: 8388352,
+  chocolate: 13789470,
+  coral: 16744272,
+  cornflowerblue: 6591981,
+  cornsilk: 16775388,
+  crimson: 14423100,
+  cyan: 65535,
+  darkblue: 139,
+  darkcyan: 35723,
+  darkgoldenrod: 12092939,
+  darkgray: 11119017,
+  darkgreen: 25600,
+  darkgrey: 11119017,
+  darkkhaki: 12433259,
+  darkmagenta: 9109643,
+  darkolivegreen: 5597999,
+  darkorange: 16747520,
+  darkorchid: 10040012,
+  darkred: 9109504,
+  darksalmon: 15308410,
+  darkseagreen: 9419919,
+  darkslateblue: 4734347,
+  darkslategray: 3100495,
+  darkslategrey: 3100495,
+  darkturquoise: 52945,
+  darkviolet: 9699539,
+  deeppink: 16716947,
+  deepskyblue: 49151,
+  dimgray: 6908265,
+  dimgrey: 6908265,
+  dodgerblue: 2003199,
+  firebrick: 11674146,
+  floralwhite: 16775920,
+  forestgreen: 2263842,
+  fuchsia: 16711935,
+  gainsboro: 14474460,
+  ghostwhite: 16316671,
+  gold: 16766720,
+  goldenrod: 14329120,
+  gray: 8421504,
+  green: 32768,
+  greenyellow: 11403055,
+  grey: 8421504,
+  honeydew: 15794160,
+  hotpink: 16738740,
+  indianred: 13458524,
+  indigo: 4915330,
+  ivory: 16777200,
+  khaki: 15787660,
+  lavender: 15132410,
+  lavenderblush: 16773365,
+  lawngreen: 8190976,
+  lemonchiffon: 16775885,
+  lightblue: 11393254,
+  lightcoral: 15761536,
+  lightcyan: 14745599,
+  lightgoldenrodyellow: 16448210,
+  lightgray: 13882323,
+  lightgreen: 9498256,
+  lightgrey: 13882323,
+  lightpink: 16758465,
+  lightsalmon: 16752762,
+  lightseagreen: 2142890,
+  lightskyblue: 8900346,
+  lightslategray: 7833753,
+  lightslategrey: 7833753,
+  lightsteelblue: 11584734,
+  lightyellow: 16777184,
+  lime: 65280,
+  limegreen: 3329330,
+  linen: 16445670,
+  magenta: 16711935,
+  maroon: 8388608,
+  mediumaquamarine: 6737322,
+  mediumblue: 205,
+  mediumorchid: 12211667,
+  mediumpurple: 9662683,
+  mediumseagreen: 3978097,
+  mediumslateblue: 8087790,
+  mediumspringgreen: 64154,
+  mediumturquoise: 4772300,
+  mediumvioletred: 13047173,
+  midnightblue: 1644912,
+  mintcream: 16121850,
+  mistyrose: 16770273,
+  moccasin: 16770229,
+  navajowhite: 16768685,
+  navy: 128,
+  oldlace: 16643558,
+  olive: 8421376,
+  olivedrab: 7048739,
+  orange: 16753920,
+  orangered: 16729344,
+  orchid: 14315734,
+  palegoldenrod: 15657130,
+  palegreen: 10025880,
+  paleturquoise: 11529966,
+  palevioletred: 14381203,
+  papayawhip: 16773077,
+  peachpuff: 16767673,
+  peru: 13468991,
+  pink: 16761035,
+  plum: 14524637,
+  powderblue: 11591910,
+  purple: 8388736,
+  rebeccapurple: 6697881,
+  red: 16711680,
+  rosybrown: 12357519,
+  royalblue: 4286945,
+  saddlebrown: 9127187,
+  salmon: 16416882,
+  sandybrown: 16032864,
+  seagreen: 3050327,
+  seashell: 16774638,
+  sienna: 10506797,
+  silver: 12632256,
+  skyblue: 8900331,
+  slateblue: 6970061,
+  slategray: 7372944,
+  slategrey: 7372944,
+  snow: 16775930,
+  springgreen: 65407,
+  steelblue: 4620980,
+  tan: 13808780,
+  teal: 32896,
+  thistle: 14204888,
+  tomato: 16737095,
+  turquoise: 4251856,
+  violet: 15631086,
+  wheat: 16113331,
+  white: 16777215,
+  whitesmoke: 16119285,
+  yellow: 16776960,
+  yellowgreen: 10145074
+};
+define_default2(Color2, color3, {
+  copy(channels) {
+    return Object.assign(new this.constructor(), this, channels);
+  },
+  displayable() {
+    return this.rgb().displayable();
+  },
+  hex: color_formatHex2,
+  // Deprecated! Use color.formatHex.
+  formatHex: color_formatHex2,
+  formatHex8: color_formatHex8,
+  formatHsl: color_formatHsl2,
+  formatRgb: color_formatRgb2,
+  toString: color_formatRgb2
+});
+function color_formatHex2() {
+  return this.rgb().formatHex();
+}
+function color_formatHex8() {
+  return this.rgb().formatHex8();
+}
+function color_formatHsl2() {
+  return hslConvert2(this).formatHsl();
+}
+function color_formatRgb2() {
+  return this.rgb().formatRgb();
+}
+function color3(format) {
+  var m, l;
+  return format = (format + "").trim().toLowerCase(), (m = reHex2.exec(format)) ? (l = m[1].length, m = parseInt(m[1], 16), l === 6 ? rgbn2(m) : l === 3 ? new Rgb2(m >> 8 & 15 | m >> 4 & 240, m >> 4 & 15 | m & 240, (m & 15) << 4 | m & 15, 1) : l === 8 ? rgba3(m >> 24 & 255, m >> 16 & 255, m >> 8 & 255, (m & 255) / 255) : l === 4 ? rgba3(m >> 12 & 15 | m >> 8 & 240, m >> 8 & 15 | m >> 4 & 240, m >> 4 & 15 | m & 240, ((m & 15) << 4 | m & 15) / 255) : null) : (m = reRgbInteger2.exec(format)) ? new Rgb2(m[1], m[2], m[3], 1) : (m = reRgbPercent2.exec(format)) ? new Rgb2(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, 1) : (m = reRgbaInteger2.exec(format)) ? rgba3(m[1], m[2], m[3], m[4]) : (m = reRgbaPercent2.exec(format)) ? rgba3(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, m[4]) : (m = reHslPercent2.exec(format)) ? hsla3(m[1], m[2] / 100, m[3] / 100, 1) : (m = reHslaPercent2.exec(format)) ? hsla3(m[1], m[2] / 100, m[3] / 100, m[4]) : named2.hasOwnProperty(format) ? rgbn2(named2[format]) : format === "transparent" ? new Rgb2(NaN, NaN, NaN, 0) : null;
+}
+function rgbn2(n) {
+  return new Rgb2(n >> 16 & 255, n >> 8 & 255, n & 255, 1);
+}
+function rgba3(r, g, b, a) {
+  return a <= 0 && (r = g = b = NaN), new Rgb2(r, g, b, a);
+}
+function rgbConvert2(o) {
+  return o instanceof Color2 || (o = color3(o)), o ? (o = o.rgb(), new Rgb2(o.r, o.g, o.b, o.opacity)) : new Rgb2();
+}
+function rgb2(r, g, b, opacity) {
+  return arguments.length === 1 ? rgbConvert2(r) : new Rgb2(r, g, b, opacity ?? 1);
+}
+function Rgb2(r, g, b, opacity) {
+  this.r = +r, this.g = +g, this.b = +b, this.opacity = +opacity;
+}
+define_default2(Rgb2, rgb2, extend2(Color2, {
+  brighter(k) {
+    return k = k == null ? brighter2 : Math.pow(brighter2, k), new Rgb2(this.r * k, this.g * k, this.b * k, this.opacity);
+  },
+  darker(k) {
+    return k = k == null ? darker2 : Math.pow(darker2, k), new Rgb2(this.r * k, this.g * k, this.b * k, this.opacity);
+  },
+  rgb() {
+    return this;
+  },
+  clamp() {
+    return new Rgb2(clampi(this.r), clampi(this.g), clampi(this.b), clampa(this.opacity));
+  },
+  displayable() {
+    return -0.5 <= this.r && this.r < 255.5 && -0.5 <= this.g && this.g < 255.5 && -0.5 <= this.b && this.b < 255.5 && 0 <= this.opacity && this.opacity <= 1;
+  },
+  hex: rgb_formatHex2,
+  // Deprecated! Use color.formatHex.
+  formatHex: rgb_formatHex2,
+  formatHex8: rgb_formatHex8,
+  formatRgb: rgb_formatRgb2,
+  toString: rgb_formatRgb2
+}));
+function rgb_formatHex2() {
+  return `#${hex4(this.r)}${hex4(this.g)}${hex4(this.b)}`;
+}
+function rgb_formatHex8() {
+  return `#${hex4(this.r)}${hex4(this.g)}${hex4(this.b)}${hex4((isNaN(this.opacity) ? 1 : this.opacity) * 255)}`;
+}
+function rgb_formatRgb2() {
+  let a = clampa(this.opacity);
+  return `${a === 1 ? "rgb(" : "rgba("}${clampi(this.r)}, ${clampi(this.g)}, ${clampi(this.b)}${a === 1 ? ")" : `, ${a})`}`;
+}
+function clampa(opacity) {
+  return isNaN(opacity) ? 1 : Math.max(0, Math.min(1, opacity));
+}
+function clampi(value) {
+  return Math.max(0, Math.min(255, Math.round(value) || 0));
+}
+function hex4(value) {
+  return value = clampi(value), (value < 16 ? "0" : "") + value.toString(16);
+}
+function hsla3(h, s, l, a) {
+  return a <= 0 ? h = s = l = NaN : l <= 0 || l >= 1 ? h = s = NaN : s <= 0 && (h = NaN), new Hsl2(h, s, l, a);
+}
+function hslConvert2(o) {
+  if (o instanceof Hsl2)
+    return new Hsl2(o.h, o.s, o.l, o.opacity);
+  if (o instanceof Color2 || (o = color3(o)), !o)
+    return new Hsl2();
+  if (o instanceof Hsl2)
+    return o;
+  o = o.rgb();
+  var r = o.r / 255, g = o.g / 255, b = o.b / 255, min2 = Math.min(r, g, b), max2 = Math.max(r, g, b), h = NaN, s = max2 - min2, l = (max2 + min2) / 2;
+  return s ? (r === max2 ? h = (g - b) / s + (g < b) * 6 : g === max2 ? h = (b - r) / s + 2 : h = (r - g) / s + 4, s /= l < 0.5 ? max2 + min2 : 2 - max2 - min2, h *= 60) : s = l > 0 && l < 1 ? 0 : h, new Hsl2(h, s, l, o.opacity);
+}
+function hsl2(h, s, l, opacity) {
+  return arguments.length === 1 ? hslConvert2(h) : new Hsl2(h, s, l, opacity ?? 1);
+}
+function Hsl2(h, s, l, opacity) {
+  this.h = +h, this.s = +s, this.l = +l, this.opacity = +opacity;
+}
+define_default2(Hsl2, hsl2, extend2(Color2, {
+  brighter(k) {
+    return k = k == null ? brighter2 : Math.pow(brighter2, k), new Hsl2(this.h, this.s, this.l * k, this.opacity);
+  },
+  darker(k) {
+    return k = k == null ? darker2 : Math.pow(darker2, k), new Hsl2(this.h, this.s, this.l * k, this.opacity);
+  },
+  rgb() {
+    var h = this.h % 360 + (this.h < 0) * 360, s = isNaN(h) || isNaN(this.s) ? 0 : this.s, l = this.l, m2 = l + (l < 0.5 ? l : 1 - l) * s, m1 = 2 * l - m2;
+    return new Rgb2(
+      hsl2rgb2(h >= 240 ? h - 240 : h + 120, m1, m2),
+      hsl2rgb2(h, m1, m2),
+      hsl2rgb2(h < 120 ? h + 240 : h - 120, m1, m2),
+      this.opacity
+    );
+  },
+  clamp() {
+    return new Hsl2(clamph(this.h), clampt(this.s), clampt(this.l), clampa(this.opacity));
+  },
+  displayable() {
+    return (0 <= this.s && this.s <= 1 || isNaN(this.s)) && 0 <= this.l && this.l <= 1 && 0 <= this.opacity && this.opacity <= 1;
+  },
+  formatHsl() {
+    let a = clampa(this.opacity);
+    return `${a === 1 ? "hsl(" : "hsla("}${clamph(this.h)}, ${clampt(this.s) * 100}%, ${clampt(this.l) * 100}%${a === 1 ? ")" : `, ${a})`}`;
+  }
+}));
+function clamph(value) {
+  return value = (value || 0) % 360, value < 0 ? value + 360 : value;
+}
+function clampt(value) {
+  return Math.max(0, Math.min(1, value || 0));
+}
+function hsl2rgb2(h, m1, m2) {
+  return (h < 60 ? m1 + (m2 - m1) * h / 60 : h < 180 ? m2 : h < 240 ? m1 + (m2 - m1) * (240 - h) / 60 : m1) * 255;
+}
+
+// node_modules/d3-interpolate/src/basis.js
+function basis2(t1, v0, v1, v2, v3) {
+  var t2 = t1 * t1, t3 = t2 * t1;
+  return ((1 - 3 * t1 + 3 * t2 - t3) * v0 + (4 - 6 * t2 + 3 * t3) * v1 + (1 + 3 * t1 + 3 * t2 - 3 * t3) * v2 + t3 * v3) / 6;
+}
+function basis_default2(values) {
+  var n = values.length - 1;
+  return function(t) {
+    var i = t <= 0 ? t = 0 : t >= 1 ? (t = 1, n - 1) : Math.floor(t * n), v1 = values[i], v2 = values[i + 1], v0 = i > 0 ? values[i - 1] : 2 * v1 - v2, v3 = i < n - 1 ? values[i + 2] : 2 * v2 - v1;
+    return basis2((t - i / n) * n, v0, v1, v2, v3);
+  };
+}
+
+// node_modules/d3-interpolate/src/basisClosed.js
+function basisClosed_default2(values) {
+  var n = values.length;
+  return function(t) {
+    var i = Math.floor(((t %= 1) < 0 ? ++t : t) * n), v0 = values[(i + n - 1) % n], v1 = values[i % n], v2 = values[(i + 1) % n], v3 = values[(i + 2) % n];
+    return basis2((t - i / n) * n, v0, v1, v2, v3);
+  };
+}
+
+// node_modules/d3-interpolate/src/constant.js
+var constant_default5 = (x) => () => x;
+
+// node_modules/d3-interpolate/src/color.js
+function linear2(a, d) {
+  return function(t) {
+    return a + t * d;
+  };
+}
+function exponential2(a, b, y) {
+  return a = Math.pow(a, y), b = Math.pow(b, y) - a, y = 1 / y, function(t) {
+    return Math.pow(a + t * b, y);
+  };
+}
+function gamma2(y) {
+  return (y = +y) == 1 ? nogamma2 : function(a, b) {
+    return b - a ? exponential2(a, b, y) : constant_default5(isNaN(a) ? b : a);
+  };
+}
+function nogamma2(a, b) {
+  var d = b - a;
+  return d ? linear2(a, d) : constant_default5(isNaN(a) ? b : a);
+}
+
+// node_modules/d3-interpolate/src/rgb.js
+var rgb_default2 = function rgbGamma2(y) {
+  var color4 = gamma2(y);
+  function rgb3(start4, end) {
+    var r = color4((start4 = rgb2(start4)).r, (end = rgb2(end)).r), g = color4(start4.g, end.g), b = color4(start4.b, end.b), opacity = nogamma2(start4.opacity, end.opacity);
+    return function(t) {
+      return start4.r = r(t), start4.g = g(t), start4.b = b(t), start4.opacity = opacity(t), start4 + "";
+    };
+  }
+  return rgb3.gamma = rgbGamma2, rgb3;
+}(1);
+function rgbSpline2(spline) {
+  return function(colors) {
+    var n = colors.length, r = new Array(n), g = new Array(n), b = new Array(n), i, color4;
+    for (i = 0; i < n; ++i)
+      color4 = rgb2(colors[i]), r[i] = color4.r || 0, g[i] = color4.g || 0, b[i] = color4.b || 0;
+    return r = spline(r), g = spline(g), b = spline(b), color4.opacity = 1, function(t) {
+      return color4.r = r(t), color4.g = g(t), color4.b = b(t), color4 + "";
+    };
+  };
+}
+var rgbBasis2 = rgbSpline2(basis_default2), rgbBasisClosed2 = rgbSpline2(basisClosed_default2);
+
+// node_modules/d3-interpolate/src/number.js
+function number_default2(a, b) {
+  return a = +a, b = +b, function(t) {
+    return a * (1 - t) + b * t;
+  };
+}
+
+// node_modules/d3-interpolate/src/string.js
+var reA2 = /[-+]?(?:\d+\.?\d*|\.?\d+)(?:[eE][-+]?\d+)?/g, reB2 = new RegExp(reA2.source, "g");
+function zero2(b) {
+  return function() {
+    return b;
+  };
+}
+function one2(b) {
+  return function(t) {
+    return b(t) + "";
+  };
+}
+function string_default2(a, b) {
+  var bi = reA2.lastIndex = reB2.lastIndex = 0, am, bm, bs, i = -1, s = [], q = [];
+  for (a = a + "", b = b + ""; (am = reA2.exec(a)) && (bm = reB2.exec(b)); )
+    (bs = bm.index) > bi && (bs = b.slice(bi, bs), s[i] ? s[i] += bs : s[++i] = bs), (am = am[0]) === (bm = bm[0]) ? s[i] ? s[i] += bm : s[++i] = bm : (s[++i] = null, q.push({ i, x: number_default2(am, bm) })), bi = reB2.lastIndex;
+  return bi < b.length && (bs = b.slice(bi), s[i] ? s[i] += bs : s[++i] = bs), s.length < 2 ? q[0] ? one2(q[0].x) : zero2(b) : (b = q.length, function(t) {
+    for (var i2 = 0, o; i2 < b; ++i2)
+      s[(o = q[i2]).i] = o.x(t);
+    return s.join("");
+  });
+}
+
+// node_modules/d3-interpolate/src/transform/decompose.js
+var degrees4 = 180 / Math.PI, identity3 = {
+  translateX: 0,
+  translateY: 0,
+  rotate: 0,
+  skewX: 0,
+  scaleX: 1,
+  scaleY: 1
+};
+function decompose_default2(a, b, c, d, e, f) {
+  var scaleX, scaleY, skewX;
+  return (scaleX = Math.sqrt(a * a + b * b)) && (a /= scaleX, b /= scaleX), (skewX = a * c + b * d) && (c -= a * skewX, d -= b * skewX), (scaleY = Math.sqrt(c * c + d * d)) && (c /= scaleY, d /= scaleY, skewX /= scaleY), a * d < b * c && (a = -a, b = -b, skewX = -skewX, scaleX = -scaleX), {
+    translateX: e,
+    translateY: f,
+    rotate: Math.atan2(b, a) * degrees4,
+    skewX: Math.atan(skewX) * degrees4,
+    scaleX,
+    scaleY
+  };
+}
+
+// node_modules/d3-interpolate/src/transform/parse.js
+var svgNode2;
+function parseCss2(value) {
+  let m = new (typeof DOMMatrix == "function" ? DOMMatrix : WebKitCSSMatrix)(value + "");
+  return m.isIdentity ? identity3 : decompose_default2(m.a, m.b, m.c, m.d, m.e, m.f);
+}
+function parseSvg2(value) {
+  return value == null ? identity3 : (svgNode2 || (svgNode2 = document.createElementNS("http://www.w3.org/2000/svg", "g")), svgNode2.setAttribute("transform", value), (value = svgNode2.transform.baseVal.consolidate()) ? (value = value.matrix, decompose_default2(value.a, value.b, value.c, value.d, value.e, value.f)) : identity3);
+}
+
+// node_modules/d3-interpolate/src/transform/index.js
+function interpolateTransform2(parse2, pxComma, pxParen, degParen) {
+  function pop(s) {
+    return s.length ? s.pop() + " " : "";
+  }
+  function translate(xa, ya, xb, yb, s, q) {
+    if (xa !== xb || ya !== yb) {
+      var i = s.push("translate(", null, pxComma, null, pxParen);
+      q.push({ i: i - 4, x: number_default2(xa, xb) }, { i: i - 2, x: number_default2(ya, yb) });
+    } else
+      (xb || yb) && s.push("translate(" + xb + pxComma + yb + pxParen);
+  }
+  function rotate(a, b, s, q) {
+    a !== b ? (a - b > 180 ? b += 360 : b - a > 180 && (a += 360), q.push({ i: s.push(pop(s) + "rotate(", null, degParen) - 2, x: number_default2(a, b) })) : b && s.push(pop(s) + "rotate(" + b + degParen);
+  }
+  function skewX(a, b, s, q) {
+    a !== b ? q.push({ i: s.push(pop(s) + "skewX(", null, degParen) - 2, x: number_default2(a, b) }) : b && s.push(pop(s) + "skewX(" + b + degParen);
+  }
+  function scale2(xa, ya, xb, yb, s, q) {
+    if (xa !== xb || ya !== yb) {
+      var i = s.push(pop(s) + "scale(", null, ",", null, ")");
+      q.push({ i: i - 4, x: number_default2(xa, xb) }, { i: i - 2, x: number_default2(ya, yb) });
+    } else
+      (xb !== 1 || yb !== 1) && s.push(pop(s) + "scale(" + xb + "," + yb + ")");
+  }
+  return function(a, b) {
+    var s = [], q = [];
+    return a = parse2(a), b = parse2(b), translate(a.translateX, a.translateY, b.translateX, b.translateY, s, q), rotate(a.rotate, b.rotate, s, q), skewX(a.skewX, b.skewX, s, q), scale2(a.scaleX, a.scaleY, b.scaleX, b.scaleY, s, q), a = b = null, function(t) {
+      for (var i = -1, n = q.length, o; ++i < n; )
+        s[(o = q[i]).i] = o.x(t);
+      return s.join("");
+    };
+  };
+}
+var interpolateTransformCss2 = interpolateTransform2(parseCss2, "px, ", "px)", "deg)"), interpolateTransformSvg2 = interpolateTransform2(parseSvg2, ", ", ")", ")");
 
 // node_modules/d3-brush/node_modules/d3-selection/src/namespaces.js
 var xhtml2 = "http://www.w3.org/1999/xhtml", namespaces_default2 = {
@@ -27070,7 +31160,7 @@ EnterNode2.prototype = {
 };
 
 // node_modules/d3-brush/node_modules/d3-selection/src/constant.js
-function constant_default5(x) {
+function constant_default6(x) {
   return function() {
     return x;
   };
@@ -27099,7 +31189,7 @@ function data_default2(value, key) {
   if (!arguments.length)
     return Array.from(this, datum2);
   var bind = key ? bindKey2 : bindIndex2, parents = this._parents, groups = this._groups;
-  typeof value != "function" && (value = constant_default5(value));
+  typeof value != "function" && (value = constant_default6(value));
   for (var m = groups.length, update = new Array(m), enter = new Array(m), exit = new Array(m), j = 0; j < m; ++j) {
     var parent = parents[j], group = groups[j], groupLength = group.length, data = arraylike(value.call(parent, parent && parent.__data__, j, parents)), dataLength = data.length, enterGroup = enter[j] = new Array(dataLength), updateGroup = update[j] = new Array(dataLength), exitGroup = exit[j] = new Array(groupLength);
     bind(parent, group, enterGroup, updateGroup, exitGroup, data, key);
@@ -27469,7 +31559,7 @@ function parseTypenames3(typenames) {
 function onRemove2(typename) {
   return function() {
     var on = this.__on;
-    if (!!on) {
+    if (on) {
       for (var j = 0, i = -1, m = on.length, o; j < m; ++j)
         o = on[j], (!typename.type || o.type === typename.type) && o.name === typename.name ? this.removeEventListener(o.type, o.listener, o.options) : on[++i] = o;
       ++i ? on.length = i : delete this.__on;
@@ -27585,7 +31675,7 @@ var selection_default3 = selection2;
 
 // node_modules/d3-brush/node_modules/d3-transition/src/transition/schedule.js
 init_src5();
-init_src10();
+init_src9();
 var emptyOn2 = dispatch_default("start", "end", "cancel", "interrupt"), emptyTween2 = [], CREATED2 = 0, SCHEDULED2 = 1, STARTING2 = 2, STARTED2 = 3, RUNNING2 = 4, ENDING2 = 5, ENDED2 = 6;
 function schedule_default2(node, name, id6, index2, group, timing) {
   var schedules = node.__transition;
@@ -27596,7 +31686,9 @@ function schedule_default2(node, name, id6, index2, group, timing) {
   create2(node, id6, {
     name,
     index: index2,
+    // For context during callback.
     group,
+    // For context during callback.
     on: emptyOn2,
     tween: emptyTween2,
     time: timing.time,
@@ -27665,7 +31757,7 @@ function create2(node, id6, self2) {
 // node_modules/d3-brush/node_modules/d3-transition/src/interrupt.js
 function interrupt_default3(node, name) {
   var schedules = node.__transition, schedule, active, empty4 = !0, i;
-  if (!!schedules) {
+  if (schedules) {
     name = name == null ? null : name + "";
     for (i in schedules) {
       if ((schedule = schedules[i]).name !== name) {
@@ -27684,9 +31776,6 @@ function interrupt_default4(name) {
     interrupt_default3(this, name);
   });
 }
-
-// node_modules/d3-brush/node_modules/d3-transition/src/transition/attr.js
-init_src9();
 
 // node_modules/d3-brush/node_modules/d3-transition/src/transition/tween.js
 function tweenRemove2(id6, name) {
@@ -27743,11 +31832,9 @@ function tweenValue2(transition4, name, value) {
 }
 
 // node_modules/d3-brush/node_modules/d3-transition/src/transition/interpolate.js
-init_src8();
-init_src9();
 function interpolate_default3(a, b) {
   var c;
-  return (typeof b == "number" ? number_default : b instanceof color2 ? rgb_default : (c = color2(b)) ? (b = c, rgb_default) : string_default)(a, b);
+  return (typeof b == "number" ? number_default2 : b instanceof color3 ? rgb_default2 : (c = color3(b)) ? (b = c, rgb_default2) : string_default2)(a, b);
 }
 
 // node_modules/d3-brush/node_modules/d3-transition/src/transition/attr.js
@@ -27790,7 +31877,7 @@ function attrFunctionNS4(fullname, interpolate2, value) {
   };
 }
 function attr_default4(name, value) {
-  var fullname = namespace_default2(name), i = fullname === "transform" ? interpolateTransformSvg : interpolate_default3;
+  var fullname = namespace_default2(name), i = fullname === "transform" ? interpolateTransformSvg2 : interpolate_default3;
   return this.attrTween(name, typeof value == "function" ? (fullname.local ? attrFunctionNS4 : attrFunction4)(fullname, i, tweenValue2(this, "attr." + name, value)) : value == null ? (fullname.local ? attrRemoveNS4 : attrRemove4)(fullname) : (fullname.local ? attrConstantNS4 : attrConstant4)(fullname, i, value));
 }
 
@@ -27978,7 +32065,6 @@ function selection_default4() {
 }
 
 // node_modules/d3-brush/node_modules/d3-transition/src/transition/style.js
-init_src9();
 function styleNull2(name, interpolate2) {
   var string00, string10, interpolate0;
   return function() {
@@ -28013,7 +32099,7 @@ function styleMaybeRemove2(id6, name) {
   };
 }
 function style_default4(name, value, priority) {
-  var i = (name += "") == "transform" ? interpolateTransformCss : interpolate_default3;
+  var i = (name += "") == "transform" ? interpolateTransformCss2 : interpolate_default3;
   return value == null ? this.styleTween(name, styleNull2(name, i)).on("end.style." + name, styleRemove4(name)) : typeof value == "function" ? this.styleTween(name, styleFunction4(name, i, tweenValue2(this, "style." + name, value))).each(styleMaybeRemove2(this._id, name)) : this.styleTween(name, styleConstant4(name, i, value), priority).on("end.style." + name, null);
 }
 
@@ -28159,10 +32245,11 @@ Transition2.prototype = transition2.prototype = {
 };
 
 // node_modules/d3-brush/node_modules/d3-transition/src/selection/transition.js
-init_src11();
-init_src10();
+init_src12();
+init_src9();
 var defaultTiming2 = {
   time: null,
+  // Set on use.
   delay: 0,
   duration: 250,
   ease: cubicInOut
@@ -28226,315 +32313,8 @@ function type(t) {
   return { type: t };
 }
 
-// node_modules/d3/node_modules/d3-color/src/define.js
-function define_default2(constructor, factory, prototype) {
-  constructor.prototype = factory.prototype = prototype, prototype.constructor = constructor;
-}
-function extend2(parent, definition) {
-  var prototype = Object.create(parent.prototype);
-  for (var key in definition)
-    prototype[key] = definition[key];
-  return prototype;
-}
-
-// node_modules/d3/node_modules/d3-color/src/color.js
-function Color2() {
-}
-var darker2 = 0.7, brighter2 = 1 / darker2, reI2 = "\\s*([+-]?\\d+)\\s*", reN2 = "\\s*([+-]?(?:\\d*\\.)?\\d+(?:[eE][+-]?\\d+)?)\\s*", reP2 = "\\s*([+-]?(?:\\d*\\.)?\\d+(?:[eE][+-]?\\d+)?)%\\s*", reHex2 = /^#([0-9a-f]{3,8})$/, reRgbInteger2 = new RegExp(`^rgb\\(${reI2},${reI2},${reI2}\\)$`), reRgbPercent2 = new RegExp(`^rgb\\(${reP2},${reP2},${reP2}\\)$`), reRgbaInteger2 = new RegExp(`^rgba\\(${reI2},${reI2},${reI2},${reN2}\\)$`), reRgbaPercent2 = new RegExp(`^rgba\\(${reP2},${reP2},${reP2},${reN2}\\)$`), reHslPercent2 = new RegExp(`^hsl\\(${reN2},${reP2},${reP2}\\)$`), reHslaPercent2 = new RegExp(`^hsla\\(${reN2},${reP2},${reP2},${reN2}\\)$`), named2 = {
-  aliceblue: 15792383,
-  antiquewhite: 16444375,
-  aqua: 65535,
-  aquamarine: 8388564,
-  azure: 15794175,
-  beige: 16119260,
-  bisque: 16770244,
-  black: 0,
-  blanchedalmond: 16772045,
-  blue: 255,
-  blueviolet: 9055202,
-  brown: 10824234,
-  burlywood: 14596231,
-  cadetblue: 6266528,
-  chartreuse: 8388352,
-  chocolate: 13789470,
-  coral: 16744272,
-  cornflowerblue: 6591981,
-  cornsilk: 16775388,
-  crimson: 14423100,
-  cyan: 65535,
-  darkblue: 139,
-  darkcyan: 35723,
-  darkgoldenrod: 12092939,
-  darkgray: 11119017,
-  darkgreen: 25600,
-  darkgrey: 11119017,
-  darkkhaki: 12433259,
-  darkmagenta: 9109643,
-  darkolivegreen: 5597999,
-  darkorange: 16747520,
-  darkorchid: 10040012,
-  darkred: 9109504,
-  darksalmon: 15308410,
-  darkseagreen: 9419919,
-  darkslateblue: 4734347,
-  darkslategray: 3100495,
-  darkslategrey: 3100495,
-  darkturquoise: 52945,
-  darkviolet: 9699539,
-  deeppink: 16716947,
-  deepskyblue: 49151,
-  dimgray: 6908265,
-  dimgrey: 6908265,
-  dodgerblue: 2003199,
-  firebrick: 11674146,
-  floralwhite: 16775920,
-  forestgreen: 2263842,
-  fuchsia: 16711935,
-  gainsboro: 14474460,
-  ghostwhite: 16316671,
-  gold: 16766720,
-  goldenrod: 14329120,
-  gray: 8421504,
-  green: 32768,
-  greenyellow: 11403055,
-  grey: 8421504,
-  honeydew: 15794160,
-  hotpink: 16738740,
-  indianred: 13458524,
-  indigo: 4915330,
-  ivory: 16777200,
-  khaki: 15787660,
-  lavender: 15132410,
-  lavenderblush: 16773365,
-  lawngreen: 8190976,
-  lemonchiffon: 16775885,
-  lightblue: 11393254,
-  lightcoral: 15761536,
-  lightcyan: 14745599,
-  lightgoldenrodyellow: 16448210,
-  lightgray: 13882323,
-  lightgreen: 9498256,
-  lightgrey: 13882323,
-  lightpink: 16758465,
-  lightsalmon: 16752762,
-  lightseagreen: 2142890,
-  lightskyblue: 8900346,
-  lightslategray: 7833753,
-  lightslategrey: 7833753,
-  lightsteelblue: 11584734,
-  lightyellow: 16777184,
-  lime: 65280,
-  limegreen: 3329330,
-  linen: 16445670,
-  magenta: 16711935,
-  maroon: 8388608,
-  mediumaquamarine: 6737322,
-  mediumblue: 205,
-  mediumorchid: 12211667,
-  mediumpurple: 9662683,
-  mediumseagreen: 3978097,
-  mediumslateblue: 8087790,
-  mediumspringgreen: 64154,
-  mediumturquoise: 4772300,
-  mediumvioletred: 13047173,
-  midnightblue: 1644912,
-  mintcream: 16121850,
-  mistyrose: 16770273,
-  moccasin: 16770229,
-  navajowhite: 16768685,
-  navy: 128,
-  oldlace: 16643558,
-  olive: 8421376,
-  olivedrab: 7048739,
-  orange: 16753920,
-  orangered: 16729344,
-  orchid: 14315734,
-  palegoldenrod: 15657130,
-  palegreen: 10025880,
-  paleturquoise: 11529966,
-  palevioletred: 14381203,
-  papayawhip: 16773077,
-  peachpuff: 16767673,
-  peru: 13468991,
-  pink: 16761035,
-  plum: 14524637,
-  powderblue: 11591910,
-  purple: 8388736,
-  rebeccapurple: 6697881,
-  red: 16711680,
-  rosybrown: 12357519,
-  royalblue: 4286945,
-  saddlebrown: 9127187,
-  salmon: 16416882,
-  sandybrown: 16032864,
-  seagreen: 3050327,
-  seashell: 16774638,
-  sienna: 10506797,
-  silver: 12632256,
-  skyblue: 8900331,
-  slateblue: 6970061,
-  slategray: 7372944,
-  slategrey: 7372944,
-  snow: 16775930,
-  springgreen: 65407,
-  steelblue: 4620980,
-  tan: 13808780,
-  teal: 32896,
-  thistle: 14204888,
-  tomato: 16737095,
-  turquoise: 4251856,
-  violet: 15631086,
-  wheat: 16113331,
-  white: 16777215,
-  whitesmoke: 16119285,
-  yellow: 16776960,
-  yellowgreen: 10145074
-};
-define_default2(Color2, color3, {
-  copy(channels) {
-    return Object.assign(new this.constructor(), this, channels);
-  },
-  displayable() {
-    return this.rgb().displayable();
-  },
-  hex: color_formatHex2,
-  formatHex: color_formatHex2,
-  formatHex8: color_formatHex8,
-  formatHsl: color_formatHsl2,
-  formatRgb: color_formatRgb2,
-  toString: color_formatRgb2
-});
-function color_formatHex2() {
-  return this.rgb().formatHex();
-}
-function color_formatHex8() {
-  return this.rgb().formatHex8();
-}
-function color_formatHsl2() {
-  return hslConvert2(this).formatHsl();
-}
-function color_formatRgb2() {
-  return this.rgb().formatRgb();
-}
-function color3(format) {
-  var m, l;
-  return format = (format + "").trim().toLowerCase(), (m = reHex2.exec(format)) ? (l = m[1].length, m = parseInt(m[1], 16), l === 6 ? rgbn2(m) : l === 3 ? new Rgb2(m >> 8 & 15 | m >> 4 & 240, m >> 4 & 15 | m & 240, (m & 15) << 4 | m & 15, 1) : l === 8 ? rgba3(m >> 24 & 255, m >> 16 & 255, m >> 8 & 255, (m & 255) / 255) : l === 4 ? rgba3(m >> 12 & 15 | m >> 8 & 240, m >> 8 & 15 | m >> 4 & 240, m >> 4 & 15 | m & 240, ((m & 15) << 4 | m & 15) / 255) : null) : (m = reRgbInteger2.exec(format)) ? new Rgb2(m[1], m[2], m[3], 1) : (m = reRgbPercent2.exec(format)) ? new Rgb2(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, 1) : (m = reRgbaInteger2.exec(format)) ? rgba3(m[1], m[2], m[3], m[4]) : (m = reRgbaPercent2.exec(format)) ? rgba3(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, m[4]) : (m = reHslPercent2.exec(format)) ? hsla3(m[1], m[2] / 100, m[3] / 100, 1) : (m = reHslaPercent2.exec(format)) ? hsla3(m[1], m[2] / 100, m[3] / 100, m[4]) : named2.hasOwnProperty(format) ? rgbn2(named2[format]) : format === "transparent" ? new Rgb2(NaN, NaN, NaN, 0) : null;
-}
-function rgbn2(n) {
-  return new Rgb2(n >> 16 & 255, n >> 8 & 255, n & 255, 1);
-}
-function rgba3(r, g, b, a) {
-  return a <= 0 && (r = g = b = NaN), new Rgb2(r, g, b, a);
-}
-function rgbConvert2(o) {
-  return o instanceof Color2 || (o = color3(o)), o ? (o = o.rgb(), new Rgb2(o.r, o.g, o.b, o.opacity)) : new Rgb2();
-}
-function rgb2(r, g, b, opacity) {
-  return arguments.length === 1 ? rgbConvert2(r) : new Rgb2(r, g, b, opacity ?? 1);
-}
-function Rgb2(r, g, b, opacity) {
-  this.r = +r, this.g = +g, this.b = +b, this.opacity = +opacity;
-}
-define_default2(Rgb2, rgb2, extend2(Color2, {
-  brighter(k) {
-    return k = k == null ? brighter2 : Math.pow(brighter2, k), new Rgb2(this.r * k, this.g * k, this.b * k, this.opacity);
-  },
-  darker(k) {
-    return k = k == null ? darker2 : Math.pow(darker2, k), new Rgb2(this.r * k, this.g * k, this.b * k, this.opacity);
-  },
-  rgb() {
-    return this;
-  },
-  clamp() {
-    return new Rgb2(clampi(this.r), clampi(this.g), clampi(this.b), clampa(this.opacity));
-  },
-  displayable() {
-    return -0.5 <= this.r && this.r < 255.5 && -0.5 <= this.g && this.g < 255.5 && -0.5 <= this.b && this.b < 255.5 && 0 <= this.opacity && this.opacity <= 1;
-  },
-  hex: rgb_formatHex2,
-  formatHex: rgb_formatHex2,
-  formatHex8: rgb_formatHex8,
-  formatRgb: rgb_formatRgb2,
-  toString: rgb_formatRgb2
-}));
-function rgb_formatHex2() {
-  return `#${hex4(this.r)}${hex4(this.g)}${hex4(this.b)}`;
-}
-function rgb_formatHex8() {
-  return `#${hex4(this.r)}${hex4(this.g)}${hex4(this.b)}${hex4((isNaN(this.opacity) ? 1 : this.opacity) * 255)}`;
-}
-function rgb_formatRgb2() {
-  let a = clampa(this.opacity);
-  return `${a === 1 ? "rgb(" : "rgba("}${clampi(this.r)}, ${clampi(this.g)}, ${clampi(this.b)}${a === 1 ? ")" : `, ${a})`}`;
-}
-function clampa(opacity) {
-  return isNaN(opacity) ? 1 : Math.max(0, Math.min(1, opacity));
-}
-function clampi(value) {
-  return Math.max(0, Math.min(255, Math.round(value) || 0));
-}
-function hex4(value) {
-  return value = clampi(value), (value < 16 ? "0" : "") + value.toString(16);
-}
-function hsla3(h, s, l, a) {
-  return a <= 0 ? h = s = l = NaN : l <= 0 || l >= 1 ? h = s = NaN : s <= 0 && (h = NaN), new Hsl2(h, s, l, a);
-}
-function hslConvert2(o) {
-  if (o instanceof Hsl2)
-    return new Hsl2(o.h, o.s, o.l, o.opacity);
-  if (o instanceof Color2 || (o = color3(o)), !o)
-    return new Hsl2();
-  if (o instanceof Hsl2)
-    return o;
-  o = o.rgb();
-  var r = o.r / 255, g = o.g / 255, b = o.b / 255, min2 = Math.min(r, g, b), max2 = Math.max(r, g, b), h = NaN, s = max2 - min2, l = (max2 + min2) / 2;
-  return s ? (r === max2 ? h = (g - b) / s + (g < b) * 6 : g === max2 ? h = (b - r) / s + 2 : h = (r - g) / s + 4, s /= l < 0.5 ? max2 + min2 : 2 - max2 - min2, h *= 60) : s = l > 0 && l < 1 ? 0 : h, new Hsl2(h, s, l, o.opacity);
-}
-function hsl2(h, s, l, opacity) {
-  return arguments.length === 1 ? hslConvert2(h) : new Hsl2(h, s, l, opacity ?? 1);
-}
-function Hsl2(h, s, l, opacity) {
-  this.h = +h, this.s = +s, this.l = +l, this.opacity = +opacity;
-}
-define_default2(Hsl2, hsl2, extend2(Color2, {
-  brighter(k) {
-    return k = k == null ? brighter2 : Math.pow(brighter2, k), new Hsl2(this.h, this.s, this.l * k, this.opacity);
-  },
-  darker(k) {
-    return k = k == null ? darker2 : Math.pow(darker2, k), new Hsl2(this.h, this.s, this.l * k, this.opacity);
-  },
-  rgb() {
-    var h = this.h % 360 + (this.h < 0) * 360, s = isNaN(h) || isNaN(this.s) ? 0 : this.s, l = this.l, m2 = l + (l < 0.5 ? l : 1 - l) * s, m1 = 2 * l - m2;
-    return new Rgb2(
-      hsl2rgb2(h >= 240 ? h - 240 : h + 120, m1, m2),
-      hsl2rgb2(h, m1, m2),
-      hsl2rgb2(h < 120 ? h + 240 : h - 120, m1, m2),
-      this.opacity
-    );
-  },
-  clamp() {
-    return new Hsl2(clamph(this.h), clampt(this.s), clampt(this.l), clampa(this.opacity));
-  },
-  displayable() {
-    return (0 <= this.s && this.s <= 1 || isNaN(this.s)) && 0 <= this.l && this.l <= 1 && 0 <= this.opacity && this.opacity <= 1;
-  },
-  formatHsl() {
-    let a = clampa(this.opacity);
-    return `${a === 1 ? "hsl(" : "hsla("}${clamph(this.h)}, ${clampt(this.s) * 100}%, ${clampt(this.l) * 100}%${a === 1 ? ")" : `, ${a})`}`;
-  }
-}));
-function clamph(value) {
-  return value = (value || 0) % 360, value < 0 ? value + 360 : value;
-}
-function clampt(value) {
-  return Math.max(0, Math.min(1, value || 0));
-}
-function hsl2rgb2(h, m1, m2) {
-  return (h < 60 ? m1 + (m2 - m1) * h / 60 : h < 180 ? m2 : h < 240 ? m1 + (m2 - m1) * (240 - h) / 60 : m1) * 255;
-}
-
 // node_modules/d3/node_modules/d3-dispatch/src/dispatch.js
-var noop4 = { value: () => {
+var noop6 = { value: () => {
 } };
 function dispatch2() {
   for (var i = 0, n = arguments.length, _ = {}, t; i < n; ++i) {
@@ -28605,7 +32385,7 @@ function get4(type2, name) {
 function set4(type2, name, callback) {
   for (var i = 0, n = type2.length; i < n; ++i)
     if (type2[i].name === name) {
-      type2[i] = noop4, type2 = type2.slice(0, i).concat(type2.slice(i + 1));
+      type2[i] = noop6, type2 = type2.slice(0, i).concat(type2.slice(i + 1));
       break;
     }
   return callback != null && type2.push({ name, value: callback }), type2;
@@ -28769,7 +32549,7 @@ EnterNode3.prototype = {
 };
 
 // node_modules/d3/node_modules/d3-selection/src/constant.js
-function constant_default7(x) {
+function constant_default8(x) {
   return function() {
     return x;
   };
@@ -28798,7 +32578,7 @@ function data_default3(value, key) {
   if (!arguments.length)
     return Array.from(this, datum3);
   var bind = key ? bindKey3 : bindIndex3, parents = this._parents, groups = this._groups;
-  typeof value != "function" && (value = constant_default7(value));
+  typeof value != "function" && (value = constant_default8(value));
   for (var m = groups.length, update = new Array(m), enter = new Array(m), exit = new Array(m), j = 0; j < m; ++j) {
     var parent = parents[j], group = groups[j], groupLength = group.length, data = arraylike2(value.call(parent, parent && parent.__data__, j, parents)), dataLength = data.length, enterGroup = enter[j] = new Array(dataLength), updateGroup = update[j] = new Array(dataLength), exitGroup = exit[j] = new Array(groupLength);
     bind(parent, group, enterGroup, updateGroup, exitGroup, data, key);
@@ -29168,7 +32948,7 @@ function parseTypenames5(typenames) {
 function onRemove3(typename) {
   return function() {
     var on = this.__on;
-    if (!!on) {
+    if (on) {
       for (var j = 0, i = -1, m = on.length, o; j < m; ++j)
         o = on[j], (!typename.type || o.type === typename.type) && o.name === typename.name ? this.removeEventListener(o.type, o.listener, o.options) : on[++i] = o;
       ++i ? on.length = i : delete this.__on;
@@ -29292,172 +33072,6 @@ function cubicInOut2(t) {
   return ((t *= 2) <= 1 ? t * t * t : (t -= 2) * t * t + 2) / 2;
 }
 
-// node_modules/d3/node_modules/d3-interpolate/src/basis.js
-function basis2(t1, v0, v1, v2, v3) {
-  var t2 = t1 * t1, t3 = t2 * t1;
-  return ((1 - 3 * t1 + 3 * t2 - t3) * v0 + (4 - 6 * t2 + 3 * t3) * v1 + (1 + 3 * t1 + 3 * t2 - 3 * t3) * v2 + t3 * v3) / 6;
-}
-function basis_default2(values) {
-  var n = values.length - 1;
-  return function(t) {
-    var i = t <= 0 ? t = 0 : t >= 1 ? (t = 1, n - 1) : Math.floor(t * n), v1 = values[i], v2 = values[i + 1], v0 = i > 0 ? values[i - 1] : 2 * v1 - v2, v3 = i < n - 1 ? values[i + 2] : 2 * v2 - v1;
-    return basis2((t - i / n) * n, v0, v1, v2, v3);
-  };
-}
-
-// node_modules/d3/node_modules/d3-interpolate/src/basisClosed.js
-function basisClosed_default2(values) {
-  var n = values.length;
-  return function(t) {
-    var i = Math.floor(((t %= 1) < 0 ? ++t : t) * n), v0 = values[(i + n - 1) % n], v1 = values[i % n], v2 = values[(i + 1) % n], v3 = values[(i + 2) % n];
-    return basis2((t - i / n) * n, v0, v1, v2, v3);
-  };
-}
-
-// node_modules/d3/node_modules/d3-interpolate/src/constant.js
-var constant_default8 = (x) => () => x;
-
-// node_modules/d3/node_modules/d3-interpolate/src/color.js
-function linear2(a, d) {
-  return function(t) {
-    return a + t * d;
-  };
-}
-function exponential2(a, b, y) {
-  return a = Math.pow(a, y), b = Math.pow(b, y) - a, y = 1 / y, function(t) {
-    return Math.pow(a + t * b, y);
-  };
-}
-function gamma2(y) {
-  return (y = +y) == 1 ? nogamma2 : function(a, b) {
-    return b - a ? exponential2(a, b, y) : constant_default8(isNaN(a) ? b : a);
-  };
-}
-function nogamma2(a, b) {
-  var d = b - a;
-  return d ? linear2(a, d) : constant_default8(isNaN(a) ? b : a);
-}
-
-// node_modules/d3/node_modules/d3-interpolate/src/rgb.js
-var rgb_default2 = function rgbGamma2(y) {
-  var color4 = gamma2(y);
-  function rgb3(start4, end) {
-    var r = color4((start4 = rgb2(start4)).r, (end = rgb2(end)).r), g = color4(start4.g, end.g), b = color4(start4.b, end.b), opacity = nogamma2(start4.opacity, end.opacity);
-    return function(t) {
-      return start4.r = r(t), start4.g = g(t), start4.b = b(t), start4.opacity = opacity(t), start4 + "";
-    };
-  }
-  return rgb3.gamma = rgbGamma2, rgb3;
-}(1);
-function rgbSpline2(spline) {
-  return function(colors) {
-    var n = colors.length, r = new Array(n), g = new Array(n), b = new Array(n), i, color4;
-    for (i = 0; i < n; ++i)
-      color4 = rgb2(colors[i]), r[i] = color4.r || 0, g[i] = color4.g || 0, b[i] = color4.b || 0;
-    return r = spline(r), g = spline(g), b = spline(b), color4.opacity = 1, function(t) {
-      return color4.r = r(t), color4.g = g(t), color4.b = b(t), color4 + "";
-    };
-  };
-}
-var rgbBasis2 = rgbSpline2(basis_default2), rgbBasisClosed2 = rgbSpline2(basisClosed_default2);
-
-// node_modules/d3/node_modules/d3-interpolate/src/number.js
-function number_default2(a, b) {
-  return a = +a, b = +b, function(t) {
-    return a * (1 - t) + b * t;
-  };
-}
-
-// node_modules/d3/node_modules/d3-interpolate/src/string.js
-var reA2 = /[-+]?(?:\d+\.?\d*|\.?\d+)(?:[eE][-+]?\d+)?/g, reB2 = new RegExp(reA2.source, "g");
-function zero2(b) {
-  return function() {
-    return b;
-  };
-}
-function one2(b) {
-  return function(t) {
-    return b(t) + "";
-  };
-}
-function string_default2(a, b) {
-  var bi = reA2.lastIndex = reB2.lastIndex = 0, am, bm, bs, i = -1, s = [], q = [];
-  for (a = a + "", b = b + ""; (am = reA2.exec(a)) && (bm = reB2.exec(b)); )
-    (bs = bm.index) > bi && (bs = b.slice(bi, bs), s[i] ? s[i] += bs : s[++i] = bs), (am = am[0]) === (bm = bm[0]) ? s[i] ? s[i] += bm : s[++i] = bm : (s[++i] = null, q.push({ i, x: number_default2(am, bm) })), bi = reB2.lastIndex;
-  return bi < b.length && (bs = b.slice(bi), s[i] ? s[i] += bs : s[++i] = bs), s.length < 2 ? q[0] ? one2(q[0].x) : zero2(b) : (b = q.length, function(t) {
-    for (var i2 = 0, o; i2 < b; ++i2)
-      s[(o = q[i2]).i] = o.x(t);
-    return s.join("");
-  });
-}
-
-// node_modules/d3/node_modules/d3-interpolate/src/transform/decompose.js
-var degrees4 = 180 / Math.PI, identity3 = {
-  translateX: 0,
-  translateY: 0,
-  rotate: 0,
-  skewX: 0,
-  scaleX: 1,
-  scaleY: 1
-};
-function decompose_default2(a, b, c, d, e, f) {
-  var scaleX, scaleY, skewX;
-  return (scaleX = Math.sqrt(a * a + b * b)) && (a /= scaleX, b /= scaleX), (skewX = a * c + b * d) && (c -= a * skewX, d -= b * skewX), (scaleY = Math.sqrt(c * c + d * d)) && (c /= scaleY, d /= scaleY, skewX /= scaleY), a * d < b * c && (a = -a, b = -b, skewX = -skewX, scaleX = -scaleX), {
-    translateX: e,
-    translateY: f,
-    rotate: Math.atan2(b, a) * degrees4,
-    skewX: Math.atan(skewX) * degrees4,
-    scaleX,
-    scaleY
-  };
-}
-
-// node_modules/d3/node_modules/d3-interpolate/src/transform/parse.js
-var svgNode2;
-function parseCss2(value) {
-  let m = new (typeof DOMMatrix == "function" ? DOMMatrix : WebKitCSSMatrix)(value + "");
-  return m.isIdentity ? identity3 : decompose_default2(m.a, m.b, m.c, m.d, m.e, m.f);
-}
-function parseSvg2(value) {
-  return value == null ? identity3 : (svgNode2 || (svgNode2 = document.createElementNS("http://www.w3.org/2000/svg", "g")), svgNode2.setAttribute("transform", value), (value = svgNode2.transform.baseVal.consolidate()) ? (value = value.matrix, decompose_default2(value.a, value.b, value.c, value.d, value.e, value.f)) : identity3);
-}
-
-// node_modules/d3/node_modules/d3-interpolate/src/transform/index.js
-function interpolateTransform2(parse2, pxComma, pxParen, degParen) {
-  function pop(s) {
-    return s.length ? s.pop() + " " : "";
-  }
-  function translate(xa, ya, xb, yb, s, q) {
-    if (xa !== xb || ya !== yb) {
-      var i = s.push("translate(", null, pxComma, null, pxParen);
-      q.push({ i: i - 4, x: number_default2(xa, xb) }, { i: i - 2, x: number_default2(ya, yb) });
-    } else
-      (xb || yb) && s.push("translate(" + xb + pxComma + yb + pxParen);
-  }
-  function rotate(a, b, s, q) {
-    a !== b ? (a - b > 180 ? b += 360 : b - a > 180 && (a += 360), q.push({ i: s.push(pop(s) + "rotate(", null, degParen) - 2, x: number_default2(a, b) })) : b && s.push(pop(s) + "rotate(" + b + degParen);
-  }
-  function skewX(a, b, s, q) {
-    a !== b ? q.push({ i: s.push(pop(s) + "skewX(", null, degParen) - 2, x: number_default2(a, b) }) : b && s.push(pop(s) + "skewX(" + b + degParen);
-  }
-  function scale2(xa, ya, xb, yb, s, q) {
-    if (xa !== xb || ya !== yb) {
-      var i = s.push(pop(s) + "scale(", null, ",", null, ")");
-      q.push({ i: i - 4, x: number_default2(xa, xb) }, { i: i - 2, x: number_default2(ya, yb) });
-    } else
-      (xb !== 1 || yb !== 1) && s.push(pop(s) + "scale(" + xb + "," + yb + ")");
-  }
-  return function(a, b) {
-    var s = [], q = [];
-    return a = parse2(a), b = parse2(b), translate(a.translateX, a.translateY, b.translateX, b.translateY, s, q), rotate(a.rotate, b.rotate, s, q), skewX(a.skewX, b.skewX, s, q), scale2(a.scaleX, a.scaleY, b.scaleX, b.scaleY, s, q), a = b = null, function(t) {
-      for (var i = -1, n = q.length, o; ++i < n; )
-        s[(o = q[i]).i] = o.x(t);
-      return s.join("");
-    };
-  };
-}
-var interpolateTransformCss2 = interpolateTransform2(parseCss2, "px, ", "px)", "deg)"), interpolateTransformSvg2 = interpolateTransform2(parseSvg2, ", ", ")", ")");
-
 // node_modules/d3/node_modules/d3-timer/src/timer.js
 var frame3 = 0, timeout2 = 0, interval2 = 0, pokeDelay2 = 1e3, taskHead2, taskTail2, clockLast2 = 0, clockNow2 = 0, clockSkew2 = 0, clock2 = typeof performance == "object" && performance.now ? performance : Date, setFrame2 = typeof window == "object" && window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : function(f) {
   setTimeout(f, 17);
@@ -29476,10 +33090,10 @@ Timer2.prototype = timer2.prototype = {
   restart: function(callback, delay2, time) {
     if (typeof callback != "function")
       throw new TypeError("callback is not a function");
-    time = (time == null ? now2() : +time) + (delay2 == null ? 0 : +delay2), !this._next && taskTail2 !== this && (taskTail2 ? taskTail2._next = this : taskHead2 = this, taskTail2 = this), this._call = callback, this._time = time, sleep2();
+    time = (time == null ? now2() : +time) + (delay2 == null ? 0 : +delay2), !this._next && taskTail2 !== this && (taskTail2 ? taskTail2._next = this : taskHead2 = this, taskTail2 = this), this._call = callback, this._time = time, sleep3();
   },
   stop: function() {
-    this._call && (this._call = null, this._time = 1 / 0, sleep2());
+    this._call && (this._call = null, this._time = 1 / 0, sleep3());
   }
 };
 function timer2(callback, delay2, time) {
@@ -29507,9 +33121,9 @@ function poke2() {
 function nap2() {
   for (var t0, t1 = taskHead2, t2, time = 1 / 0; t1; )
     t1._call ? (time > t1._time && (time = t1._time), t0 = t1, t1 = t1._next) : (t2 = t1._next, t1._next = null, t1 = t0 ? t0._next = t2 : taskHead2 = t2);
-  taskTail2 = t0, sleep2(time);
+  taskTail2 = t0, sleep3(time);
 }
-function sleep2(time) {
+function sleep3(time) {
   if (!frame3) {
     timeout2 && (timeout2 = clearTimeout(timeout2));
     var delay2 = time - clockNow2;
@@ -29536,7 +33150,9 @@ function schedule_default3(node, name, id6, index2, group, timing) {
   create3(node, id6, {
     name,
     index: index2,
+    // For context during callback.
     group,
+    // For context during callback.
     on: emptyOn3,
     tween: emptyTween3,
     time: timing.time,
@@ -29605,7 +33221,7 @@ function create3(node, id6, self2) {
 // node_modules/d3/node_modules/d3-transition/src/interrupt.js
 function interrupt_default5(node, name) {
   var schedules = node.__transition, schedule, active, empty4 = !0, i;
-  if (!!schedules) {
+  if (schedules) {
     name = name == null ? null : name + "";
     for (i in schedules) {
       if ((schedule = schedules[i]).name !== name) {
@@ -30095,6 +33711,7 @@ Transition3.prototype = transition3.prototype = {
 // node_modules/d3/node_modules/d3-transition/src/selection/transition.js
 var defaultTiming3 = {
   time: null,
+  // Set on use.
   delay: 0,
   duration: 250,
   ease: cubicInOut2
@@ -30168,14 +33785,13 @@ function transform2(node) {
 }
 
 // app/components/travel/geography/TravelledGeography.tsx
-var import_jsx_dev_runtime9 = __toESM(require_jsx_dev_runtime()), TravelledGeography = ({
+var import_jsx_dev_runtime5 = __toESM(require_jsx_dev_runtime()), TravelledGeography = ({
   geography,
-  onSelect,
   isSelected
 }) => {
-  let geoSvg = (0, import_react36.useRef)(null), [isHovering, setIsHovering] = (0, import_react36.useState)(!1), [box, setBox] = (0, import_react36.useState)(null);
-  (0, import_react36.useEffect)(() => {
-    !geoSvg.current || (geoSvg.current.addEventListener("mouseenter", () => {
+  let geoSvg = (0, import_react30.useRef)(null), [isHovering, setIsHovering] = (0, import_react30.useState)(!1), [box, setBox] = (0, import_react30.useState)(null);
+  (0, import_react30.useEffect)(() => {
+    geoSvg.current && (geoSvg.current.addEventListener("mouseenter", () => {
       select_default7(geoSvg.current).raise(), setIsHovering(() => !0);
     }), geoSvg.current.addEventListener(
       "mouseleave",
@@ -30183,7 +33799,7 @@ var import_jsx_dev_runtime9 = __toESM(require_jsx_dev_runtime()), TravelledGeogr
     ), setBox(geoSvg.current.getBBox()));
   }, [geoSvg]);
   let scaling = isSelected ? 0.1 : 0.05, calculateBaseTranslate = (position, size) => (position + size / 2) * scaling;
-  return /* @__PURE__ */ (0, import_jsx_dev_runtime9.jsxDEV)(Link2, { to: `/travel/${geography.properties.name}`, children: /* @__PURE__ */ (0, import_jsx_dev_runtime9.jsxDEV)(
+  return /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(Link2, { to: `/travel/${geography.properties.name}`, children: /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(
     import_react_simple_maps.Geography,
     {
       ref: geoSvg,
@@ -30200,33 +33816,27 @@ var import_jsx_dev_runtime9 = __toESM(require_jsx_dev_runtime()), TravelledGeogr
         default: { outline: "none" },
         hover: { outline: "none" },
         pressed: { outline: "none" }
-      },
-      onClick: () => {
-        onSelect(geography);
-      },
-      onTouchStart: () => {
-        onSelect(geography);
       }
     },
     geography.rsmKey,
     !1,
     {
       fileName: "app/components/travel/geography/TravelledGeography.tsx",
-      lineNumber: 35,
+      lineNumber: 34,
       columnNumber: 7
     },
     this
   ) }, void 0, !1, {
     fileName: "app/components/travel/geography/TravelledGeography.tsx",
-    lineNumber: 34,
+    lineNumber: 33,
     columnNumber: 5
   }, this);
 };
 
 // app/components/travel/geography/UntravelledGeography.tsx
-var import_react_simple_maps2 = __toESM(require_index_umd()), import_jsx_dev_runtime10 = __toESM(require_jsx_dev_runtime()), UntravelledGeography = ({
+var import_react_simple_maps2 = __toESM(require_index_umd()), import_jsx_dev_runtime6 = __toESM(require_jsx_dev_runtime()), UntravelledGeography = ({
   geography
-}) => /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)(
+}) => /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)(
   import_react_simple_maps2.Geography,
   {
     geography,
@@ -30248,7 +33858,7 @@ var import_react_simple_maps2 = __toESM(require_index_umd()), import_jsx_dev_run
 );
 
 // app/components/travel/TravelMap.tsx
-var import_jsx_dev_runtime11 = __toESM(require_jsx_dev_runtime()), geoUrl = "/geomap.json", TravelMap = ({
+var import_jsx_dev_runtime7 = __toESM(require_jsx_dev_runtime()), geoUrl = "/geomap.json", TravelMap = ({
   selectedCountry,
   mediaMetaData
 }) => {
@@ -30258,18 +33868,17 @@ var import_jsx_dev_runtime11 = __toESM(require_jsx_dev_runtime()), geoUrl = "/ge
   }, getGeographyName = (geo) => geo.properties.name, isTravelledCountry = (geo) => mediaMetaData && mediaMetaData.some(
     (imageMetaData) => imageMetaData.country.includes(geo.properties.name)
   ) ? "travelled" : "untravelled";
-  return /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)(
+  return /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(
     import_react_simple_maps3.ComposableMap,
     {
       projection: "geoMercator",
       className: "h-full w-full",
-      children: /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)(import_react_simple_maps3.ZoomableGroup, { children: /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)(import_react_simple_maps3.Geographies, { geography: geoUrl, children: ({ geographies }) => geographies.map((geography) => {
+      children: /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(import_react_simple_maps3.ZoomableGroup, { children: /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(import_react_simple_maps3.Geographies, { geography: geoUrl, children: ({ geographies }) => geographies.map((geography) => {
         let MyGeography = geographyMap[isTravelledCountry(geography)];
-        return /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)(
+        return /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(
           MyGeography,
           {
             geography,
-            onSelect: () => null,
             isSelected: selectedCountry === getGeographyName(geography)
           },
           geography.rsmKey,
@@ -30302,12 +33911,261 @@ var import_jsx_dev_runtime11 = __toESM(require_jsx_dev_runtime()), geoUrl = "/ge
   );
 };
 
-// app/routes/travel.tsx
-var import_jsx_dev_runtime12 = __toESM(require_jsx_dev_runtime());
-function Travel() {
-  let mainRef = (0, import_react38.useRef)(null), mediaMetaData = useTravelMetaData(), selectedCountry = useParams().country;
-  return /* @__PURE__ */ (0, import_jsx_dev_runtime12.jsxDEV)("main", { className: "h-full relative", ref: mainRef, children: [
-    /* @__PURE__ */ (0, import_jsx_dev_runtime12.jsxDEV)("div", { className: "h-full", children: /* @__PURE__ */ (0, import_jsx_dev_runtime12.jsxDEV)(
+// app/components/travel/countryModal/CountryModal.tsx
+var import_react34 = __toESM(require_react());
+
+// node_modules/react-icons/lib/esm/iconBase.js
+var import_react33 = __toESM(require_react());
+
+// node_modules/react-icons/lib/esm/iconContext.js
+var import_react32 = __toESM(require_react()), DefaultContext = {
+  color: void 0,
+  size: void 0,
+  className: void 0,
+  style: void 0,
+  attr: void 0
+}, IconContext = import_react32.default.createContext && import_react32.default.createContext(DefaultContext);
+
+// node_modules/react-icons/lib/esm/iconBase.js
+var __assign = function() {
+  return __assign = Object.assign || function(t) {
+    for (var s, i = 1, n = arguments.length; i < n; i++) {
+      s = arguments[i];
+      for (var p in s)
+        Object.prototype.hasOwnProperty.call(s, p) && (t[p] = s[p]);
+    }
+    return t;
+  }, __assign.apply(this, arguments);
+}, __rest = function(s, e) {
+  var t = {};
+  for (var p in s)
+    Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0 && (t[p] = s[p]);
+  if (s != null && typeof Object.getOwnPropertySymbols == "function")
+    for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++)
+      e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]) && (t[p[i]] = s[p[i]]);
+  return t;
+};
+function Tree2Element(tree) {
+  return tree && tree.map(function(node, i) {
+    return import_react33.default.createElement(node.tag, __assign({
+      key: i
+    }, node.attr), Tree2Element(node.child));
+  });
+}
+function GenIcon(data) {
+  return function(props) {
+    return import_react33.default.createElement(IconBase, __assign({
+      attr: __assign({}, data.attr)
+    }, props), Tree2Element(data.child));
+  };
+}
+function IconBase(props) {
+  var elem = function(conf) {
+    var attr = props.attr, size = props.size, title = props.title, svgProps = __rest(props, ["attr", "size", "title"]), computedSize = size || conf.size || "1em", className;
+    return conf.className && (className = conf.className), props.className && (className = (className ? className + " " : "") + props.className), import_react33.default.createElement("svg", __assign({
+      stroke: "currentColor",
+      fill: "currentColor",
+      strokeWidth: "0"
+    }, conf.attr, attr, svgProps, {
+      className,
+      style: __assign(__assign({
+        color: props.color || conf.color
+      }, conf.style), props.style),
+      height: computedSize,
+      width: computedSize,
+      xmlns: "http://www.w3.org/2000/svg"
+    }), title && import_react33.default.createElement("title", null, title), props.children);
+  };
+  return IconContext !== void 0 ? import_react33.default.createElement(IconContext.Consumer, null, function(conf) {
+    return elem(conf);
+  }) : elem(DefaultContext);
+}
+
+// node_modules/react-icons/fi/index.esm.js
+function FiMaximize(props) {
+  return GenIcon({ tag: "svg", attr: { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, child: [{ tag: "path", attr: { d: "M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" } }] })(props);
+}
+function FiX(props) {
+  return GenIcon({ tag: "svg", attr: { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, child: [{ tag: "line", attr: { x1: "18", y1: "6", x2: "6", y2: "18" } }, { tag: "line", attr: { x1: "6", y1: "6", x2: "18", y2: "18" } }] })(props);
+}
+
+// app/components/travel/countryModal/CountryModal.tsx
+var import_jsx_dev_runtime8 = __toESM(require_jsx_dev_runtime()), CountryModalHoverContext = import_react34.default.createContext(!1), CountryModal = ({
+  children: children4,
+  country
+}) => {
+  let modalRef = (0, import_react34.useRef)(null), [isHovering, setIsHovering] = (0, import_react34.useState)(!1);
+  (0, import_react34.useEffect)(() => {
+    modalRef.current && (modalRef.current.addEventListener("mouseenter", () => {
+      setIsHovering(() => !0);
+    }), modalRef.current.addEventListener(
+      "mouseleave",
+      () => setIsHovering(() => !1)
+    ));
+  }, [modalRef]);
+  let sharedIconStyles = " h-4 w-4 md:h-6 md:w-6 z-20 stroke-slate-300 hover:stroke-slate-100 hover:scale-125 transition-all duration-200 ";
+  return /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(
+    "div",
+    {
+      className: "transition-all fixed bottom-3 right-3 md:bottom-4 md:right-4 lg:right-6 lg:bottom-6",
+      ref: modalRef,
+      children: /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(
+        motion.div,
+        {
+          initial: { opacity: 0, x: 30 },
+          animate: { opacity: 1, x: 0 },
+          exit: { opacity: 0, x: 30 },
+          className: "bg-slate-700 rounded-xl overflow-hidden drop-shadow-2xl",
+          children: [
+            /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(
+              "div",
+              {
+                className: "z-10 h-full w-full absolute bg-slate-900 transition-all " + (isHovering ? "opacity-30" : "opacity-0")
+              },
+              void 0,
+              !1,
+              {
+                fileName: "app/components/travel/countryModal/CountryModal.tsx",
+                lineNumber: 50,
+                columnNumber: 9
+              },
+              this
+            ),
+            /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(Link2, { to: "/travel", children: /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(
+              FiX,
+              {
+                className: "absolute top-2 right-2 transition-all" + sharedIconStyles + (isHovering ? "opacity-100 cursor-pointer" : "opacity-0")
+              },
+              void 0,
+              !1,
+              {
+                fileName: "app/components/travel/countryModal/CountryModal.tsx",
+                lineNumber: 57,
+                columnNumber: 11
+              },
+              this
+            ) }, void 0, !1, {
+              fileName: "app/components/travel/countryModal/CountryModal.tsx",
+              lineNumber: 56,
+              columnNumber: 9
+            }, this),
+            /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(Link2, { to: `./${country}/test`, children: /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(
+              FiMaximize,
+              {
+                size: 24,
+                className: "absolute top-1/2 left-1/2 translate-x-[-50%] translate-y-[-50%] transition-all" + sharedIconStyles + (isHovering ? "opacity-100 cursor-pointer" : "opacity-0")
+              },
+              void 0,
+              !1,
+              {
+                fileName: "app/components/travel/countryModal/CountryModal.tsx",
+                lineNumber: 68,
+                columnNumber: 11
+              },
+              this
+            ) }, void 0, !1, {
+              fileName: "app/components/travel/countryModal/CountryModal.tsx",
+              lineNumber: 67,
+              columnNumber: 9
+            }, this),
+            /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(CountryModalHoverContext.Provider, { value: isHovering, children: children4 }, void 0, !1, {
+              fileName: "app/components/travel/countryModal/CountryModal.tsx",
+              lineNumber: 79,
+              columnNumber: 9
+            }, this)
+          ]
+        },
+        1,
+        !0,
+        {
+          fileName: "app/components/travel/countryModal/CountryModal.tsx",
+          lineNumber: 41,
+          columnNumber: 7
+        },
+        this
+      )
+    },
+    void 0,
+    !1,
+    {
+      fileName: "app/components/travel/countryModal/CountryModal.tsx",
+      lineNumber: 35,
+      columnNumber: 5
+    },
+    this
+  );
+};
+
+// app/components/general/ImageCarousel.tsx
+var import_react36 = __toESM(require_react());
+var import_jsx_dev_runtime9 = __toESM(require_jsx_dev_runtime()), imageAspectRatio = 384 / 683, ImageCarousel = ({ images }) => {
+  let [imageLoading, setImageLoading] = (0, import_react36.useState)(!0), [imageIndex, setImageIndex] = (0, import_react36.useState)(0), isHovering = (0, import_react36.useContext)(CountryModalHoverContext), currentImage = images[imageIndex];
+  return (0, import_react36.useEffect)(() => {
+    setImageLoading(!0);
+  }, [currentImage]), (0, import_react36.useEffect)(() => {
+    let interval3 = setInterval(() => {
+      !isHovering && setImageIndex((prev) => (prev + 1) % images.length);
+    }, 4e3);
+    return () => clearInterval(interval3);
+  }), /* @__PURE__ */ (0, import_jsx_dev_runtime9.jsxDEV)(
+    motion.div,
+    {
+      className: "w-full relative",
+      style: {
+        aspectRatio: imageAspectRatio
+      },
+      children: /* @__PURE__ */ (0, import_jsx_dev_runtime9.jsxDEV)(AnimatePresence, { initial: !1, children: /* @__PURE__ */ (0, import_jsx_dev_runtime9.jsxDEV)(
+        motion.img,
+        {
+          initial: { opacity: 0 },
+          animate: {
+            opacity: imageLoading ? 0 : 1,
+            scale: isHovering ? 1.05 : 1
+          },
+          transition: {
+            duration: 0.3
+          },
+          exit: { opacity: 0 },
+          src: currentImage,
+          onLoad: () => setImageLoading(!1),
+          className: "pointer-events-none select-none absolute"
+        },
+        currentImage,
+        !1,
+        {
+          fileName: "app/components/general/ImageCarousel.tsx",
+          lineNumber: 36,
+          columnNumber: 9
+        },
+        this
+      ) }, void 0, !1, {
+        fileName: "app/components/general/ImageCarousel.tsx",
+        lineNumber: 35,
+        columnNumber: 7
+      }, this)
+    },
+    void 0,
+    !1,
+    {
+      fileName: "app/components/general/ImageCarousel.tsx",
+      lineNumber: 29,
+      columnNumber: 5
+    },
+    this
+  );
+};
+
+// app/routes/travel.$.tsx
+var import_cloudflare2 = __toESM(require_dist()), import_jsx_dev_runtime10 = __toESM(require_jsx_dev_runtime()), loader = async ({ params }) => {
+  let parameterArray = (params["*"] ?? "").split("/");
+  return (0, import_cloudflare2.json)({
+    country: parameterArray[0]
+  });
+};
+function TravelCountry() {
+  let { country } = useLoaderData2(), mainRef = (0, import_react37.useRef)(null), mediaMetaData = useTravelMetaData(), selectedCountry = country;
+  return /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)("main", { className: "h-full relative", ref: mainRef, children: [
+    /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)("div", { className: "h-full", children: /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)(
       TravelMap,
       {
         selectedCountry,
@@ -30316,56 +34174,259 @@ function Travel() {
       void 0,
       !1,
       {
-        fileName: "app/routes/travel.tsx",
-        lineNumber: 18,
+        fileName: "app/routes/travel.$.tsx",
+        lineNumber: 29,
         columnNumber: 9
       },
       this
     ) }, void 0, !1, {
-      fileName: "app/routes/travel.tsx",
-      lineNumber: 17,
+      fileName: "app/routes/travel.$.tsx",
+      lineNumber: 28,
       columnNumber: 7
     }, this),
-    /* @__PURE__ */ (0, import_jsx_dev_runtime12.jsxDEV)(AnimatePresence, { initial: !1, children: selectedCountry && /* @__PURE__ */ (0, import_jsx_dev_runtime12.jsxDEV)(CountryModal, { children: /* @__PURE__ */ (0, import_jsx_dev_runtime12.jsxDEV)(
+    /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)(AnimatePresence, { initial: !1, children: selectedCountry && /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)(CountryModal, { country: selectedCountry, children: /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)(
       "div",
       {
         className: "w-28 md:w-48 lg:w-64 transition-all",
         style: { aspectRatio: imageAspectRatio },
-        children: /* @__PURE__ */ (0, import_jsx_dev_runtime12.jsxDEV)(Outlet, {}, void 0, !1, {
-          fileName: "app/routes/travel.tsx",
-          lineNumber: 30,
+        children: /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)("div", { children: [
+          /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)(
+            ImageCarousel,
+            {
+              images: (mediaMetaData == null ? void 0 : mediaMetaData.filter(
+                (imageMetaData) => imageMetaData.country === selectedCountry
+              ).filter(
+                (imageMetaData) => imageMetaData.type === "image"
+              ).map((image) => image.url)) || [""]
+            },
+            void 0,
+            !1,
+            {
+              fileName: "app/routes/travel.$.tsx",
+              lineNumber: 42,
+              columnNumber: 17
+            },
+            this
+          ),
+          /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)(AnimatePresence, { initial: !1, children: /* @__PURE__ */ (0, import_jsx_dev_runtime10.jsxDEV)(
+            motion.div,
+            {
+              initial: { opacity: 0, x: -30 },
+              animate: { opacity: 1, x: 0 },
+              exit: { opacity: 0, x: 30 },
+              className: "z-20 m-2 text-sm md:m-3 md:text-base lg:m-4 lg:text-2xl absolute bottom-0 bg-auto drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,0.8)] ",
+              children: selectedCountry
+            },
+            selectedCountry,
+            !1,
+            {
+              fileName: "app/routes/travel.$.tsx",
+              lineNumber: 57,
+              columnNumber: 19
+            },
+            this
+          ) }, void 0, !1, {
+            fileName: "app/routes/travel.$.tsx",
+            lineNumber: 56,
+            columnNumber: 17
+          }, this)
+        ] }, void 0, !0, {
+          fileName: "app/routes/travel.$.tsx",
+          lineNumber: 41,
           columnNumber: 15
         }, this)
       },
       void 0,
       !1,
       {
-        fileName: "app/routes/travel.tsx",
-        lineNumber: 26,
+        fileName: "app/routes/travel.$.tsx",
+        lineNumber: 37,
         columnNumber: 13
       },
       this
     ) }, void 0, !1, {
-      fileName: "app/routes/travel.tsx",
-      lineNumber: 25,
+      fileName: "app/routes/travel.$.tsx",
+      lineNumber: 36,
       columnNumber: 11
     }, this) }, void 0, !1, {
-      fileName: "app/routes/travel.tsx",
-      lineNumber: 23,
+      fileName: "app/routes/travel.$.tsx",
+      lineNumber: 34,
       columnNumber: 7
     }, this)
   ] }, void 0, !0, {
-    fileName: "app/routes/travel.tsx",
-    lineNumber: 16,
+    fileName: "app/routes/travel.$.tsx",
+    lineNumber: 27,
+    columnNumber: 5
+  }, this);
+}
+
+// app/routes/_index.tsx
+var index_exports = {};
+__export(index_exports, {
+  default: () => _index3,
+  meta: () => meta
+});
+var import_jsx_dev_runtime11 = __toESM(require_jsx_dev_runtime()), meta = () => [{ title: "New Remix App" }];
+function _index3() {
+  return /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)("div", { style: { fontFamily: "system-ui, sans-serif", lineHeight: "1.4" }, children: [
+    /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)("h1", { className: "text-center mt-4", children: "Hi, I'm Enes" }, void 0, !1, {
+      fileName: "app/routes/_index.tsx",
+      lineNumber: 10,
+      columnNumber: 7
+    }, this),
+    /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)("div", { className: "mx-auto mt-16 max-w-7xl text-center", children: /* @__PURE__ */ (0, import_jsx_dev_runtime11.jsxDEV)("span", { children: "This is my personal page where I document things I'm doing (including this page)" }, void 0, !1, {
+      fileName: "app/routes/_index.tsx",
+      lineNumber: 12,
+      columnNumber: 9
+    }, this) }, void 0, !1, {
+      fileName: "app/routes/_index.tsx",
+      lineNumber: 11,
+      columnNumber: 7
+    }, this)
+  ] }, void 0, !0, {
+    fileName: "app/routes/_index.tsx",
+    lineNumber: 9,
+    columnNumber: 5
+  }, this);
+}
+
+// app/routes/weight.tsx
+var weight_exports = {};
+__export(weight_exports, {
+  default: () => Weight
+});
+
+// app/hooks/useWeightData.ts
+var useWeightQuery = () => useQuery({
+  queryKey: ["weight"],
+  queryFn: async () => (await fetch("/weight.json")).json(),
+  select: (data) => data.map((weightDto) => ({
+    weight: weightDto.weight,
+    date: new Date(weightDto.date)
+  }))
+});
+
+// app/hooks/useCurrentWeight.ts
+var useCurrentWeight = () => {
+  var _a10;
+  return (_a10 = useWeightQuery().data) == null ? void 0 : _a10.sort((a, b) => a.date.getTime() - b.date.getTime()).pop();
+};
+
+// app/components/general/DashboardCard.tsx
+var import_jsx_dev_runtime12 = __toESM(require_jsx_dev_runtime()), DashboardCard = ({
+  label,
+  subtitle,
+  value
+}) => /* @__PURE__ */ (0, import_jsx_dev_runtime12.jsxDEV)(
+  "div",
+  {
+    className: "w-full sm bg-slate-300 p-4 rounded-lg text-slate-800 relative",
+    children: [
+      /* @__PURE__ */ (0, import_jsx_dev_runtime12.jsxDEV)("p", { className: "text-slate-500 text-sm", children: label }, void 0, !1, {
+        fileName: "app/components/general/DashboardCard.tsx",
+        lineNumber: 18,
+        columnNumber: 7
+      }, this),
+      /* @__PURE__ */ (0, import_jsx_dev_runtime12.jsxDEV)("p", { className: "text-2xl font-bold", children: [
+        value,
+        " ",
+        /* @__PURE__ */ (0, import_jsx_dev_runtime12.jsxDEV)("span", { className: "text-xs font-medium", children: subtitle }, void 0, !1, {
+          fileName: "app/components/general/DashboardCard.tsx",
+          lineNumber: 21,
+          columnNumber: 9
+        }, this)
+      ] }, void 0, !0, {
+        fileName: "app/components/general/DashboardCard.tsx",
+        lineNumber: 19,
+        columnNumber: 7
+      }, this)
+    ]
+  },
+  void 0,
+  !0,
+  {
+    fileName: "app/components/general/DashboardCard.tsx",
+    lineNumber: 13,
+    columnNumber: 5
+  },
+  this
+);
+
+// app/components/weight/BmiCard.tsx
+var import_jsx_dev_runtime13 = __toESM(require_jsx_dev_runtime()), calculateBmi = (weight, height) => Math.round(weight / (height * height)), getBmiClassification = (bmi) => bmi < 18.5 ? "Underweight" : bmi < 24.9 ? "Normal weight" : bmi < 29.9 ? "Overweight" : "Obese", BmiCard = () => {
+  let currentWeight = useCurrentWeight();
+  if (!currentWeight)
+    return null;
+  let bmi = calculateBmi(currentWeight.weight, 1.82);
+  return /* @__PURE__ */ (0, import_jsx_dev_runtime13.jsxDEV)(
+    DashboardCard,
+    {
+      label: "Body Mass Index",
+      value: bmi.toString(),
+      subtitle: getBmiClassification(bmi)
+    },
+    void 0,
+    !1,
+    {
+      fileName: "app/components/weight/BmiCard.tsx",
+      lineNumber: 20,
+      columnNumber: 5
+    },
+    this
+  );
+};
+
+// app/components/weight/WeightCard.tsx
+var import_jsx_dev_runtime14 = __toESM(require_jsx_dev_runtime()), WeightCard = () => {
+  let currentWeight = useCurrentWeight();
+  return currentWeight ? /* @__PURE__ */ (0, import_jsx_dev_runtime14.jsxDEV)(
+    DashboardCard,
+    {
+      label: "Weight",
+      value: currentWeight.weight.toString(),
+      subtitle: "kg"
+    },
+    void 0,
+    !1,
+    {
+      fileName: "app/components/weight/WeightCard.tsx",
+      lineNumber: 8,
+      columnNumber: 5
+    },
+    this
+  ) : null;
+};
+
+// app/routes/weight.tsx
+var import_jsx_dev_runtime15 = __toESM(require_jsx_dev_runtime());
+function Weight() {
+  return /* @__PURE__ */ (0, import_jsx_dev_runtime15.jsxDEV)("div", { className: "m-4", children: /* @__PURE__ */ (0, import_jsx_dev_runtime15.jsxDEV)("div", { className: "grid gap-5 sm:grid-cols-3 lg:grid-cols-4", children: [
+    /* @__PURE__ */ (0, import_jsx_dev_runtime15.jsxDEV)(WeightCard, {}, void 0, !1, {
+      fileName: "app/routes/weight.tsx",
+      lineNumber: 9,
+      columnNumber: 9
+    }, this),
+    /* @__PURE__ */ (0, import_jsx_dev_runtime15.jsxDEV)(BmiCard, {}, void 0, !1, {
+      fileName: "app/routes/weight.tsx",
+      lineNumber: 10,
+      columnNumber: 9
+    }, this)
+  ] }, void 0, !0, {
+    fileName: "app/routes/weight.tsx",
+    lineNumber: 8,
+    columnNumber: 7
+  }, this) }, void 0, !1, {
+    fileName: "app/routes/weight.tsx",
+    lineNumber: 7,
     columnNumber: 5
   }, this);
 }
 
 // server-assets-manifest:@remix-run/dev/assets-manifest
-var assets_manifest_default = { version: "2d4b2de5", entry: { module: "/build/entry.client-UOW4UBTR.js", imports: ["/build/_shared/chunk-GT2VJRAR.js", "/build/_shared/chunk-56THQXCK.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-PF6UNOJM.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-WMMM33TT.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel": { id: "routes/travel", parentId: "root", path: "travel", index: void 0, caseSensitive: void 0, module: "/build/routes/travel-JLIKYGFI.js", imports: ["/build/_shared/chunk-25KMZGLN.js"], hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel.$country": { id: "routes/travel.$country", parentId: "routes/travel", path: ":country", index: void 0, caseSensitive: void 0, module: "/build/routes/travel.$country-4PXLXLTD.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, cssBundleHref: void 0, hmr: void 0, url: "/build/manifest-2D4B2DE5.js" };
+var assets_manifest_default = { entry: { module: "/build/entry.client-34CMYVB5.js", imports: ["/build/_shared/chunk-AH4SXGZI.js", "/build/_shared/chunk-7HYSD3WE.js"] }, routes: { root: { id: "root", parentId: void 0, path: "", index: void 0, caseSensitive: void 0, module: "/build/root-IR2QSU7E.js", imports: ["/build/_shared/chunk-LUBQ4Q2T.js"], hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/_index": { id: "routes/_index", parentId: "root", path: void 0, index: !0, caseSensitive: void 0, module: "/build/routes/_index-QKAWTQBS.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/travel.$": { id: "routes/travel.$", parentId: "root", path: "travel/*", index: void 0, caseSensitive: void 0, module: "/build/routes/travel.$-4E5UTNNG.js", imports: void 0, hasAction: !1, hasLoader: !0, hasCatchBoundary: !1, hasErrorBoundary: !1 }, "routes/weight": { id: "routes/weight", parentId: "root", path: "weight", index: void 0, caseSensitive: void 0, module: "/build/routes/weight-KZ64VH4P.js", imports: void 0, hasAction: !1, hasLoader: !1, hasCatchBoundary: !1, hasErrorBoundary: !1 } }, version: "dd5a823d", hmr: void 0, url: "/build/manifest-DD5A823D.js" };
 
 // server-entry-module:@remix-run/dev/server-build
-var assetsBuildDirectory = "public/build", future = { unstable_cssModules: !1, unstable_cssSideEffectImports: !1, unstable_dev: !1, unstable_postcss: !1, unstable_tailwind: !0, unstable_vanillaExtract: !1, v2_errorBoundary: !0, v2_meta: !0, v2_normalizeFormMethod: !0, v2_routeConvention: !0 }, publicPath = "/build/", entry = { module: entry_server_exports }, routes = {
+var assetsBuildDirectory = "public/build", future = { v2_dev: !1, unstable_postcss: !1, unstable_tailwind: !0, v2_errorBoundary: !0, v2_headers: !1, v2_meta: !0, v2_normalizeFormMethod: !0, v2_routeConvention: !0 }, publicPath = "/build/", entry = { module: entry_server_exports }, routes = {
   root: {
     id: "root",
     parentId: void 0,
@@ -30374,13 +34435,13 @@ var assetsBuildDirectory = "public/build", future = { unstable_cssModules: !1, u
     caseSensitive: void 0,
     module: root_exports
   },
-  "routes/travel.$country": {
-    id: "routes/travel.$country",
-    parentId: "routes/travel",
-    path: ":country",
+  "routes/travel.$": {
+    id: "routes/travel.$",
+    parentId: "root",
+    path: "travel/*",
     index: void 0,
     caseSensitive: void 0,
-    module: travel_country_exports
+    module: travel_exports
   },
   "routes/_index": {
     id: "routes/_index",
@@ -30390,18 +34451,18 @@ var assetsBuildDirectory = "public/build", future = { unstable_cssModules: !1, u
     caseSensitive: void 0,
     module: index_exports
   },
-  "routes/travel": {
-    id: "routes/travel",
+  "routes/weight": {
+    id: "routes/weight",
     parentId: "root",
-    path: "travel",
+    path: "weight",
     index: void 0,
     caseSensitive: void 0,
-    module: travel_exports
+    module: weight_exports
   }
 };
 
 // server.js
-var handleRequest2 = createPagesFunctionHandler({
+var import_cloudflare3 = __toESM(require_dist()), handleRequest2 = createPagesFunctionHandler({
   build: server_build_exports,
   mode: "development",
   getLoadContext: (context) => context.env
@@ -30412,4 +34473,602 @@ function onRequest(context) {
 export {
   onRequest
 };
+/*! Bundled license information:
+
+cookie/index.js:
+  (*!
+   * cookie
+   * Copyright(c) 2012-2014 Roman Shtylman
+   * Copyright(c) 2015 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+@remix-run/server-runtime/dist/esm/warnings.js:
+  (**
+   * @remix-run/server-runtime v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/server-runtime/dist/esm/cookies.js:
+  (**
+   * @remix-run/server-runtime v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/server-runtime/dist/esm/formData.js:
+  (**
+   * @remix-run/server-runtime v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/router/dist/router.js:
+  (**
+   * @remix-run/router v1.7.2
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/server-runtime/dist/esm/mode.js:
+  (**
+   * @remix-run/server-runtime v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/server-runtime/dist/esm/errors.js:
+  (**
+   * @remix-run/server-runtime v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/server-runtime/dist/esm/responses.js:
+  (**
+   * @remix-run/server-runtime v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/server-runtime/dist/esm/entry.js:
+  (**
+   * @remix-run/server-runtime v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/server-runtime/dist/esm/headers.js:
+  (**
+   * @remix-run/server-runtime v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/server-runtime/dist/esm/invariant.js:
+  (**
+   * @remix-run/server-runtime v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/server-runtime/dist/esm/routeMatching.js:
+  (**
+   * @remix-run/server-runtime v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/server-runtime/dist/esm/data.js:
+  (**
+   * @remix-run/server-runtime v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/server-runtime/dist/esm/routes.js:
+  (**
+   * @remix-run/server-runtime v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/server-runtime/dist/esm/markup.js:
+  (**
+   * @remix-run/server-runtime v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/server-runtime/dist/esm/serverHandoff.js:
+  (**
+   * @remix-run/server-runtime v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/server-runtime/dist/esm/server.js:
+  (**
+   * @remix-run/server-runtime v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/server-runtime/dist/esm/sessions.js:
+  (**
+   * @remix-run/server-runtime v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/server-runtime/dist/esm/sessions/cookieStorage.js:
+  (**
+   * @remix-run/server-runtime v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/server-runtime/dist/esm/sessions/memoryStorage.js:
+  (**
+   * @remix-run/server-runtime v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/server-runtime/dist/esm/upload/errors.js:
+  (**
+   * @remix-run/server-runtime v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/server-runtime/dist/esm/upload/memoryUploadHandler.js:
+  (**
+   * @remix-run/server-runtime v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/server-runtime/dist/esm/dev.js:
+  (**
+   * @remix-run/server-runtime v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/server-runtime/dist/esm/index.js:
+  (**
+   * @remix-run/server-runtime v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/cloudflare/dist/crypto.js:
+  (**
+   * @remix-run/cloudflare v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/cloudflare/dist/implementations.js:
+  (**
+   * @remix-run/cloudflare v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/cloudflare/dist/sessions/workersKVStorage.js:
+  (**
+   * @remix-run/cloudflare v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/cloudflare/dist/index.js:
+  (**
+   * @remix-run/cloudflare v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+react/cjs/react.development.js:
+  (**
+   * @license React
+   * react.development.js
+   *
+   * Copyright (c) Facebook, Inc. and its affiliates.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE file in the root directory of this source tree.
+   *)
+
+react-router/dist/index.js:
+  (**
+   * React Router v6.14.2
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+react-router-dom/dist/index.js:
+  (**
+   * React Router DOM v6.14.2
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+react-dom/cjs/react-dom-server-legacy.browser.development.js:
+  (**
+   * @license React
+   * react-dom-server-legacy.browser.development.js
+   *
+   * Copyright (c) Facebook, Inc. and its affiliates.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE file in the root directory of this source tree.
+   *)
+
+react-dom/cjs/react-dom-server.browser.development.js:
+  (**
+   * @license React
+   * react-dom-server.browser.development.js
+   *
+   * Copyright (c) Facebook, Inc. and its affiliates.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE file in the root directory of this source tree.
+   *)
+
+react/cjs/react-jsx-dev-runtime.development.js:
+  (**
+   * @license React
+   * react-jsx-dev-runtime.development.js
+   *
+   * Copyright (c) Facebook, Inc. and its affiliates.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE file in the root directory of this source tree.
+   *)
+
+react/cjs/react-jsx-runtime.development.js:
+  (**
+   * @license React
+   * react-jsx-runtime.development.js
+   *
+   * Copyright (c) Facebook, Inc. and its affiliates.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE file in the root directory of this source tree.
+   *)
+
+react-is/cjs/react-is.development.js:
+  (** @license React v16.13.1
+   * react-is.development.js
+   *
+   * Copyright (c) Facebook, Inc. and its affiliates.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE file in the root directory of this source tree.
+   *)
+
+object-assign/index.js:
+  (*
+  object-assign
+  (c) Sindre Sorhus
+  @license MIT
+  *)
+
+@remix-run/cloudflare-pages/dist/esm/worker.js:
+  (**
+   * @remix-run/cloudflare-pages v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/cloudflare-pages/dist/esm/index.js:
+  (**
+   * @remix-run/cloudflare-pages v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/react/dist/esm/_virtual/_rollupPluginBabelHelpers.js:
+  (**
+   * @remix-run/react v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/react/dist/esm/errorBoundaries.js:
+  (**
+   * @remix-run/react v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/react/dist/esm/invariant.js:
+  (**
+   * @remix-run/react v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/react/dist/esm/routeModules.js:
+  (**
+   * @remix-run/react v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/react/dist/esm/links.js:
+  (**
+   * @remix-run/react v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/react/dist/esm/markup.js:
+  (**
+   * @remix-run/react v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/react/dist/esm/warnings.js:
+  (**
+   * @remix-run/react v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/react/dist/esm/components.js:
+  (**
+   * @remix-run/react v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/react/dist/esm/routes.js:
+  (**
+   * @remix-run/react v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/react/dist/esm/scroll-restoration.js:
+  (**
+   * @remix-run/react v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/react/dist/esm/server.js:
+  (**
+   * @remix-run/react v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+
+@remix-run/react/dist/esm/index.js:
+  (**
+   * @remix-run/react v1.19.3
+   *
+   * Copyright (c) Remix Software Inc.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE.md file in the root directory of this source tree.
+   *
+   * @license MIT
+   *)
+*/
 //# sourceMappingURL=/build/[[path]].js.map

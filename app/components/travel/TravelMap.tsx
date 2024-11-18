@@ -50,7 +50,6 @@ export const TravelMap = ({
                 <MyGeography
                   key={geography.rsmKey}
                   geography={geography}
-                  onSelect={() => null}
                   isSelected={
                     selectedCountry === getGeographyName(geography)
                   }
