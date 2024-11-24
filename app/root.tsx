@@ -34,17 +34,14 @@ export default function App() {
       </head>
       <body
         className={
-          'bg-slate-800 w-screen h-screen text-slate-300 overflow-hidden'
+          'bg-slate-800 w-screen h-screen text-slate-300 pt-14'
         }
       >
         <QueryClientProvider client={new QueryClient()}>
           <NavigationTabContainer>
             <NavigationTab to={'/'} displayString={'Home'} />
             <NavigationTab to={'/travel'} displayString={'Travel'} />
-            <NavigationTab
-              to={'/weight'}
-              displayString={'Weight Journey'}
-            />
+            <NavigationTab to={'/weight'} displayString={'Weight'} />
           </NavigationTabContainer>
           <Outlet />
           <ScrollRestoration />

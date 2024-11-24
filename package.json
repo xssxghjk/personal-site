@@ -11,6 +11,7 @@
     "wrangler": "wrangler pages dev ./public"
   },
   "dependencies": {
+    "@emotion/react": "^11.13.5",
     "@remix-run/cloudflare": "^1.15.0",
     "@remix-run/cloudflare-pages": "^1.15.0",
     "@remix-run/node": "^1.15.0",
@@ -21,6 +22,7 @@
     "framer-motion": "^10.12.16",
     "isbot": "^3.6.5",
     "react": "^18.2.0",
+    "react-charts": "^3.0.0-beta.57",
     "react-dom": "^18.2.0",
     "react-icons": "^4.10.1",
     "react-simple-maps": "^3.0.0"

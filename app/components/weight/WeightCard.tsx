@@ -3,11 +3,11 @@ import { DashboardCard } from '~/components/general/DashboardCard'
 
 export const WeightCard = () => {
   const currentWeight = useCurrentWeight()
-  if (!currentWeight) return null
   return (
     <DashboardCard
       label={'Weight'}
-      value={currentWeight.weight.toString()}
+      value={currentWeight.data?.weight.toString()}
+      loading={currentWeight.isLoading}
       subtitle={'kg'}
     />
   )
